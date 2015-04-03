@@ -17,6 +17,6 @@ endforeach(SRC)
 
 add_executable(profile_client profile_client.cpp)
 if(NOT APPLE)
-    set_target_properties(profile_client PROPERTIES LINK_FLAGS "-lrt")
+    target_link_libraries(profile_client rt)
 endif(NOT APPLE)
 target_link_libraries(profile_client mc)
