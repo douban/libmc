@@ -1,0 +1,14 @@
+*.pyc
+*.sw[op]
+*.egg-info
+*.egg/
+*.egg
+build/
+dist/
+venv/
+bench_venv/
+_client.cpp
+_client.so
+.clang_complete
+.eggs/
+tests/resources/keys_*.txt
