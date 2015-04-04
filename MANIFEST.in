@@ -1,0 +1,8 @@
+include README.md
+include LICENSE.txt
+recursive-include include *.h
+recursive-include src *.cpp
+recursive-include libmc *.py *.pyx
+prune tests
+prune misc
+prune build

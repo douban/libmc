@@ -49,11 +49,15 @@ class PyTest(TestCommand):
         sys.exit(errno)
 
 setup(
-    name='libmc',
-    packages=['libmc'],
-    version=find_version('libmc', '__init__.py'),
-    license= 'BSD License',
-    description="Yet another memcached client for Python",
+    name="libmc",
+    packages=["libmc"],
+    version=find_version("libmc", "__init__.py"),
+    license= "BSD License",
+    description="Fast and light-weight memcached client for C++/Python",
+    author="PAN, Myautsai",
+    author_email="myautsai@gmail.com",
+    url="https://github.com/douban/libmc",
+    keywords=["memcached", "memcache", "client"],
     long_description=open("README.md").read(),
     classifiers=[
         "Intended Audience :: Developers",
@@ -66,13 +70,13 @@ setup(
         "Topic :: Software Development :: Libraries"
     ],
     # Support for the basestring type is new in Cython 0.20.
-    setup_requires=['setuptools_cython', 'Cython >= 0.20'],
-    cmdclass={'test': PyTest},
+    setup_requires=["setuptools_cython", "Cython >= 0.20"],
+    cmdclass={"test": PyTest},
     ext_modules=[
-        Extension('libmc._client', sources, include_dirs=include_dirs,
+        Extension("libmc._client", sources, include_dirs=include_dirs,
                   language="c++", extra_compile_args=COMPILER_FLAGS)
     ],
     tests_require=[
-        'pytest',
+        "pytest",
     ]
 )
