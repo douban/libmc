@@ -256,11 +256,11 @@ class ThreadUnsafe(Exception):
 
 
 cdef class PyClient:
+    cdef readonly list servers
+    cdef readonly int comp_threshold
     cdef Client* _imp
     cdef bool_t do_split
-    cdef int comp_threshold
     cdef bool_t noreply
-    cdef list servers
     cdef bytes prefix
     cdef int last_error
     cdef object _thread_ident
