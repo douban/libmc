@@ -8,7 +8,7 @@ It's mainly written in C++ and Cython. libmc can be considered as a drop in repl
 
 libmc is developing and maintaining by Douban Inc. Currently, It is working in production environment, 
 powering all web traffics in douban.com.
-Realtime [benchmark result](https://gist.github.com/mckelvin/f7cdb657a8338ffdc89d) will be available on travis (soon).
+Realtime [benchmark result](https://travis-ci.org/douban/libmc/builds/57124335#L1611) is available on travis.
 
 
 ## Build and Installation
@@ -41,9 +41,15 @@ Some techniques are applied to make `set_multi` command extremely fast in libmc
 
 ```python
 import libmc
+from libmc import (
+    MC_HASH_MD5, MC_POLL_TIMEOUT, MC_CONNECT_TIMEOUT, MC_RETRY_TIMEOUT
+)
 
-mc = libmc.Client(['localhost:11211', 'localhost:11212'], do_split=True, comp_threshold=0, noreply=False,
-                  prefix=None, hash_fn=OPT_HASH_MD5, failover=False)
+mc = libmc.Client(
+    ['localhost:11211', 'localhost:11212'], do_split=True,
+    comp_threshold=0, noreply=False, prefix=None,
+    hash_fn=MC_HASH_MD5, failover=False
+)
 
 mc.config(MC_POLL_TIMEOUT, 100)  # 100 ms
 mc.config(MC_CONNECT_TIMEOUT, 300)  # 300 ms
@@ -119,21 +125,22 @@ Read `tests/shabby/gevent_issue.py` for details.
 
 ## Acknowledgments
 
-- Thanks to @fahrenheit2539 and the llvm project for the standalone 
+- Thanks to [@fahrenheit2539](https://github.com/fahrenheit2539) and the llvm project for the standalone.
   [SmallVector](http://fahrenheit2539.blogspot.com/2012/06/introduction-in-depths-look-at.html) implementation.
-- Thanks to @miloyip for the high performance [i64toa](https://github.com/miloyip/itoa-benchmark) implementation.
-- Thanks to Ivan Novikov for the research in [THE NEW PAGE OF INJECTIONS BOOK: MEMCACHED INJECTIONS](https://www.blackhat.com/us-14/briefings.html#the-new-page-of-injections-book-memcached-injections)
+- Thanks to [@miloyip](https://github.com/miloyip) for the high performance [i64toa](https://github.com/miloyip/itoa-benchmark) implementation.
+- Thanks to [Ivan Novikov](https://twitter.com/d0znpp) for the research in [THE NEW PAGE OF INJECTIONS BOOK: MEMCACHED INJECTIONS](https://www.blackhat.com/us-14/briefings.html#the-new-page-of-injections-book-memcached-injections).
 - Thanks to the PolarSSL project for the md5 implementation.
-- Thanks to @lericson for the [benchmark script in pylibmc](https://github.com/lericson/pylibmc/blob/master/bin/runbench.py)
+- Thanks to [@lericson](https://github.com/lericson) for the [benchmark script in pylibmc](https://github.com/lericson/pylibmc/blob/master/bin/runbench.py).
 - Thanks to the libmemcached project and some other projects possibly not mentioned here.
 
 
 ## Contributors
 
-- @mckelvin
-- @zzl0
-- @windreamer
-- @lembacon
+- [@mckelvin](https://github.com/mckelvin)
+- [@zzl0](https://github.com/zzl0)
+- [@windreamer](https://github.com/windreamer)
+- [@lembacon](https://github.com/lembacon)
+- [@seansay](https://github.com/seansay)
 
 
 ## LICENSE
