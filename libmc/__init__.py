@@ -13,8 +13,8 @@ from ._client import (
     MC_HASH_CRC_32,
 )
 
-__VERSION__ = '0.4.3'
-__version__ = "v0.4.3"
+__VERSION__ = '0.5.0'
+__version__ = "c5566db"
 __author__ = "mckelvin"
 __email__ = "kelvin0576@gmail.com"
 __date__ = "Sat Apr 4 13:07:39 2015 +0800"
