@@ -7,7 +7,7 @@ python $BASEDIR/slow_memcached_server.py > /dev/null &
 pid=$!
 
 
-if [[ `uname` == 'Linux' ]]; then
+if [ `uname` = 'Linux' ]; then
     echo
     echo "=== test gevent support ==="
     echo
