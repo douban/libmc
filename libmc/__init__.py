@@ -14,10 +14,10 @@ from ._client import (
 )
 
 __VERSION__ = '0.4.3'
-__version__ = "16ef015"
+__version__ = "v0.4.3"
 __author__ = "mckelvin"
 __email__ = "kelvin0576@gmail.com"
-__date__ = "Thu Apr 2 18:40:28 2015 +0800"
+__date__ = "Sat Apr 4 13:07:39 2015 +0800"
 
 
 class Client(PyClient):

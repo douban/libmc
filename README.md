@@ -15,7 +15,7 @@ Realtime [benchmark result](https://travis-ci.org/douban/libmc/builds/57124335#L
 
 For users:
 
-    pip install -e git+https://github.com/douban/libmc.git@master#egg=libmc
+    pip install libmc
 
 Usage:
 
@@ -147,4 +147,4 @@ Read `tests/shabby/gevent_issue.py` for details.
 
 Copyright (c) 2014-2015, Douban Inc. All rights reserved.
 
-Licensed under a BSD license: https://github.com/douban/libmc/blob/master/LICENSE
+Licensed under a BSD license: https://github.com/douban/libmc/blob/master/LICENSE.txt
