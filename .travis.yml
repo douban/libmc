@@ -1,0 +1,48 @@
+language: python
+
+python:
+  - "2.7"
+
+env:
+  - CMAKE_BUILD_TYPE=Release
+
+install:
+  - sudo apt-get update -yqq
+  - sudo apt-get install -yqq python-numpy valgrind
+  - sudo apt-get install build-essential g++
+
+  # install patched libmemcached from douban
+  - wget https://github.com/xtao/douban-patched/raw/master/libmemcached-douban-1.0.18.tar.gz
+  - tar zxf libmemcached-douban-1.0.18.tar.gz
+  - cd libmemcached-1.0.18
+  - ./configure --prefix=/usr && make && sudo make install
+  - cd ..
+  - rm -rf python-libmemcached
+  - rm -rf libmemcached*
+  - sudo ldconfig
+  - pip install -q pytest greenify gevent
+  - pip install -q git+https://github.com/lericson/pylibmc@master#egg=pylibmc
+  - pip install -q git+https://github.com/linsomniac/python-memcached.git@master#egg=memcache
+  - pip install -q git+https://github.com/douban/python-libmemcached.git@master#egg=cmemcached
+
+services:
+  - memcached
+
+before_script:
+  - python misc/generate_hash_dataset.py tests/resources/keys.txt
+  - ./misc/memcached_server start
+
+script:
+  - mkdir -p build
+  - cd build
+  - cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE ..
+  - make -j8
+  - valgrind --leak-check=full make test
+  - cd ..
+  - python setup.py test
+  - python setup.py install
+  - ./tests/shabby/run_test.sh
+  - python ./misc/runbench.py
+
+after_script:
+  - ./misc/memcached_server stop

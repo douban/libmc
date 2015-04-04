@@ -15,9 +15,10 @@
 #define LLVM_ADT_SMALLVECTOR_H
 
 #include "type_traits.h"
-#include <algorithm>
+#include <cstddef>
 #include <cassert>
 #include <cstring>
+#include <algorithm>
 #include <memory>
 
 namespace llvm {
