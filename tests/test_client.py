@@ -27,6 +27,12 @@ class SingleServerCase(unittest.TestCase):
         self.compressed_mc = Client(["127.0.0.1:21211"], comp_threshold=1024)
         self.noreply_mc = Client(["127.0.0.1:21211"], noreply=True)
 
+    def test_attribute(self):
+        "Test attributes are accessible from Python code"
+        mc = self.mc
+        assert hasattr(mc, 'comp_threshold')
+        assert hasattr(mc, 'servers')
+
     def test_misc(self):
         mc = self.mc
         mc.get_multi(['foo', 'tuiche'])
@@ -142,7 +148,7 @@ class SingleServerCase(unittest.TestCase):
         mc.delete('injected')
         mc.set('key1', '1234567890')
         mc.set('key1 0', '123456789012345678901234567890\r\n'
-                          'set injected 0 3600 3\r\nINJ\r\n')
+                         'set injected 0 3600 3\r\nINJ\r\n')
         assert mc.get('injected') is None
 
     def test_maxiov(self):
