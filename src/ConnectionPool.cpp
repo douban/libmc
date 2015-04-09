@@ -462,7 +462,7 @@ err_code_t ConnectionPool::waitPoll() {
               goto next_fd;
               break;
             default:
-              log_warn("should not be here!");
+              NOT_REACHED();
               break;
           }
         }
