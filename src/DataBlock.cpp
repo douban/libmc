@@ -32,9 +32,7 @@ size_t DataBlock::s_minCapacity(MIN_DATABLOCK_CAPACITY);
 
 
 DataBlock::~DataBlock() {
-  if (m_data != NULL) {
-    delete[] m_data;
-  }
+  delete[] m_data;
 }
 
 
