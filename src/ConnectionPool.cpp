@@ -35,7 +35,6 @@ int ConnectionPool::s_pollTimeout = MC_DEFAULT_POLL_TIMEOUT;
 
 ConnectionPool::~ConnectionPool() {
   delete[] m_conns;
-  m_conns = NULL;
 }
 
 

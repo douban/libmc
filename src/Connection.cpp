@@ -32,6 +32,10 @@ Connection::Connection()
   m_parser.setBufferReader(m_buffer_reader);
 }
 
+Connection::Connection(const Connection& conn) {
+  // never_called
+}
+
 Connection::~Connection() {
   this->close();
   delete m_buffer_writer;
@@ -55,7 +59,7 @@ int Connection::connect() {
   hints.ai_family = AF_INET;
   hints.ai_socktype = SOCK_STREAM;
   hints.ai_protocol = IPPROTO_TCP;
-  char str_port[MC_NI_MAXSERV];
+  char str_port[MC_NI_MAXSERV] = "\0";
   snprintf(str_port, MC_NI_MAXSERV, "%u", m_port);
   if (getaddrinfo(m_host, str_port, &hints, &server_addrinfo) != 0) {
     if (server_addrinfo) {
@@ -72,7 +76,7 @@ int Connection::connect() {
     }
 
     // non blocking
-    int flags = -1, rv = -1;
+    int flags = -1;
     do {
       flags = fcntl(fd, F_GETFL, 0);
     } while (flags == -1 && (errno == EINTR || errno == EAGAIN));
@@ -81,6 +85,7 @@ int Connection::connect() {
     }
 
     if ((flags & O_NONBLOCK) == 0) {
+      int rv = -1;
       do {
         rv = fcntl(fd, F_SETFL, flags | O_NONBLOCK);
       } while (rv == -1 && (errno == EINTR || errno == EAGAIN));
@@ -231,17 +236,11 @@ ssize_t Connection::send() {
 
   msg.msg_iov = const_cast<struct iovec *>(m_buffer_writer->getReadPtr(msg.msg_iovlen));
 
-#ifndef MSG_MORE
-#define MC_MSG_MORE 0
-#else
-#define MC_MSG_MORE MSG_MORE
-#endif
-
   // otherwise may lead to EMSGSIZE, SEE issue#3 on code
   int flags = 0;
   if (msg.msg_iovlen > MC_UIO_MAXIOV) {
     msg.msg_iovlen = MC_UIO_MAXIOV;
-    flags |= MC_MSG_MORE;
+    flags = MC_MSG_MORE;
   }
 
   ssize_t nSent = ::sendmsg(m_socketFd, &msg, flags);

@@ -35,6 +35,12 @@
 #define MC_NI_MAXSERV 32
 #endif
 
+#ifndef MSG_MORE
+#define MC_MSG_MORE 0
+#else
+#define MC_MSG_MORE MSG_MORE
+#endif
+
 #define MC_BUFFER_SIZE 8192
 #define RECV_BUFFER_SIZE 8192
 #define MIN(A, B) (((A) > (B)) ? (B) : (A))

@@ -49,7 +49,6 @@ typedef std::vector<DataBlockSlice> TokenData;
 #endif
 
 void freeTokenData(TokenData& td);
-void printTokenData(TokenData& td);
 char* parseTokenData(TokenData& td, size_t reserved);
 void copyTokenData(const TokenData& src, TokenData& dst);
 
@@ -59,7 +58,6 @@ class BufferReader {
   BufferReader();
   ~BufferReader();
   void reset();
-  void _resetHEAD(); // for benchmark only
 
   size_t prepareWriteBlock(size_t len);
 
@@ -81,7 +79,6 @@ class BufferReader {
   void readBytes(err_code_t& err, size_t len, TokenData& tokenData);
   void expectBytes(err_code_t& err, const char* str, size_t str_size);
   void skipBytes(err_code_t& err, size_t str_size);
-  void print();
   void setNextPreferedDataBlockSize(size_t n);
   size_t getNextPreferedDataBlockSize();
 

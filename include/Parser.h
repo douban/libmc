@@ -61,7 +61,7 @@ class PacketParser {
 
 inline bool PacketParser::canEndParse() {
   assert(m_mode == MODE_END_STATE || m_mode == MODE_COUNTING);
-  return m_mode == MODE_END_STATE ? IS_END_STATE(m_state) : (m_requestKeys.size() == 0);
+  return m_mode == MODE_END_STATE ? IS_END_STATE(m_state) : m_requestKeys.empty();
 }
 
 } // namespace mc

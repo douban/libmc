@@ -9,7 +9,7 @@ bool isValidKey(const char* key, const size_t keylen) {
 
 #define HANDLE_BAD_MC_KEY() \
   do { \
-    log_warn("invalid mc key of length %lu: \"%.*s\"", keylen, static_cast<int>(keylen), key); \
+    log_warn("invalid mc key of length %zu: \"%.*s\"", keylen, static_cast<int>(keylen), key); \
     return false; \
   } while (0)
 
@@ -42,10 +42,9 @@ bool isValidKey(const char* key, const size_t keylen) {
 // credits for: https://gist.github.com/sergot/1333837
 void fprintBuffer(std::FILE* file, const char *data_buffer_, const unsigned int length) {
   const unsigned char* data_buffer = reinterpret_cast<const unsigned char*>(data_buffer_);
-  unsigned char byte;
   unsigned int i, j;
   for (i = 0; i < length; i++) {
-    byte = data_buffer[i];
+    unsigned char byte = data_buffer[i];
     fprintf(file, "%02x ", data_buffer[i]);
     if (((i%16) == 15) || (i == length-1)) {
       for (j = 0; j < 15-(i%16); j++) {

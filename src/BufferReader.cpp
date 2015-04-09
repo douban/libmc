@@ -37,14 +37,13 @@ void BufferReader::reset() {
 
   // assume all datablocks are reusable(ref == 0)
   int i = 0;
-  DataBlock* dbPtr = NULL;
   for (DataBlockListIterator it = m_dataBlockList.begin();
        it != m_dataBlockList.end(); ++it, ++i) {
-    dbPtr = &*it;
+    DataBlock* dbPtr = &*it;
     if (!dbPtr->reusable()) {
       log_warn("A DataBlock(%p) in use is backspace-ed. "
                "This should ONLY be happened on error. "
-               "nBytes: %lu:",
+               "nBytes: %zu:",
                dbPtr, dbPtr->nBytesRef());
       utility::fprintBuffer(stderr, dbPtr->at(0), std::min(dbPtr->nBytesRef(), 128UL));
     }
@@ -62,18 +61,6 @@ void BufferReader::reset() {
   m_blockWriteIterator = m_dataBlockList.begin();
   m_blockReadCursor.iterator = m_dataBlockList.begin();
   m_blockReadCursor.offset = 0;
-}
-
-
-void BufferReader::_resetHEAD() {
-  for (DataBlockListIterator it = m_dataBlockList.begin();
-       it != m_dataBlockList.end(); ++it) {
-    it->acquire(it->size() - it->nBytesRef());
-  }
-  m_blockReadCursor.iterator = m_dataBlockList.begin();
-  m_blockReadCursor.offset = 0;
-  m_blockReadCursor.offset = 0;
-  m_readLeft = m_size;
 }
 
 
@@ -96,9 +83,6 @@ size_t BufferReader::prepareWriteBlock(size_t len) {
     dbPtr = &m_dataBlockList.back();
     dbPtr->init(preferedSize);
     m_capacity += dbPtr->capacity();
-
-    assert(dbPtr->size() == 0);
-    assert(dbPtr->getWriteLeft() == dbPtr->capacity());
 
     m_blockWriteIterator = --m_dataBlockList.end();
   } else {
@@ -199,7 +183,7 @@ const char BufferReader::peek(err_code_t& err, size_t offset) const {
 
 
 size_t BufferReader::readUntil(err_code_t& err, char value, TokenData& tokenData) {
-  assert(tokenData.size() == 0);
+  assert(tokenData.empty());
   err = OK_ERR;
   DataCursor endCur = m_blockReadCursor;
   DataBlock * dbPtr = NULL;
@@ -319,10 +303,9 @@ void BufferReader::readUnsigned(err_code_t& err, uint64_t& value) {
     return;
   }
 
-  size_t offset = 0;
   while (m_blockReadCursor != endCur) {
     dbPtr = &*m_blockReadCursor.iterator;
-    offset = m_blockReadCursor.offset;
+    size_t offset = m_blockReadCursor.offset;
 
     size_t len = 0, j = 0;
 
@@ -345,8 +328,7 @@ void BufferReader::readUnsigned(err_code_t& err, uint64_t& value) {
 
 
 void BufferReader::readBytes(err_code_t& err, size_t len, TokenData& tokenData) {
-  assert(len >= 0);
-  assert(tokenData.size() == 0);
+  assert(tokenData.empty());
   err = OK_ERR;
   if (len == 0) {
     return;
@@ -445,17 +427,6 @@ void BufferReader::skipBytes(err_code_t& err, size_t len) {
 }
 
 
-void BufferReader::print() {
-  fprintf(stderr, "BufferReader(addr: %p, nDataBlock: %lu, nSize: %lu)\n---\n",
-          this, this->nDataBlock(), this->m_size);
-  for (DataBlockListIterator it = m_dataBlockList.begin();
-      it != m_dataBlockList.end(); ++it) {
-    fprintf(stderr, "%.*s", static_cast<int>(it->size()), it->at(0));
-  }
-  fprintf(stderr, "\n---\n");
-}
-
-
 size_t BufferReader::getNextPreferedDataBlockSize() {
   size_t tmp = m_nextPreferedDataBlockSize == 0 ?
       DataBlock::minCapacity() :
@@ -475,14 +446,6 @@ void freeTokenData(TokenData& td) {
   }
 }
 
-void printTokenData(TokenData& td) {
-  fprintf(stderr, "[");
-  for (TokenData::const_iterator i = td.begin(); i != td.end(); ++i) {
-    fprintf(stderr, "%.*s", static_cast<int>(i->size), i->iterator->at(i->offset));
-  }
-  fprintf(stderr, "]\r\n");
-}
-
 char* parseTokenData(TokenData& td, size_t reserved) {
   if (reserved == 0) {
     return NULL;
@@ -497,7 +460,7 @@ char* parseTokenData(TokenData& td, size_t reserved) {
   size_t pos = 0;
   for (TokenData::const_iterator it = td.begin(); it != td.end(); ++it) {
     if (pos + it->size > reserved) {
-      log_err("programmer error: overflow in parseTokenData(%p), reserved: %lu",
+      log_err("programmer error: overflow in parseTokenData(%p), reserved: %zu",
               &td, reserved);
       return NULL;
     }
@@ -511,13 +474,12 @@ char* parseTokenData(TokenData& td, size_t reserved) {
 
 
 void copyTokenData(const TokenData& src, TokenData& dst) {
-  if (src.size() == 0) {
+  if (src.empty()) {
     return;
   }
-  assert(dst.size() == 0);
+  assert(dst.empty());
   dst = src;
   assert(dst.size() == src.size());
-  assert(src.size() == 0 || (dst.begin() != src.begin()));
   for (TokenData::const_iterator it = dst.begin(); it != dst.end(); ++it) {
     it->iterator->acquire(it->size);
   }

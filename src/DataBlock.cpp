@@ -48,13 +48,6 @@ void DataBlock::init(size_t len) {
 }
 
 
-DataBlock* DataBlock::create(size_t len) {
-  DataBlock* dbPtr = new DataBlock();
-  dbPtr->init(len);
-  return dbPtr;
-}
-
-
 void DataBlock::setMinCapacity(size_t len) {
   s_minCapacity = len;
 }

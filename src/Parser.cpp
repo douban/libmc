@@ -12,8 +12,9 @@ using douban::mc::types::LineResult;
 namespace douban {
 namespace mc {
 
-PacketParser::PacketParser(BufferReader* reader) {
-  PacketParser();
+PacketParser::PacketParser(BufferReader* reader)
+  : m_buffer_reader(NULL), m_state(FSM_START), m_mode(MODE_UNDEFINED),
+    m_expectedResultCount(0), mt_kvPtr(NULL) {
   m_buffer_reader = reader;
 }
 
