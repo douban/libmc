@@ -1,6 +1,6 @@
 # libmc
 
-[![build status](https://travis-ci.org/douban/libmc.png)](https:/travis-ci.org/douban/libmc)
+[![build status](https://travis-ci.org/douban/libmc.png)](https://travis-ci.org/douban/libmc)
 
 libmc is a memcached client library for Python without any other dependencies in runtime.
 It's mainly written in C++ and Cython. libmc can be considered as a drop in replacement for
