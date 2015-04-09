@@ -8,7 +8,7 @@ env:
 
 install:
   - sudo apt-get update -yqq
-  - sudo apt-get install -yqq python-numpy valgrind
+  - sudo apt-get install -yqq python-numpy valgrind cppcheck
   - sudo apt-get install build-essential g++
 
   # install patched libmemcached from douban
@@ -20,6 +20,7 @@ install:
   - rm -rf python-libmemcached
   - rm -rf libmemcached*
   - sudo ldconfig
+  - pip install -q Cython
   - pip install -q pytest greenify gevent
   - pip install -q git+https://github.com/lericson/pylibmc@master#egg=pylibmc
   - pip install -q git+https://github.com/linsomniac/python-memcached.git@master#egg=memcache
@@ -29,6 +30,8 @@ services:
   - memcached
 
 before_script:
+  - cppcheck --enable=all --std=c99 --error-exitcode=1
+    --suppressions-list=misc/.cppcheck-supp -Iinclude src tests
   - python misc/generate_hash_dataset.py tests/resources/keys.txt
   - ./misc/memcached_server start
 

@@ -34,10 +34,7 @@ int ConnectionPool::s_pollTimeout = MC_DEFAULT_POLL_TIMEOUT;
 
 
 ConnectionPool::~ConnectionPool() {
-  if (m_conns != NULL) {
-    delete[] m_conns;
-    m_conns = NULL;
-  }
+  delete[] m_conns;
 }
 
 
@@ -64,11 +61,8 @@ void ConnectionPool::setHashFunction(hash_function_options_t fn_opt) {
 
 int ConnectionPool::init(const char* const * hosts, const uint32_t* ports, const size_t n,
                          const uint32_t* weights) {
-  if (m_conns != NULL) {
-    delete[] m_conns;
-    m_conns = NULL;
-    m_connSelector.reset();
-  }
+  delete[] m_conns;
+  m_connSelector.reset();
   int rv = 0;
   m_nConns = n;
   m_conns = new Connection[m_nConns];
