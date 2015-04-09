@@ -1,6 +1,7 @@
 #include <unistd.h>
 #include <vector>
 
+#include "Common.h"
 #include "Client.h"
 #include "Keywords.h"
 
@@ -37,19 +38,19 @@ void Client::config(config_options_t opt, int val) {
 }
 
 
-int Client::get(const char* const* keys, const size_t* keyLens, size_t nKeys,
+err_code_t Client::get(const char* const* keys, const size_t* keyLens, size_t nKeys,
                  retrieval_result_t*** results, size_t* nResults) {
   dispatchRetrieval(GET_OP, keys, keyLens, nKeys);
-  int rv = waitPoll();
+  err_code_t rv = waitPoll();
   collectRetrievalResult(results, nResults);
   return rv;
 }
 
 
-int Client::gets(const char* const* keys, const size_t* keyLens, size_t nKeys,
+err_code_t Client::gets(const char* const* keys, const size_t* keyLens, size_t nKeys,
                  retrieval_result_t*** results, size_t* nResults) {
   dispatchRetrieval(GETS_OP, keys, keyLens, nKeys);
-  int rv = waitPoll();
+  err_code_t rv = waitPoll();
   collectRetrievalResult(results, nResults);
   return rv;
 }
@@ -93,14 +94,14 @@ void Client::destroyMessageResult() {
 
 
 #define IMPL_STORAGE_CMD(M, O) \
-int Client::M(const char* const* keys, const size_t* key_lens, \
+err_code_t Client::M(const char* const* keys, const size_t* key_lens, \
                  const types::flags_t* flags, const types::exptime_t exptime, \
                  const types::cas_unique_t* cas_uniques, const bool noreply, \
                  const char* const* vals, const size_t* val_lens, \
                  size_t nItems, types::message_result_t*** results, size_t* nResults) { \
   dispatchStorage((O), keys, key_lens, flags, exptime, cas_uniques, noreply, vals, \
                   val_lens, nItems); \
-  int rv = waitPoll(); \
+  err_code_t rv = waitPoll(); \
   collectMessageResult(results, nResults); \
   return rv;\
 }
@@ -113,11 +114,11 @@ IMPL_STORAGE_CMD(prepend, PREPEND_OP)
 IMPL_STORAGE_CMD(cas, CAS_OP)
 
 
-int Client::_delete(const char* const* keys, const size_t* key_lens,
+err_code_t Client::_delete(const char* const* keys, const size_t* key_lens,
                      const bool noreply, size_t nItems,
                      types::message_result_t*** results, size_t* nResults) {
   dispatchDeletion(keys, key_lens, noreply, nItems);
-  int rv = waitPoll();
+  err_code_t rv = waitPoll();
   collectMessageResult(results, nResults);
   return rv;
 }
@@ -141,27 +142,27 @@ void Client::destroyBroadcastResult() {
 }
 
 
-int Client::version(types::broadcast_result_t** results, size_t* nHosts) {
+err_code_t Client::version(types::broadcast_result_t** results, size_t* nHosts) {
   broadcastCommand(keywords::kVERSION, 7);
-  int rv = waitPoll();
+  err_code_t rv = waitPoll();
   collectBroadcastResult(results, nHosts);
   return rv;
 }
 
 
-int Client::stats(types::broadcast_result_t** results, size_t* nHosts) {
+err_code_t Client::stats(types::broadcast_result_t** results, size_t* nHosts) {
   broadcastCommand(keywords::kSTATS, 5);
-  int rv = waitPoll();
+  err_code_t rv = waitPoll();
   collectBroadcastResult(results, nHosts);
   return rv;
 }
 
 
-int Client::touch(const char* const* keys, const size_t* keyLens,
+err_code_t Client::touch(const char* const* keys, const size_t* keyLens,
                    const types::exptime_t exptime, const bool noreply, size_t nItems,
                    types::message_result_t*** results, size_t* nResults) {
   dispatchTouch(keys, keyLens, exptime, noreply, nItems);
-  int rv = waitPoll();
+  err_code_t rv = waitPoll();
   collectMessageResult(results, nResults);
   return rv;
 }
@@ -180,21 +181,21 @@ void Client::collectUnsignedResult(types::unsigned_result_t*** results, size_t* 
   }
 }
 
-int Client::incr(const char* key, const size_t keyLen, const uint64_t delta,
+err_code_t Client::incr(const char* key, const size_t keyLen, const uint64_t delta,
                  const bool noreply,
                  types::unsigned_result_t*** results, size_t* nResults) {
   dispatchIncrDecr(INCR_OP, key, keyLen, delta, noreply);
-  int rv = waitPoll();
+  err_code_t rv = waitPoll();
   collectUnsignedResult(results, nResults);
   return rv;
 }
 
 
-int Client::decr(const char* key, const size_t keyLen, const uint64_t delta,
+err_code_t Client::decr(const char* key, const size_t keyLen, const uint64_t delta,
                  const bool noreply,
                  types::unsigned_result_t*** results, size_t* nResults) {
   dispatchIncrDecr(DECR_OP, key, keyLen, delta, noreply);
-  int rv = waitPoll();
+  err_code_t rv = waitPoll();
   collectUnsignedResult(results, nResults);
   return rv;
 }

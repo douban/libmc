@@ -34,7 +34,7 @@ class ConnectionPool {
                         const uint64_t delta, const bool noreply);
   void broadcastCommand(const char * const cmd, const size_t cmdLens);
 
-  int waitPoll();
+  err_code_t waitPoll();
 
   void collectRetrievalResult(std::vector<types::retrieval_result_t*>& results);
   void collectMessageResult(std::vector<types::message_result_t*>& results);

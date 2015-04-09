@@ -48,6 +48,17 @@ cdef extern from "Common.h" namespace "douban::mc":
         OPT_HASH_FNV1A_32
         OPT_HASH_CRC_32
 
+    ctypedef enum err_code_t:
+        SEND_ERR
+        RECV_ERR
+        CONN_POLL_ERR
+        POLL_TIMEOUT_ERR
+        POLL_ERR
+        MC_SERVER_ERR
+        PROGRAMMING_ERR
+        INCOMPLETE_BUFFER_ERR
+        OK_ERR
+
 
 cdef extern from "Result.h" namespace "douban::mc::types":
     ctypedef int64_t exptime_t
@@ -178,6 +189,19 @@ MC_HASH_MD5 = PyInt_FromLong(OPT_HASH_MD5)
 MC_HASH_FNV1_32 = PyInt_FromLong(OPT_HASH_FNV1_32)
 MC_HASH_FNV1A_32 = PyInt_FromLong(OPT_HASH_FNV1A_32)
 MC_HASH_CRC_32 = PyInt_FromLong(OPT_HASH_CRC_32)
+
+
+cdef dict ERROR_CODE_TO_STR = {
+    SEND_ERR: 'send_error',
+    RECV_ERR: 'recv_error',
+    CONN_POLL_ERR: 'conn_poll_error',
+    POLL_TIMEOUT_ERR: 'poll_timeout',
+    POLL_ERR: 'poll_error',
+    MC_SERVER_ERR: 'server_error',
+    PROGRAMMING_ERR: 'programming_error',
+    INCOMPLETE_BUFFER_ERR: 'incomplete_buffer_error',
+    OK_ERR: 'ok'
+}
 
 
 cdef bytes _encode_value(object val, int comp_threshold, flags_t *flags):
@@ -928,3 +952,6 @@ cdef class PyClient:
 
     def get_last_error(self):
         return self.last_error
+
+    def get_last_strerror(self):
+        return ERROR_CODE_TO_STR.get(self.last_error, '')

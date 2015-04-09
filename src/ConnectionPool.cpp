@@ -359,9 +359,9 @@ void ConnectionPool::broadcastCommand(const char * const cmd, const size_t cmdLe
   }
 }
 
-int ConnectionPool::waitPoll() {
+err_code_t ConnectionPool::waitPoll() {
   if (m_nActiveConn == 0) {
-    return -1;
+    return MC_SERVER_ERR;
   }
   nfds_t n_fds = m_nActiveConn;
   pollfd_t pollfds[n_fds];
@@ -380,17 +380,19 @@ int ConnectionPool::waitPoll() {
     fd2conn[fd_idx] = conn;
   }
 
-  int ret_code = 0;
+  err_code_t ret_code = OK_ERR;
   while (m_nActiveConn) {
     int rv = poll(pollfds, n_fds, s_pollTimeout);
     if (rv == -1) {
       markDeadAll(pollfds, keywords::kPOLL_ERROR);
-      return -1;
+      ret_code = POLL_ERR;
+      break;
     } else if (rv == 0) {
       log_warn("poll timeout. (m_nActiveConn: %d)", m_nActiveConn);
       // NOTE: MUST reset all active TCP connections after timeout.
       markDeadAll(pollfds, keywords::kPOLL_TIMEOUT);
-      return -1;
+      ret_code = POLL_TIMEOUT_ERR;
+      break;
     } else {
       err_code_t err;
       for (fd_idx = 0; fd_idx < n_fds; fd_idx++) {
@@ -399,7 +401,7 @@ int ConnectionPool::waitPoll() {
 
         if (pollfd_ptr->revents & (POLLERR | POLLHUP | POLLNVAL)) {
           markDeadConn(conn, keywords::kCONN_POLL_ERROR, pollfd_ptr);
-          ret_code = -1;
+          ret_code = CONN_POLL_ERR;
           m_nActiveConn -= 1;
           goto next_fd;
         }
@@ -410,7 +412,7 @@ int ConnectionPool::waitPoll() {
           ssize_t nToSend = conn->send();
           if (nToSend == -1) {
             markDeadConn(conn, keywords::kSEND_ERROR, pollfd_ptr);
-            ret_code = -1;
+            ret_code = SEND_ERR;
             m_nActiveConn -= 1;
             goto next_fd;
           } else {
@@ -434,7 +436,7 @@ int ConnectionPool::waitPoll() {
           ssize_t nRecv = conn->recv();
           if (nRecv == -1 || nRecv == 0) {
             markDeadConn(conn, keywords::kRECV_ERROR, pollfd_ptr);
-            ret_code = -1;
+            ret_code = RECV_ERR;
             m_nActiveConn -= 1;
             goto next_fd;
           }
@@ -449,15 +451,18 @@ int ConnectionPool::waitPoll() {
               break;
             case PROGRAMMING_ERR:
               markDeadConn(conn, keywords::kPROGRAMMING_ERROR, pollfd_ptr);
-              ret_code = -1;
+              ret_code = PROGRAMMING_ERR;
               m_nActiveConn -= 1;
               goto next_fd;
               break;
             case MC_SERVER_ERR:
               markDeadConn(conn, keywords::kSERVER_ERROR, pollfd_ptr);
-              ret_code = -1;
+              ret_code = MC_SERVER_ERR;
               m_nActiveConn -= 1;
               goto next_fd;
+              break;
+            default:
+              log_warn("should not be here!");
               break;
           }
         }
@@ -466,7 +471,6 @@ next_fd: {}
       } // end for
     }
   }
-
   return ret_code;
 }
 

@@ -179,6 +179,11 @@ typedef enum {
 
 
 typedef enum {
+  SEND_ERR = -8,
+  RECV_ERR = -7,
+  CONN_POLL_ERR = -6,
+  POLL_TIMEOUT_ERR = -5,
+  POLL_ERR = -4,
   MC_SERVER_ERR = -3,
   PROGRAMMING_ERR = -2,
   INCOMPLETE_BUFFER_ERR = -1,
