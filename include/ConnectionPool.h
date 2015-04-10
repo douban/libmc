@@ -48,6 +48,7 @@ class ConnectionPool {
   void markDeadConn(Connection*, const char*, pollfd_t*);
 
   uint32_t m_nActiveConn; // wait for poll
+  uint32_t m_nInvalidKey;
   std::vector<Connection*> m_activeConns;
   hashkit::KetamaSelector m_connSelector;
   Connection *m_conns;

@@ -46,11 +46,11 @@ void PacketParser::processMessageResult(enum types::message_result_type tp) {
 
 
 void PacketParser::processLineResult(err_code_t& err) {
-  err = OK_ERR;
+  err = RET_OK;
   LineResult* inner = &(m_lineResults.back());
   inner->line.clear();
   inner->line_len = m_buffer_reader->readUntil(err, '\n', inner->line);
-  if (err != OK_ERR) {
+  if (err != RET_OK) {
     return;
   }
   m_buffer_reader->skipBytes(err, 1);
@@ -78,11 +78,11 @@ size_t PacketParser::requestKeyCount() {
 
 
 void PacketParser::process_packets(err_code_t& err) {
-  // NOTE: always return with err INCOMPLETE_BUFFER_ERR if not all packets are recved.
+  // NOTE: always return with err RET_INCOMPLETE_BUFFER_ERR if not all packets are recved.
   //
   // m_n_active--;
   // m_buffer_reader->print();
-  err = OK_ERR;
+  err = RET_OK;
 
   if (IS_END_STATE(m_state)) {
     m_state = FSM_START;
@@ -91,7 +91,7 @@ void PacketParser::process_packets(err_code_t& err) {
 #define SKIP_BYTES(N) \
   do { \
     m_buffer_reader->skipBytes(err, (N)); \
-    if (err != OK_ERR) { \
+    if (err != RET_OK) { \
       return; \
     } \
   } while(0)
@@ -99,7 +99,7 @@ void PacketParser::process_packets(err_code_t& err) {
 #define READ_UNSIGNED(N) \
   do { \
     m_buffer_reader->readUnsigned(err, (N)); \
-    if (err != OK_ERR) { \
+    if (err != RET_OK) { \
       return; \
     } \
   } while (0)
@@ -109,7 +109,7 @@ void PacketParser::process_packets(err_code_t& err) {
       case FSM_START:
         {
           this->start_state(err);
-          if (err != OK_ERR) {
+          if (err != RET_OK) {
             return;
           }
         }
@@ -119,7 +119,7 @@ void PacketParser::process_packets(err_code_t& err) {
           mt_kvPtr = &m_retrievalResults.back();
           mt_kvPtr->key.clear();
           mt_kvPtr->key_len = m_buffer_reader->readUntil(err, ' ', mt_kvPtr->key);
-          if (err != OK_ERR) {
+          if (err != RET_OK) {
             return;
           }
           SKIP_BYTES(1);  // " "
@@ -152,7 +152,7 @@ void PacketParser::process_packets(err_code_t& err) {
           assert(mt_kvPtr != NULL);
           if (m_state == FSM_GET_BYTES_CAS) {
             const char c = m_buffer_reader->peek(err, 0);
-            if (err != OK_ERR) {
+            if (err != RET_OK) {
               return;
             }
             if (c == '\n') {  // get
@@ -179,7 +179,7 @@ void PacketParser::process_packets(err_code_t& err) {
               m_buffer_reader->setNextPreferedDataBlockSize(mt_kvPtr->bytes + 2 - m_buffer_reader->readLeft());
             }
             m_buffer_reader->readBytes(err, mt_kvPtr->bytes, mt_kvPtr->data_block);
-            if (err != OK_ERR) {
+            if (err != RET_OK) {
               return;
             }
             mt_kvPtr->bytesRemain = 0;
@@ -215,7 +215,7 @@ void PacketParser::process_packets(err_code_t& err) {
       case FSM_INCR_DECR_REMAINING:
         {
           m_buffer_reader->skipUntil(err, '\n');
-          if (err != OK_ERR) {
+          if (err != RET_OK) {
             return;
           }
           SKIP_BYTES(1);  // '\n'
@@ -227,7 +227,7 @@ void PacketParser::process_packets(err_code_t& err) {
       case FSM_VER_START:
         {
           processLineResult(err);
-          if (err != OK_ERR) {
+          if (err != RET_OK) {
             return;
           }
           m_state = FSM_END;
@@ -236,7 +236,7 @@ void PacketParser::process_packets(err_code_t& err) {
       case FSM_STAT_START:
         {
           processLineResult(err);
-          if (err != OK_ERR) {
+          if (err != RET_OK) {
             return;
           }
           m_state = FSM_START;
@@ -251,9 +251,9 @@ void PacketParser::process_packets(err_code_t& err) {
 
 int PacketParser::start_state(err_code_t& err) {
 
-  err = OK_ERR;
+  err = RET_OK;
   const char c1 = m_buffer_reader->peek(err, 0);
-  if (err != OK_ERR) {
+  if (err != RET_OK) {
     return 0;
   }
   // log_info("start_state with %c", c1);
@@ -262,7 +262,7 @@ int PacketParser::start_state(err_code_t& err) {
 #define EXPECT_BYTES(S, N) \
   do { \
     m_buffer_reader->expectBytes(err, (S), (N)); \
-    if (err != OK_ERR) { \
+    if (err != RET_OK) { \
       return 0; \
     } \
   } while (0)
@@ -271,7 +271,7 @@ int PacketParser::start_state(err_code_t& err) {
     case 'V':
       {
         const char c2 = m_buffer_reader->peek(err, 1);
-        if (err != OK_ERR) {
+        if (err != RET_OK) {
           return 0;
         }
         if (c2 == 'A') {
@@ -290,7 +290,7 @@ int PacketParser::start_state(err_code_t& err) {
     case 'E':
       {
         const char c2 = m_buffer_reader->peek(err, 1);
-        if (err != OK_ERR) {
+        if (err != RET_OK) {
           return 0;
         }
         if (c2 == 'R') {
@@ -298,15 +298,15 @@ int PacketParser::start_state(err_code_t& err) {
           // client side(programmer) should be blame for this error
           TokenData err_td;
           size_t n = m_buffer_reader->readUntil(err, '\n', err_td);
-          if (err != OK_ERR) {
+          if (err != RET_OK) {
             return 0;
           }
           m_buffer_reader->skipBytes(err, 1); // '\n'
-          assert(OK_ERR == err);
+          assert(err == RET_OK);
           char* ptr = parseTokenData(err_td, n);
           log_err("error: [%.*s]", static_cast<int>(n - 1), ptr); // -1 to ignore '\r'
           freeTokenData(err_td);
-          err = PROGRAMMING_ERR;
+          err = RET_PROGRAMMING_ERR;
           m_state = FSM_ERROR;
         } else if (c2 == 'N') {
           // END
@@ -329,11 +329,11 @@ int PacketParser::start_state(err_code_t& err) {
     case 'S':
       {
         const char c3 = m_buffer_reader->peek(err, 2);
-        if (err != OK_ERR) {
+        if (err != RET_OK) {
           return 0;
         }
         const char c2 = m_buffer_reader->peek(err, 1);
-        if (err != OK_ERR) {
+        if (err != RET_OK) {
           return 0;
         }
         if (c2 == 'T') {
@@ -351,15 +351,15 @@ int PacketParser::start_state(err_code_t& err) {
           // SERVER_ERROR
           TokenData err_td;
           size_t n = m_buffer_reader->readUntil(err, '\n', err_td);
-          if (err != OK_ERR) {
+          if (err != RET_OK) {
             return 0;
           }
           m_buffer_reader->skipBytes(err, 1); // '\n'
-          assert(err == OK_ERR);
+          assert(err == RET_OK);
           char* ptr = parseTokenData(err_td, n);
           log_err("server_error: [%.*s]", static_cast<int>(n - 1), ptr); // -1 to ignore '/r'
           freeTokenData(err_td);
-          err = MC_SERVER_ERR;
+          err = RET_MC_SERVER_ERR;
           m_state = FSM_ERROR;
         }
       }
@@ -374,7 +374,7 @@ int PacketParser::start_state(err_code_t& err) {
     case 'N':
       {
         const char c5 = m_buffer_reader->peek(err, 4);
-        if (err != OK_ERR) {
+        if (err != RET_OK) {
           return 0;
         }
 
@@ -402,15 +402,15 @@ int PacketParser::start_state(err_code_t& err) {
         // client side(programmer) should be blame for this error
         TokenData err_td;
         size_t n = m_buffer_reader->readUntil(err, '\n', err_td);
-        if (err != OK_ERR) {
+        if (err != RET_OK) {
           return 0;
         }
         m_buffer_reader->skipBytes(err, 1); // '\n'
-        assert(err == OK_ERR);
+        assert(err == RET_OK);
         char* ptr = parseTokenData(err_td, n);
         log_err("client_error: [%.*s]", static_cast<int>(n - 1), ptr); // -1 to ignore '/r'
         freeTokenData(err_td);
-        err = PROGRAMMING_ERR;
+        err = RET_PROGRAMMING_ERR;
         m_state = FSM_ERROR;
       }
       break;
@@ -430,7 +430,7 @@ int PacketParser::start_state(err_code_t& err) {
       }
       break;
     default:
-      err = PROGRAMMING_ERR;
+      err = RET_PROGRAMMING_ERR;
       log_err("programming error: unexpected leading char '%c' found", c1);
       break;
   }

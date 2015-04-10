@@ -6,7 +6,7 @@
 #include "gtest/gtest.h"
 
 using douban::mc::err_code_t;
-using douban::mc::INCOMPLETE_BUFFER_ERR;
+using douban::mc::RET_INCOMPLETE_BUFFER_ERR;
 using douban::mc::types::RetrievalResult;
 using douban::mc::types::retrieval_result_t;
 
@@ -33,7 +33,7 @@ TEST(test_parser, empty_result) {
       ++i;
     }
     parser.process_packets(err);
-    if (err == INCOMPLETE_BUFFER_ERR) {
+    if (err == RET_INCOMPLETE_BUFFER_ERR) {
       continue;
     }
     break;
@@ -65,7 +65,7 @@ TEST(test_parser, multi_results) {
       ++i;
     }
     parser.process_packets(err);
-    if (err == INCOMPLETE_BUFFER_ERR) {
+    if (err == RET_INCOMPLETE_BUFFER_ERR) {
       continue;
     }
     break;

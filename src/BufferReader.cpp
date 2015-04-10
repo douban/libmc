@@ -155,9 +155,9 @@ size_t BufferReader::nBytesRef() {
 
 
 const char BufferReader::peek(err_code_t& err, size_t offset) const {
-  err = OK_ERR;
+  err = RET_OK;
   if (offset >= m_readLeft) {
-    err = INCOMPLETE_BUFFER_ERR;
+    err = RET_INCOMPLETE_BUFFER_ERR;
     return '\0';
   }
   DataCursor cur = m_blockReadCursor;
@@ -172,7 +172,7 @@ const char BufferReader::peek(err_code_t& err, size_t offset) const {
         ++cur.iterator;
         cur.offset = 0;
       } else {
-        err = INCOMPLETE_BUFFER_ERR;
+        err = RET_INCOMPLETE_BUFFER_ERR;
         return '\0';
       }
     }
@@ -184,7 +184,7 @@ const char BufferReader::peek(err_code_t& err, size_t offset) const {
 
 size_t BufferReader::readUntil(err_code_t& err, char value, TokenData& tokenData) {
   assert(tokenData.empty());
-  err = OK_ERR;
+  err = RET_OK;
   DataCursor endCur = m_blockReadCursor;
   DataBlock * dbPtr = NULL;
   size_t nSize = 0;
@@ -200,7 +200,7 @@ size_t BufferReader::readUntil(err_code_t& err, char value, TokenData& tokenData
   }
 
   if (endCur.iterator == m_dataBlockList.end()) {
-    err = INCOMPLETE_BUFFER_ERR;
+    err = RET_INCOMPLETE_BUFFER_ERR;
     return 0;
   }
 
@@ -230,7 +230,7 @@ size_t BufferReader::readUntil(err_code_t& err, char value, TokenData& tokenData
 
 
 size_t BufferReader::skipUntil(err_code_t& err, char value) {
-  err = OK_ERR;
+  err = RET_OK;
   DataCursor endCur = m_blockReadCursor;
   DataBlock * dbPtr = NULL;
   size_t nSize = 0;
@@ -246,7 +246,7 @@ size_t BufferReader::skipUntil(err_code_t& err, char value) {
   }
 
   if (endCur.iterator == m_dataBlockList.end()) {
-    err = INCOMPLETE_BUFFER_ERR;
+    err = RET_INCOMPLETE_BUFFER_ERR;
     return 0;
   }
 
@@ -273,10 +273,10 @@ size_t BufferReader::skipUntil(err_code_t& err, char value) {
 
 
 void BufferReader::readUnsigned(err_code_t& err, uint64_t& value) {
-  err = OK_ERR;
+  err = RET_OK;
   value = 0ULL;
   if (m_readLeft < 2) {
-    err = INCOMPLETE_BUFFER_ERR;
+    err = RET_INCOMPLETE_BUFFER_ERR;
     return;
   }
 
@@ -294,12 +294,12 @@ void BufferReader::readUnsigned(err_code_t& err, uint64_t& value) {
   }
 
   if (m_blockReadCursor == endCur) {
-    err = PROGRAMMING_ERR;
+    err = RET_PROGRAMMING_ERR;
     return;
   }
 
   if (endCur.iterator == m_dataBlockList.end()) {
-    err = INCOMPLETE_BUFFER_ERR;
+    err = RET_INCOMPLETE_BUFFER_ERR;
     return;
   }
 
@@ -329,12 +329,12 @@ void BufferReader::readUnsigned(err_code_t& err, uint64_t& value) {
 
 void BufferReader::readBytes(err_code_t& err, size_t len, TokenData& tokenData) {
   assert(tokenData.empty());
-  err = OK_ERR;
+  err = RET_OK;
   if (len == 0) {
     return;
   }
   if (len > m_readLeft) {
-    err = INCOMPLETE_BUFFER_ERR;
+    err = RET_INCOMPLETE_BUFFER_ERR;
     return;
   }
   m_readLeft -= len;
@@ -363,9 +363,9 @@ void BufferReader::readBytes(err_code_t& err, size_t len, TokenData& tokenData) 
 
 void BufferReader::expectBytes(err_code_t& err, const char* str, size_t len) {
   assert(len > 0);
-  err = OK_ERR;
+  err = RET_OK;
   if (len > m_readLeft) {
-    err = INCOMPLETE_BUFFER_ERR;
+    err = RET_INCOMPLETE_BUFFER_ERR;
     return;
   }
   m_readLeft -= len;
@@ -378,7 +378,7 @@ void BufferReader::expectBytes(err_code_t& err, const char* str, size_t len) {
 
     if (len < maxToRead) {
       if (strncmp(dbPtr->at(m_blockReadCursor.offset), str + pos, len) != 0) {
-        err = PROGRAMMING_ERR;
+        err = RET_PROGRAMMING_ERR;
         return;
       }
       pos += len;
@@ -387,7 +387,7 @@ void BufferReader::expectBytes(err_code_t& err, const char* str, size_t len) {
       len = 0;
     } else { // len == maxToRead
       if (strncmp(dbPtr->at(m_blockReadCursor.offset), str + pos, maxToRead) != 0) {
-        err = PROGRAMMING_ERR;
+        err = RET_PROGRAMMING_ERR;
         return;
       }
       pos += maxToRead;
@@ -402,9 +402,9 @@ void BufferReader::expectBytes(err_code_t& err, const char* str, size_t len) {
 
 void BufferReader::skipBytes(err_code_t& err, size_t len) {
   assert(len > 0);
-  err = OK_ERR;
+  err = RET_OK;
   if (len > m_readLeft) {
-    err = INCOMPLETE_BUFFER_ERR;
+    err = RET_INCOMPLETE_BUFFER_ERR;
     return;
   }
   m_readLeft -= len;
