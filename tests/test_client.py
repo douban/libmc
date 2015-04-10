@@ -2,7 +2,10 @@
 
 import sys
 import unittest
-from libmc import Client, encode_value, MC_RETURN_OK, MC_RETURN_INVALID_KEY_ERR
+from libmc import (
+    Client, encode_value, MC_RETURN_OK, MC_RETURN_INVALID_KEY_ERR,
+    MC_RETURN_MC_SERVER_ERR
+)
 
 
 # defined in _client.pyx
@@ -230,3 +233,8 @@ class ErrorCodeTestCase(unittest.TestCase):
     def test_invalid_key(self):
         self.mc.get('invalid key')
         assert self.mc.get_last_error() == MC_RETURN_INVALID_KEY_ERR
+
+    def test_mc_server_err(self):
+        mc = Client(["not_exist_host:11211"])
+        mc.get('valid_key')
+        assert mc.get_last_error() == MC_RETURN_MC_SERVER_ERR

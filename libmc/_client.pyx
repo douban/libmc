@@ -208,7 +208,7 @@ cdef dict ERROR_CODE_TO_STR = {
     MC_RETURN_SEND_ERR: 'send_error',
     MC_RETURN_RECV_ERR: 'recv_error',
     MC_RETURN_CONN_POLL_ERR: 'conn_poll_error',
-    MC_RETURN_POLL_TIMEOUT_ERR: 'poll_timeout',
+    MC_RETURN_POLL_TIMEOUT_ERR: 'poll_timeout_error',
     MC_RETURN_POLL_ERR: 'poll_error',
     MC_RETURN_MC_SERVER_ERR: 'server_error',
     MC_RETURN_PROGRAMMING_ERR: 'programming_error',
