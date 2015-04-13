@@ -2,7 +2,10 @@
 
 import sys
 import unittest
-from libmc import Client, encode_value
+from libmc import (
+    Client, encode_value, MC_RETURN_OK, MC_RETURN_INVALID_KEY_ERR,
+    MC_RETURN_MC_SERVER_ERR
+)
 
 
 # defined in _client.pyx
@@ -218,3 +221,20 @@ class TenServersCase(SingleServerCase):
         self.noreply_mc = Client(
             ["127.0.0.1:%d" % (21211 + i) for i in range(10)], noreply=True
         )
+
+
+class ErrorCodeTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.mc = Client(["127.0.0.1:21211"])
+        assert self.mc.version()
+        assert self.mc.get_last_error() == MC_RETURN_OK
+
+    def test_invalid_key(self):
+        self.mc.get('invalid key')
+        assert self.mc.get_last_error() == MC_RETURN_INVALID_KEY_ERR
+
+    def test_mc_server_err(self):
+        mc = Client(["not_exist_host:11211"])
+        mc.get('valid_key')
+        assert mc.get_last_error() == MC_RETURN_MC_SERVER_ERR

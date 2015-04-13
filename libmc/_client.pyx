@@ -48,6 +48,18 @@ cdef extern from "Common.h" namespace "douban::mc":
         OPT_HASH_FNV1A_32
         OPT_HASH_CRC_32
 
+    ctypedef enum err_code_t:
+        RET_SEND_ERR
+        RET_RECV_ERR
+        RET_CONN_POLL_ERR
+        RET_POLL_TIMEOUT_ERR
+        RET_POLL_ERR
+        RET_MC_SERVER_ERR
+        RET_PROGRAMMING_ERR
+        RET_INVALID_KEY_ERR
+        RET_INCOMPLETE_BUFFER_ERR
+        RET_OK
+
 
 cdef extern from "Result.h" namespace "douban::mc::types":
     ctypedef int64_t exptime_t
@@ -178,6 +190,32 @@ MC_HASH_MD5 = PyInt_FromLong(OPT_HASH_MD5)
 MC_HASH_FNV1_32 = PyInt_FromLong(OPT_HASH_FNV1_32)
 MC_HASH_FNV1A_32 = PyInt_FromLong(OPT_HASH_FNV1A_32)
 MC_HASH_CRC_32 = PyInt_FromLong(OPT_HASH_CRC_32)
+
+
+MC_RETURN_SEND_ERR = PyInt_FromLong(RET_SEND_ERR)
+MC_RETURN_RECV_ERR = PyInt_FromLong(RET_RECV_ERR)
+MC_RETURN_CONN_POLL_ERR = PyInt_FromLong(RET_CONN_POLL_ERR)
+MC_RETURN_POLL_TIMEOUT_ERR = PyInt_FromLong(RET_POLL_TIMEOUT_ERR)
+MC_RETURN_POLL_ERR = PyInt_FromLong(RET_POLL_ERR)
+MC_RETURN_MC_SERVER_ERR = PyInt_FromLong(RET_MC_SERVER_ERR)
+MC_RETURN_PROGRAMMING_ERR = PyInt_FromLong(RET_PROGRAMMING_ERR)
+MC_RETURN_INVALID_KEY_ERR = PyInt_FromLong(RET_INVALID_KEY_ERR)
+MC_RETURN_INCOMPLETE_BUFFER_ERR = PyInt_FromLong(RET_INCOMPLETE_BUFFER_ERR)
+MC_RETURN_OK = PyInt_FromLong(RET_OK)
+
+
+cdef dict ERROR_CODE_TO_STR = {
+    MC_RETURN_SEND_ERR: 'send_error',
+    MC_RETURN_RECV_ERR: 'recv_error',
+    MC_RETURN_CONN_POLL_ERR: 'conn_poll_error',
+    MC_RETURN_POLL_TIMEOUT_ERR: 'poll_timeout_error',
+    MC_RETURN_POLL_ERR: 'poll_error',
+    MC_RETURN_MC_SERVER_ERR: 'server_error',
+    MC_RETURN_PROGRAMMING_ERR: 'programming_error',
+    MC_RETURN_INVALID_KEY_ERR: 'invalid_key_error',
+    MC_RETURN_INCOMPLETE_BUFFER_ERR: 'incomplete_buffer_error',
+    MC_RETURN_OK: 'ok'
+}
 
 
 cdef bytes _encode_value(object val, int comp_threshold, flags_t *flags):
@@ -928,3 +966,6 @@ cdef class PyClient:
 
     def get_last_error(self):
         return self.last_error
+
+    def get_last_strerror(self):
+        return ERROR_CODE_TO_STR.get(self.last_error, '')

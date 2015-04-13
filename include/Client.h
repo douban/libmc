@@ -16,15 +16,15 @@ class Client : public ConnectionPool {
   void config(config_options_t opt, int val);
   // retrieval commands
   void destroyRetrievalResult();
-  int get(const char* const* keys, const size_t* keyLens, size_t nKeys,
+  err_code_t get(const char* const* keys, const size_t* keyLens, size_t nKeys,
            types::retrieval_result_t*** results, size_t* nResults);
-  int gets(const char* const* keys, const size_t* keyLens, size_t nKeys,
+  err_code_t gets(const char* const* keys, const size_t* keyLens, size_t nKeys,
            types::retrieval_result_t*** results, size_t* nResults);
 
   // storage commands
   void destroyMessageResult();
 #define DECL_STORAGE_CMD(M) \
-  int M(const char* const* keys, const size_t* key_lens, \
+  err_code_t M(const char* const* keys, const size_t* key_lens, \
            const types::flags_t* flags, const types::exptime_t exptime, \
            const types::cas_unique_t* cas_uniques, const bool noreply, \
            const char* const* vals, const size_t* val_lens, \
@@ -37,27 +37,27 @@ class Client : public ConnectionPool {
   DECL_STORAGE_CMD(prepend);
   DECL_STORAGE_CMD(cas);
 
-  int _delete(const char* const* keys, const size_t* key_lens,
+  err_code_t _delete(const char* const* keys, const size_t* key_lens,
                const bool noreply, size_t nItems,
                types::message_result_t*** results, size_t* nResults);
 
   // broadcast commands
   void destroyBroadcastResult();
 
-  int version(types::broadcast_result_t** results, size_t* nHosts);
-  int stats(types::broadcast_result_t** results, size_t* nHosts);
+  err_code_t version(types::broadcast_result_t** results, size_t* nHosts);
+  err_code_t stats(types::broadcast_result_t** results, size_t* nHosts);
 
   // touch
-  int touch(const char* const* keys, const size_t* keyLens,
+  err_code_t touch(const char* const* keys, const size_t* keyLens,
              const types::exptime_t exptime, const bool noreply, size_t nItems,
              types::message_result_t*** results, size_t* nResults);
 
   // incr / decr
   void destroyUnsignedResult();
-  int incr(const char* key, const size_t keyLen, const uint64_t delta,
+  err_code_t incr(const char* key, const size_t keyLen, const uint64_t delta,
            const bool noreply,
            types::unsigned_result_t*** result, size_t* nResults);
-  int decr(const char* key, const size_t keyLen, const uint64_t delta,
+  err_code_t decr(const char* key, const size_t keyLen, const uint64_t delta,
            const bool noreply,
            types::unsigned_result_t*** result, size_t* nResults);
 

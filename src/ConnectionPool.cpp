@@ -26,7 +26,7 @@ namespace douban {
 namespace mc {
 
 ConnectionPool::ConnectionPool()
-  : m_nActiveConn(0), m_conns(NULL), m_nConns(0) {
+  : m_nActiveConn(0), m_nInvalidKey(0), m_conns(NULL), m_nConns(0) {
 }
 
 
@@ -105,6 +105,7 @@ void ConnectionPool::dispatchStorage(op_code_t op,
 
   for (; i < nItems; ++i) {
     if (!utility::isValidKey(keys[i], keyLens[i])) {
+      m_nInvalidKey += 1;
       continue;
     }
     Connection* conn = m_connSelector.getConn(keys[i], keyLens[i]);
@@ -180,6 +181,7 @@ void ConnectionPool::dispatchRetrieval(op_code_t op, const char* const* keys,
     const char* key = keys[i];
     const size_t len = keyLens[i];
     if (!utility::isValidKey(key, len)) {
+      m_nInvalidKey += 1;
       continue;
     }
     Connection* conn = m_connSelector.getConn(key, len);
@@ -223,6 +225,7 @@ void ConnectionPool::dispatchDeletion(const char* const* keys, const size_t* key
   size_t i = 0, idx = 0;
   for (; i < nItems; ++i) {
     if (!utility::isValidKey(keys[i], keyLens[i])) {
+      m_nInvalidKey += 1;
       continue;
     }
     Connection* conn = m_connSelector.getConn(keys[i], keyLens[i]);
@@ -264,6 +267,7 @@ void ConnectionPool::dispatchTouch(
   size_t i = 0, idx = 0;
   for (; i < nItems; ++i) {
     if (!utility::isValidKey(keys[i], keyLens[i])) {
+      m_nInvalidKey += 1;
       continue;
     }
     Connection* conn = m_connSelector.getConn(keys[i], keyLens[i]);
@@ -303,6 +307,7 @@ void ConnectionPool::dispatchTouch(
 void ConnectionPool::dispatchIncrDecr(op_code_t op, const char* key, const size_t keyLen,
                                       const uint64_t delta, const bool noreply) {
   if (!utility::isValidKey(key, keyLen)) {
+    m_nInvalidKey += 1;
     return;
   }
   Connection* conn = m_connSelector.getConn(key, keyLen);
@@ -359,9 +364,13 @@ void ConnectionPool::broadcastCommand(const char * const cmd, const size_t cmdLe
   }
 }
 
-int ConnectionPool::waitPoll() {
+err_code_t ConnectionPool::waitPoll() {
   if (m_nActiveConn == 0) {
-    return -1;
+    if (m_nInvalidKey > 0) {
+      return RET_INVALID_KEY_ERR;
+    } else {
+      return RET_MC_SERVER_ERR;
+    }
   }
   nfds_t n_fds = m_nActiveConn;
   pollfd_t pollfds[n_fds];
@@ -380,17 +389,19 @@ int ConnectionPool::waitPoll() {
     fd2conn[fd_idx] = conn;
   }
 
-  int ret_code = 0;
+  err_code_t ret_code = RET_OK;
   while (m_nActiveConn) {
     int rv = poll(pollfds, n_fds, s_pollTimeout);
     if (rv == -1) {
       markDeadAll(pollfds, keywords::kPOLL_ERROR);
-      return -1;
+      ret_code = RET_POLL_ERR;
+      break;
     } else if (rv == 0) {
       log_warn("poll timeout. (m_nActiveConn: %d)", m_nActiveConn);
       // NOTE: MUST reset all active TCP connections after timeout.
       markDeadAll(pollfds, keywords::kPOLL_TIMEOUT);
-      return -1;
+      ret_code = RET_POLL_TIMEOUT_ERR;
+      break;
     } else {
       err_code_t err;
       for (fd_idx = 0; fd_idx < n_fds; fd_idx++) {
@@ -399,7 +410,7 @@ int ConnectionPool::waitPoll() {
 
         if (pollfd_ptr->revents & (POLLERR | POLLHUP | POLLNVAL)) {
           markDeadConn(conn, keywords::kCONN_POLL_ERROR, pollfd_ptr);
-          ret_code = -1;
+          ret_code = RET_CONN_POLL_ERR;
           m_nActiveConn -= 1;
           goto next_fd;
         }
@@ -410,7 +421,7 @@ int ConnectionPool::waitPoll() {
           ssize_t nToSend = conn->send();
           if (nToSend == -1) {
             markDeadConn(conn, keywords::kSEND_ERROR, pollfd_ptr);
-            ret_code = -1;
+            ret_code = RET_SEND_ERR;
             m_nActiveConn -= 1;
             goto next_fd;
           } else {
@@ -434,30 +445,33 @@ int ConnectionPool::waitPoll() {
           ssize_t nRecv = conn->recv();
           if (nRecv == -1 || nRecv == 0) {
             markDeadConn(conn, keywords::kRECV_ERROR, pollfd_ptr);
-            ret_code = -1;
+            ret_code = RET_RECV_ERR;
             m_nActiveConn -= 1;
             goto next_fd;
           }
 
           conn->process(err);
           switch (err) {
-            case OK_ERR:
+            case RET_OK:
               pollfd_ptr->events &= ~POLLIN;
               --m_nActiveConn;
               break;
-            case INCOMPLETE_BUFFER_ERR:
+            case RET_INCOMPLETE_BUFFER_ERR:
               break;
-            case PROGRAMMING_ERR:
+            case RET_PROGRAMMING_ERR:
               markDeadConn(conn, keywords::kPROGRAMMING_ERROR, pollfd_ptr);
-              ret_code = -1;
+              ret_code = RET_PROGRAMMING_ERR;
               m_nActiveConn -= 1;
               goto next_fd;
               break;
-            case MC_SERVER_ERR:
+            case RET_MC_SERVER_ERR:
               markDeadConn(conn, keywords::kSERVER_ERROR, pollfd_ptr);
-              ret_code = -1;
+              ret_code = RET_MC_SERVER_ERR;
               m_nActiveConn -= 1;
               goto next_fd;
+              break;
+            default:
+              NOT_REACHED();
               break;
           }
         }
@@ -466,7 +480,6 @@ next_fd: {}
       } // end for
     }
   }
-
   return ret_code;
 }
 
@@ -548,6 +561,7 @@ void ConnectionPool::reset() {
     (*it)->reset();
   }
   m_nActiveConn = 0;
+  m_nInvalidKey = 0;
   m_activeConns.clear();
 }
 
