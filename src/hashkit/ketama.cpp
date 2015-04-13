@@ -50,10 +50,10 @@ void KetamaSelector::addServers(Connection* conns, size_t nConns) {
     for (size_t pointer_idx= 0; pointer_idx < s_pointerPerServer / s_pointerPerHash;
          pointer_idx++) {
       if (conn->port() != MC_DEFAULT_PORT) {
-        sort_host_len = snprintf(sort_host, sizeof(sort_host), "%s:%u-%lu",
+        sort_host_len = snprintf(sort_host, sizeof(sort_host), "%s:%u-%zu",
                                  conn->host(), conn->port(), pointer_idx);
       } else {
-        sort_host_len = snprintf(sort_host, sizeof(sort_host), "%s-%lu",
+        sort_host_len = snprintf(sort_host, sizeof(sort_host), "%s-%zu",
                                  conn->host(), pointer_idx);
       }
       continuum_item_t item;

@@ -74,6 +74,9 @@ class Connection {
 
     static int s_retryTimeout;
     static int s_connectTimeout;
+
+ private:
+    Connection(const Connection& conn);
 };
 
 

@@ -11,13 +11,24 @@ from ._client import (
     MC_HASH_FNV1_32,
     MC_HASH_FNV1A_32,
     MC_HASH_CRC_32,
+
+    MC_RETURN_SEND_ERR,
+    MC_RETURN_RECV_ERR,
+    MC_RETURN_CONN_POLL_ERR,
+    MC_RETURN_POLL_TIMEOUT_ERR,
+    MC_RETURN_POLL_ERR,
+    MC_RETURN_MC_SERVER_ERR,
+    MC_RETURN_PROGRAMMING_ERR,
+    MC_RETURN_INVALID_KEY_ERR,
+    MC_RETURN_INCOMPLETE_BUFFER_ERR,
+    MC_RETURN_OK,
 )
 
 __VERSION__ = '0.5.0'
-__version__ = "c5566db"
+__version__ = "v0.5.0-8-g46cfcd2"
 __author__ = "mckelvin"
-__email__ = "kelvin0576@gmail.com"
-__date__ = "Sat Apr 4 13:07:39 2015 +0800"
+__email__ = "mckelvin@users.noreply.github.com"
+__date__ = "Thu Apr 9 17:29:14 2015 +0800"
 
 
 class Client(PyClient):
@@ -30,5 +41,11 @@ __all__ = [
     'MC_DEFAULT_EXPTIME', 'MC_POLL_TIMEOUT', 'MC_CONNECT_TIMEOUT',
     'MC_RETRY_TIMEOUT',
 
-    'MC_HASH_MD5', 'MC_HASH_FNV1_32', 'MC_HASH_FNV1A_32', 'MC_HASH_CRC_32'
+    'MC_HASH_MD5', 'MC_HASH_FNV1_32', 'MC_HASH_FNV1A_32', 'MC_HASH_CRC_32',
+
+    'MC_RETURN_SEND_ERR', 'MC_RETURN_RECV_ERR', 'MC_RETURN_CONN_POLL_ERR',
+    'MC_RETURN_POLL_TIMEOUT_ERR', 'MC_RETURN_POLL_ERR',
+    'MC_RETURN_MC_SERVER_ERR', 'MC_RETURN_PROGRAMMING_ERR',
+    'MC_RETURN_INVALID_KEY_ERR', 'MC_RETURN_INCOMPLETE_BUFFER_ERR',
+    'MC_RETURN_OK',
 ]

@@ -14,7 +14,6 @@ class DataBlock {
   DataBlock();
   DataBlock(const DataBlock&);
   ~DataBlock();
-  static DataBlock* create(size_t len);
   static void setMinCapacity(size_t len);
   static size_t minCapacity();
 

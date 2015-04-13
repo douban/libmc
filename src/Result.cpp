@@ -31,10 +31,10 @@ RetrievalResult::RetrievalResult(const RetrievalResult& other) {
 
 
 RetrievalResult::~RetrievalResult() {
-  if (key.size() > 1 && m_inner.key != NULL) { // copy happened
+  if (key.size() > 1) { // copy happened
     delete[] m_inner.key;
   }
-  if (data_block.size() > 1 && m_inner.data_block != NULL) {
+  if (data_block.size() > 1) {
     delete[] m_inner.data_block;
   }
   freeTokenData(key);
@@ -69,7 +69,7 @@ LineResult::LineResult(const LineResult& other) {
 
 
 LineResult::~LineResult() {
-  if (this->line.size() > 1 && this->m_inner != NULL) {
+  if (this->line.size() > 1) {
     delete[] this->m_inner;
   }
   freeTokenData(this->line);

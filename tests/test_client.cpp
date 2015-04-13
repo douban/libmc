@@ -25,11 +25,6 @@ TEST(test_client, del_get_set_get_del) {
     "foo", "tuiche", "buzai"
   };
 
-  size_t key_lens[] = {3, 6, 5};
-
-  flags_t flags[] = {0, 0, 0};
-  exptime_t exptime = 0;
-
   const char* vals[] = {
     "value of foo", "value of tuiche", "value of buzai"
   };
@@ -42,6 +37,9 @@ TEST(test_client, del_get_set_get_del) {
     retrieval_result_t **r_results = NULL;
     message_result_t **m_results = NULL;
     size_t nResults = 0;
+    flags_t flags[] = {0, 0, 0};
+    size_t key_lens[] = {3, 6, 5};
+    exptime_t exptime = 0;
 
     client->_delete(keys, key_lens, 0, 3, &m_results, &nResults);
     client->destroyMessageResult();
@@ -88,10 +86,6 @@ TEST(test_client, test_storage) {
     "foo", "tuiche", "buzai"
   };
 
-  size_t key_lens[] = {3, 6, 5};
-
-  flags_t flags[] = {0, 0, 0};
-  exptime_t exptime = 0;
 
   const char* vals[] = {
     "value of foo", "value of tuiche", "value of buzai"
@@ -104,7 +98,11 @@ TEST(test_client, test_storage) {
   } else {
     retrieval_result_t **r_results = NULL;
     message_result_t **m_results = NULL;
+    size_t key_lens[] = {3, 6, 5};
+    flags_t flags[] = {0, 0, 0};
+    exptime_t exptime = 0;
     size_t nResults = 0;
+
 
     client->_delete(keys, key_lens, 0, 3, &m_results, &nResults);
     client->destroyMessageResult();
@@ -248,7 +246,6 @@ TEST(test_client, test_touch) {
   size_t key_lens[] = {3, 6, 5};
 
   flags_t flags[] = {0, 0, 0};
-  exptime_t exptime = 0;
 
   const char* vals[] = {
     "value of foo", "value of tuiche", "value of buzai"
@@ -261,6 +258,7 @@ TEST(test_client, test_touch) {
   } else {
     message_result_t **m_results = NULL;
     size_t nResults = 0;
+    exptime_t exptime = 0;
 
     client->_delete(keys, key_lens, 0, 3, &m_results, &nResults);
     client->destroyMessageResult();
@@ -293,7 +291,6 @@ TEST(test_client, test_incr_decr) {
   size_t key_lens[] = {3, 6, 5};
 
   flags_t flags[] = {0, 0, 0};
-  exptime_t exptime = 0;
 
   const char* vals[] = {
     "99", "101", "100"
@@ -311,6 +308,7 @@ TEST(test_client, test_incr_decr) {
     unsigned_result_t **u_results = NULL;
 
     size_t nResults = 0;
+    exptime_t exptime = 0;
 
     client->_delete(keys, key_lens, 0, 3, &m_results, &nResults);
     client->destroyMessageResult();

@@ -32,9 +32,7 @@ size_t DataBlock::s_minCapacity(MIN_DATABLOCK_CAPACITY);
 
 
 DataBlock::~DataBlock() {
-  if (m_data != NULL) {
-    delete[] m_data;
-  }
+  delete[] m_data;
 }
 
 
@@ -47,13 +45,6 @@ void DataBlock::init(size_t len) {
   this->m_capacity = len;
   this->m_nBytesRef = 0;
   this->m_size = 0;
-}
-
-
-DataBlock* DataBlock::create(size_t len) {
-  DataBlock* dbPtr = new DataBlock();
-  dbPtr->init(len);
-  return dbPtr;
 }
 
 

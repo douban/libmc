@@ -1,16 +1,24 @@
 language: python
 
+os:
+  - linux
+  - osx
+
 python:
-  - "2.7"
+  - 2.7
 
 env:
-  - CMAKE_BUILD_TYPE=Release
+  - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Release PRJ_COMPILER=clang
+  - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Debug PRJ_COMPILER=clang
+  - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Release PRJ_COMPILER=gcc
+  - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Debug PRJ_COMPILER=gcc
+  - TEST_SUITE=benchmark
 
 install:
-  - sudo apt-get update -yqq
-  - sudo apt-get install -yqq python-numpy valgrind
-  - sudo apt-get install build-essential g++
-
+  - if [ $TRAVIS_OS_NAME = "linux" ]; then sudo apt-get update -yqq; fi
+  - if [ $TRAVIS_OS_NAME = "linux" ]; then sudo apt-get install -yqq valgrind cppcheck; fi
+  - if [ $TRAVIS_OS_NAME = "osx" ]; then brew update; fi
+  - if [ $TRAVIS_OS_NAME = "osx" ]; then brew install valgrind cppcheck cmake; fi
   # install patched libmemcached from douban
   - wget https://github.com/xtao/douban-patched/raw/master/libmemcached-douban-1.0.18.tar.gz
   - tar zxf libmemcached-douban-1.0.18.tar.gz
@@ -19,30 +27,24 @@ install:
   - cd ..
   - rm -rf python-libmemcached
   - rm -rf libmemcached*
-  - sudo ldconfig
-  - pip install -q pytest greenify gevent
-  - pip install -q git+https://github.com/lericson/pylibmc@master#egg=pylibmc
-  - pip install -q git+https://github.com/linsomniac/python-memcached.git@master#egg=memcache
-  - pip install -q git+https://github.com/douban/python-libmemcached.git@master#egg=cmemcached
+  - if [ $TRAVIS_OS_NAME = "linux" ]; then sudo ldconfig; fi
+  # install python deps
+  - pip install -q Cython
+  - pip install -q git+https://github.com/douban/python-libmemcached.git@master#egg=cmemcached;
+  - if [ $TEST_SUITE = "unittest" ]; then pip install -q pytest greenify gevent numpy; fi
+  - if [ $TEST_SUITE = "benchmark" ]; then pip install -q git+https://github.com/lericson/pylibmc@master#egg=pylibmc; fi
+  - if [ $TEST_SUITE = "benchmark" ]; then pip install -q git+https://github.com/linsomniac/python-memcached.git@master#egg=memcache; fi
 
 services:
   - memcached
 
 before_script:
-  - python misc/generate_hash_dataset.py tests/resources/keys.txt
   - ./misc/memcached_server start
 
 script:
-  - mkdir -p build
-  - cd build
-  - cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE ..
-  - make -j8
-  - valgrind --leak-check=full make test
-  - cd ..
-  - python setup.py test
-  - python setup.py install
-  - ./tests/shabby/run_test.sh
-  - python ./misc/runbench.py
+  - if [ $PRJ_COMPILER = "gcc" ]; then export CC=gcc CXX=g++; fi
+  - if [ $PRJ_COMPILER = "clang" ]; then export CC=clang CXX=clang++; fi
+  - ./misc/travis/$TEST_SUITE.sh
 
 after_script:
   - ./misc/memcached_server stop

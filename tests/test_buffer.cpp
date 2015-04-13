@@ -4,9 +4,9 @@
 #include "gtest/gtest.h"
 
 using douban::mc::err_code_t;
-using douban::mc::PROGRAMMING_ERR;
-using douban::mc::INCOMPLETE_BUFFER_ERR;
-using douban::mc::OK_ERR;
+using douban::mc::RET_PROGRAMMING_ERR;
+using douban::mc::RET_INCOMPLETE_BUFFER_ERR;
+using douban::mc::RET_OK;
 
 using douban::mc::io::BufferReader;
 using douban::mc::io::DataBlock;
@@ -19,14 +19,14 @@ using douban::mc::io::TokenData;
   do { \
     err_code_t err; \
     reader.skipBytes(err, (N)); \
-    ASSERT_EQ(err, OK_ERR); \
+    ASSERT_EQ(err, RET_OK); \
   } while(0)
 
 #define TEST_READ_UNSIGNED_NO_THROW(N) \
   do { \
     err_code_t err; \
     reader.readUnsigned(err, (N)); \
-    ASSERT_EQ(err, OK_ERR); \
+    ASSERT_EQ(err, RET_OK); \
   } while(0)
 
 TEST(test_buffer, min_capacity) {
@@ -36,18 +36,18 @@ TEST(test_buffer, min_capacity) {
 
 
 TEST(test_buffer, peek_empty) {
-  err_code_t err = OK_ERR;
+  err_code_t err = RET_OK;
   BufferReader reader;
   reader.peek(err, 0);
-  ASSERT_EQ(err, INCOMPLETE_BUFFER_ERR);
+  ASSERT_EQ(err, RET_INCOMPLETE_BUFFER_ERR);
 
-  err = OK_ERR;
+  err = RET_OK;
   reader.peek(err, 1);
-  ASSERT_EQ(err, INCOMPLETE_BUFFER_ERR);
+  ASSERT_EQ(err, RET_INCOMPLETE_BUFFER_ERR);
 }
 
 TEST(test_buffer, peek_one) {
-  err_code_t err = OK_ERR;
+  err_code_t err = RET_OK;
 
   BufferReader reader;
   DataBlock::setMinCapacity(0x2B);
@@ -58,23 +58,23 @@ TEST(test_buffer, peek_one) {
   ASSERT_EQ(reader.nDataBlock(), 1);
 
   ASSERT_EQ(reader.peek(err, 0), '\x2B');
-  ASSERT_EQ(err, OK_ERR);
+  ASSERT_EQ(err, RET_OK);
   ASSERT_EQ(reader.peek(err, 0), '\x2B');
-  ASSERT_EQ(err, OK_ERR);
+  ASSERT_EQ(err, RET_OK);
 
   reader.peek(err, 1);
-  ASSERT_EQ(err, INCOMPLETE_BUFFER_ERR);
+  ASSERT_EQ(err, RET_INCOMPLETE_BUFFER_ERR);
 
   reader.peek(err, 2);
-  ASSERT_EQ(err, INCOMPLETE_BUFFER_ERR);
+  ASSERT_EQ(err, RET_INCOMPLETE_BUFFER_ERR);
 
   reader.write(CSTR("-~"), 2);
   ASSERT_EQ(reader.peek(err, 1), '-');
-  ASSERT_EQ(err, OK_ERR);
+  ASSERT_EQ(err, RET_OK);
   ASSERT_EQ(reader.peek(err, 2), '~');
-  ASSERT_EQ(err, OK_ERR);
+  ASSERT_EQ(err, RET_OK);
   reader.peek(err, 3);
-  ASSERT_EQ(err, INCOMPLETE_BUFFER_ERR);
+  ASSERT_EQ(err, RET_INCOMPLETE_BUFFER_ERR);
   TEST_SKIP_BYTES_NO_THROW(3);
 }
 
@@ -92,20 +92,20 @@ TEST(test_buffer, peek) {
   EXPECT_EQ(reader.readLeft(), len_str * 2 + 1);
   err_code_t err;
   ASSERT_EQ(reader.peek(err, 0), str[0]);
-  ASSERT_EQ(err, OK_ERR);
+  ASSERT_EQ(err, RET_OK);
   for (size_t i = 0; i < len_str; i++) {
     ASSERT_EQ(reader.peek(err, i), str[i]);
-    ASSERT_EQ(err, OK_ERR);
+    ASSERT_EQ(err, RET_OK);
   }
   ASSERT_EQ(reader.peek(err, len_str), ' ');
-  ASSERT_EQ(err, OK_ERR);
+  ASSERT_EQ(err, RET_OK);
 
   for (size_t i = len_str + 1; i < 2 * len_str + 1; i++) {
     ASSERT_EQ(reader.peek(err, i), str[i - len_str - 1]);
-    ASSERT_EQ(err, OK_ERR);
+    ASSERT_EQ(err, RET_OK);
   }
   reader.peek(err, 2 * len_str + 1);
-  ASSERT_EQ(err, INCOMPLETE_BUFFER_ERR);
+  ASSERT_EQ(err, RET_INCOMPLETE_BUFFER_ERR);
   ASSERT_EQ(reader.nDataBlock(), 3);
   TEST_SKIP_BYTES_NO_THROW(2 * len_str + 1);
 }
@@ -118,20 +118,20 @@ TEST(test_buffer, commit_read) {
   ASSERT_EQ(reader.readLeft(), 16);
   TEST_SKIP_BYTES_NO_THROW(3);
   ASSERT_EQ(reader.peek(err, 0), '3');
-  ASSERT_EQ(err, OK_ERR);
+  ASSERT_EQ(err, RET_OK);
   ASSERT_EQ(reader.readLeft(), 13);
   TEST_SKIP_BYTES_NO_THROW(3);
   ASSERT_EQ(reader.peek(err, 0), '6');
-  ASSERT_EQ(err, OK_ERR);
+  ASSERT_EQ(err, RET_OK);
   ASSERT_EQ(reader.readLeft(), 10);
   TEST_SKIP_BYTES_NO_THROW(7);
   ASSERT_EQ(reader.peek(err, 0), 'D');
-  ASSERT_EQ(err, OK_ERR);
+  ASSERT_EQ(err, RET_OK);
   ASSERT_EQ(reader.readLeft(), 3);
   TEST_SKIP_BYTES_NO_THROW(3);
   ASSERT_EQ(reader.readLeft(), 0);
   reader.peek(err, 0);
-  ASSERT_EQ(err, INCOMPLETE_BUFFER_ERR);
+  ASSERT_EQ(err, RET_INCOMPLETE_BUFFER_ERR);
 }
 
 
@@ -141,11 +141,11 @@ TEST(test_buffer, read_until_empty) {
 
   TokenData td;
   reader.readUntil(err, ' ', td);
-  ASSERT_EQ(err, INCOMPLETE_BUFFER_ERR);
+  ASSERT_EQ(err, RET_INCOMPLETE_BUFFER_ERR);
 
   reader.write(CSTR("b"), 1);
   reader.readUntil(err, ' ', td);
-  ASSERT_EQ(err, INCOMPLETE_BUFFER_ERR);
+  ASSERT_EQ(err, RET_INCOMPLETE_BUFFER_ERR);
 
   TEST_SKIP_BYTES_NO_THROW(1);
 }
@@ -162,15 +162,15 @@ TEST(test_buffer, read_until) {
   reader.write(str, len_str);
   TokenData td, td2;
   ASSERT_EQ(reader.readUntil(err, ' ', td), 3);
-  ASSERT_EQ(err, OK_ERR);
+  ASSERT_EQ(err, RET_OK);
 
   // bypass ' '
   EXPECT_EQ(reader.peek(err, 0), ' ');
-  ASSERT_EQ(err, OK_ERR);
+  ASSERT_EQ(err, RET_OK);
   TEST_SKIP_BYTES_NO_THROW(1);
 
   ASSERT_EQ(reader.readUntil(err, ' ', td2), 1);
-  ASSERT_EQ(err, OK_ERR);
+  ASSERT_EQ(err, RET_OK);
 
   ASSERT_EQ(td.size(), 1);
   ASSERT_EQ(td.front().size, 3);
@@ -188,19 +188,19 @@ TEST(test_buffer, read_until) {
 
   // bypass ' '
   EXPECT_EQ(reader.peek(err, 0), ' ');
-  ASSERT_EQ(err, OK_ERR);
+  ASSERT_EQ(err, RET_OK);
   TEST_SKIP_BYTES_NO_THROW(1);
 
   // should rollback read cursor on error
   td2.clear();
   reader.readUntil(err, ' ', td2);
-  ASSERT_EQ(err, INCOMPLETE_BUFFER_ERR);
+  ASSERT_EQ(err, RET_INCOMPLETE_BUFFER_ERR);
   ASSERT_EQ(reader.peek(err, 0), 'b');
-  ASSERT_EQ(err, OK_ERR);
+  ASSERT_EQ(err, RET_OK);
   ASSERT_EQ(reader.peek(err, 1), 'a');
-  ASSERT_EQ(err, OK_ERR);
+  ASSERT_EQ(err, RET_OK);
   ASSERT_EQ(reader.peek(err, 2), 'z');
-  ASSERT_EQ(err, OK_ERR);
+  ASSERT_EQ(err, RET_OK);
   TEST_SKIP_BYTES_NO_THROW(3);
 }
 
@@ -222,14 +222,14 @@ TEST(test_buffer, read_until_across_block) {
   TokenData* tdPtr = NULL;
   for (i = 0; i < n_token - 1; i++) {
     reader.readUntil(err, ' ', tokenDataPtr[i]);
-    ASSERT_EQ(err, OK_ERR);
+    ASSERT_EQ(err, RET_OK);
     EXPECT_EQ(reader.peek(err, 0), ' ');
-    ASSERT_EQ(err, OK_ERR);
+    ASSERT_EQ(err, RET_OK);
     TEST_SKIP_BYTES_NO_THROW(1);
   }
 
   reader.readUntil(err, ' ', *(tokenDataPtr + n_token - 1));
-  ASSERT_EQ(err, INCOMPLETE_BUFFER_ERR);
+  ASSERT_EQ(err, RET_INCOMPLETE_BUFFER_ERR);
 
   // xi
   tdPtr = tokenDataPtr;
@@ -314,7 +314,7 @@ TEST(test_buffer, read_until_across_block) {
   ASSERT_N_STREQ((*dbPtr)[tdPtr->front().offset], "aaa", 3);
 
   ASSERT_EQ(reader.peek(err, 0), '!');
-  ASSERT_EQ(err, OK_ERR);
+  ASSERT_EQ(err, RET_OK);
   TEST_SKIP_BYTES_NO_THROW(1);
   delete[] tokenDataPtr;
 }
@@ -327,11 +327,11 @@ TEST(test_buffer, read_unsigned_empty) {
   DataBlock::setMinCapacity(MIN_DATABLOCK_CAPACITY);
   BufferReader reader;
   reader.readUnsigned(err, val);
-  ASSERT_EQ(err, INCOMPLETE_BUFFER_ERR);
+  ASSERT_EQ(err, RET_INCOMPLETE_BUFFER_ERR);
 
   reader.write(str, len_str);
   reader.readUnsigned(err, val);
-  ASSERT_EQ(err, INCOMPLETE_BUFFER_ERR);
+  ASSERT_EQ(err, RET_INCOMPLETE_BUFFER_ERR);
 
   TEST_SKIP_BYTES_NO_THROW(len_str);
 }
@@ -350,18 +350,18 @@ TEST(test_buffer, read_unsigned) {
   ASSERT_EQ(val, 1024ULL);
 
   EXPECT_EQ(reader.peek(err, 0), ' ');
-  ASSERT_EQ(OK_ERR, err);
+  ASSERT_EQ(err, RET_OK);;
   TEST_SKIP_BYTES_NO_THROW(1);
 
   TEST_READ_UNSIGNED_NO_THROW(val);
   ASSERT_EQ(val, 768ULL);
 
   EXPECT_EQ(reader.peek(err, 0), '\r');
-  ASSERT_EQ(OK_ERR, err);
+  ASSERT_EQ(err, RET_OK);;
   TEST_SKIP_BYTES_NO_THROW(1);
 
   reader.readUnsigned(err, val);
-  ASSERT_EQ(err, INCOMPLETE_BUFFER_ERR);
+  ASSERT_EQ(err, RET_INCOMPLETE_BUFFER_ERR);
 
   TEST_SKIP_BYTES_NO_THROW(3);
 }
@@ -381,35 +381,35 @@ TEST(test_buffer, read_unsigned_across_block) {
   ASSERT_EQ(val, 123456ULL);
 
   EXPECT_EQ(reader.peek(err, 0), ' ');
-  ASSERT_EQ(OK_ERR, err);
+  ASSERT_EQ(err, RET_OK);;
   TEST_SKIP_BYTES_NO_THROW(1);
 
   TEST_READ_UNSIGNED_NO_THROW(val);
   ASSERT_EQ(val, 89ULL);
 
   EXPECT_EQ(reader.peek(err, 0), ' ');
-  ASSERT_EQ(OK_ERR, err);
+  ASSERT_EQ(err, RET_OK);;
   TEST_SKIP_BYTES_NO_THROW(1);
 
   TEST_READ_UNSIGNED_NO_THROW(val);
   ASSERT_EQ(val, 423ULL);
 
   EXPECT_EQ(reader.peek(err, 0), ' ');
-  ASSERT_EQ(OK_ERR, err);
+  ASSERT_EQ(err, RET_OK);;
   TEST_SKIP_BYTES_NO_THROW(1);
 
   TEST_READ_UNSIGNED_NO_THROW(val);
   ASSERT_EQ(val, 0ULL);
 
   EXPECT_EQ(reader.peek(err, 0), ' ');
-  ASSERT_EQ(OK_ERR, err);
+  ASSERT_EQ(err, RET_OK);;
   TEST_SKIP_BYTES_NO_THROW(1);
 
   TEST_READ_UNSIGNED_NO_THROW(val);
   ASSERT_EQ(val, 10ULL);
 
   reader.readUnsigned(err, val);
-  ASSERT_EQ(err, PROGRAMMING_ERR);
+  ASSERT_EQ(err, RET_PROGRAMMING_ERR);
   TEST_SKIP_BYTES_NO_THROW(2);
 }
 
@@ -420,7 +420,7 @@ TEST(test_buffer, read_bytes_empty) {
   BufferReader reader;
   TokenData td;
   reader.readBytes(err, 0, td);
-  ASSERT_EQ(err, OK_ERR);
+  ASSERT_EQ(err, RET_OK);
   ASSERT_EQ(td.size(), 0);
 }
 
@@ -436,7 +436,7 @@ TEST(test_buffer, read_bytes) {
   reader.write(CSTR("\r\n"), 2);
 
   reader.readBytes(err, 6, td);
-  ASSERT_EQ(err, OK_ERR);
+  ASSERT_EQ(err, RET_OK);
   ASSERT_EQ(td.size(), 2);
   ASSERT_EQ(td.front().size, 5);
   ASSERT_EQ(td.front().offset, 0);
@@ -454,7 +454,7 @@ TEST(test_buffer, read_bytes) {
 
   td.clear();
   reader.readBytes(err, 4, td);
-  ASSERT_EQ(err, OK_ERR);
+  ASSERT_EQ(err, RET_OK);
 
   ASSERT_EQ(td.size(), 1);
   ASSERT_EQ(td.front().size, 4);
@@ -465,7 +465,7 @@ TEST(test_buffer, read_bytes) {
 
   td.clear();
   reader.readBytes(err, 2, td);
-  ASSERT_EQ(err, OK_ERR);
+  ASSERT_EQ(err, RET_OK);
   ASSERT_EQ(td.size(), 1);
   ASSERT_EQ(td.front().size, 2);
   ASSERT_EQ(td.front().offset, 0);
@@ -475,12 +475,12 @@ TEST(test_buffer, read_bytes) {
 
   td.clear();
   reader.readBytes(err, 2, td);
-  ASSERT_EQ(err, INCOMPLETE_BUFFER_ERR);
+  ASSERT_EQ(err, RET_INCOMPLETE_BUFFER_ERR);
 
   td.clear();
   reader.write(CSTR("syyin"), 5);
   reader.readBytes(err, 5, td);
-  ASSERT_EQ(err, OK_ERR);
+  ASSERT_EQ(err, RET_OK);
 
 
   ASSERT_EQ(td.size(), 2);
@@ -516,7 +516,7 @@ TEST(test_buffer, fuzzy) {
   }
   uint64_t val, nBytes;
   reader.readUntil(err, ' ', td);
-  ASSERT_EQ(err, OK_ERR);
+  ASSERT_EQ(err, RET_OK);
   ASSERT_EQ(td.size(), 1);
   ASSERT_EQ(td.front().offset, 0);
   ASSERT_EQ(td.front().size, 5);
@@ -527,7 +527,7 @@ TEST(test_buffer, fuzzy) {
   td.clear();
 
   reader.readUntil(err, ' ', td);
-  ASSERT_EQ(err, OK_ERR);
+  ASSERT_EQ(err, RET_OK);
   ASSERT_EQ(td.size(), 1);
   ASSERT_EQ(td.front().offset, 1);
   ASSERT_EQ(td.front().size, 3);
@@ -549,7 +549,7 @@ TEST(test_buffer, fuzzy) {
   ASSERT_EQ(val, 24);
 
   reader.readBytes(err, nBytes + 4, td);
-  ASSERT_EQ(err, OK_ERR);
+  ASSERT_EQ(err, RET_OK);
   dbPtr = &*(td.front().iterator);
   dbPtr->release(td.front().size);
   // td.pop_front();
@@ -558,7 +558,7 @@ TEST(test_buffer, fuzzy) {
   dbPtr->release(td.front().size);
 
   ASSERT_EQ(reader.peek(err, 0), 'E');
-  ASSERT_EQ(err, OK_ERR);
+  ASSERT_EQ(err, RET_OK);
   TEST_SKIP_BYTES_NO_THROW(5);
 }
 
@@ -571,11 +571,11 @@ TEST(test_buffer, scalability) {
   reader.write(CSTR("345"), 3);
   reader.write(CSTR("678"), 3);
   ASSERT_EQ(reader.peek(err, 0), '0');
-  ASSERT_EQ(err, OK_ERR);
+  ASSERT_EQ(err, RET_OK);
 
   TEST_SKIP_BYTES_NO_THROW(3);
   ASSERT_EQ(reader.peek(err, 0), '3');
-  ASSERT_EQ(err, OK_ERR);
+  ASSERT_EQ(err, RET_OK);
 
   reader.write(CSTR("BCD"), 3);
   ASSERT_EQ(reader.capacity(), 12);
