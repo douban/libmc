@@ -58,7 +58,7 @@ setup(
     author_email="myautsai@gmail.com",
     url="https://github.com/douban/libmc",
     keywords=["memcached", "memcache", "client"],
-    long_description=open("README.md").read(),
+    long_description=open("README.rst").read(),
     classifiers=[
         "Intended Audience :: Developers",
         "License :: OSI Approved :: BSD License",
