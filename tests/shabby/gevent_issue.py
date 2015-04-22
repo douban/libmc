@@ -9,16 +9,16 @@ greenify.greenify()
 import libmc
 assert greenify.patch_lib(libmc._client.__file__)
 mc = libmc.Client(["127.0.0.1:%d" % slow_memcached_server.PORT])
-mc.config(libmc._client.MC_POLL_TIMEOUT, 3000)  # ms
+mc.config(libmc._client.MC_POLL_TIMEOUT,
+          slow_memcached_server.BLOCKING_SECONDS * 1000 * 2)  # ms
 
 
 stack = []
 
 
-def mc_sleep(seconds=3):
+def mc_sleep():
     print 'begin mc sleep'
     stack.append('mc_sleep_begin')
-    # fake slow memcached server wil return in 2 seconds
     assert mc.set('foo', 'bar'), "Run `python slow_memcached_server.py` first"
     stack.append('mc_sleep_end')
     print 'end mc sleep'

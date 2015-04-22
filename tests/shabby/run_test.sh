@@ -2,7 +2,7 @@
 set -e
 BASEDIR=`dirname $0`
 
-python  -c 'import greenify'
+python  -c 'import greenify; import gevent;'
 python $BASEDIR/slow_memcached_server.py > /dev/null &
 pid=$!
 
@@ -27,4 +27,8 @@ echo
 echo "=== test timeout ==="
 echo
 python $BASEDIR/timeout_issue.py
-kill $pid
+echo
+echo "=== test reconnect delay ==="
+echo
+python $BASEDIR/reconnect_delay.py
+kill $pid || exit 0
