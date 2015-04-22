@@ -9,6 +9,11 @@ BLOCKING_SECONDS = 0.5  # seconds
 
 
 DAYS30 = 3600 * 24 * 30
+KEY_GET_SERVER_ERROR = 'gimme_get_server_error'
+KEY_SET_SERVER_ERROR = 'gimme_set_server_error'
+KEY_SERVER_DOWN = 'biubiubiu'
+
+memcached = None
 
 
 class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
@@ -35,6 +40,8 @@ class MemcachedProvider(object):
         request = request.rstrip()
         response = ''
         for key in request.split(' ')[1:]:
+            if key == KEY_GET_SERVER_ERROR:
+                return 'SERVER_ERROR\r\n'
             if not is_valid_key(key):
                 return 'CLIENT_ERROR invalid key\r\n'
             if key not in self._store:
@@ -44,7 +51,7 @@ class MemcachedProvider(object):
                 del self._store[key]
                 continue
             response += (
-                'VALUE %s %d %d\r\n%s\r\n' %(
+                'VALUE %s %d %d\r\n%s\r\n' % (
                     key, flags, bytes_, data_block
                 )
             )
@@ -63,6 +70,12 @@ class MemcachedProvider(object):
             request = request[pos + 2:]
 
             key, flags, exptime, bytes_ = set_meta.split(' ')[1:]
+            if key == KEY_SERVER_DOWN:
+                print "I'm shot. Dying."
+                return None
+
+            if key == KEY_SET_SERVER_ERROR:
+                return 'SERVER_ERROR\r\n'
             if not is_valid_key(key):
                 response += 'CLIENT_ERROR invalid key\r\n'
                 continue
@@ -115,6 +128,10 @@ class Handler(SocketServer.BaseRequestHandler):
                 meth = req.rstrip()
 
             res = getattr(self.mcp, 'process_%s' % meth, )(req)
+            if res is None:
+                memcached.shutdown()
+                return
+
             time.sleep(BLOCKING_SECONDS)
 
             n_sent = 0
@@ -128,6 +145,7 @@ class Handler(SocketServer.BaseRequestHandler):
 
 
 def main(argv):
+    global memcached
     port = PORT
     if len(argv) == 2:
         port = int(argv[1])

@@ -51,10 +51,18 @@ def main():
         if not clean:
             subst_list = {
                 # '--dirty' could be added to the following, too, but is not supported everywhere
-                "version": subprocess.check_output(['git', 'describe', '--always']),  
-                "date": subprocess.check_output(['git', 'log', '--pretty=format:"%ad"', '-1']),
-                "author": subprocess.check_output(['git', 'log', '--pretty=format:"%an"', '-1']),
-                "email": subprocess.check_output(['git', 'log', '--pretty=format:"%ae"', '-1'])
+                "version": subprocess.check_output([
+                    'git', 'describe', '--always', '--tags'
+                ]),
+                "date": subprocess.check_output([
+                    'git', 'log', '--pretty=format:"%ad"', '-1'
+                ]),
+                "author": subprocess.check_output([
+                    'git', 'log', '--pretty=format:"%an"', '-1'
+                ]),
+                "email": subprocess.check_output([
+                    'git', 'log', '--pretty=format:"%ae"', '-1'
+                ])
             }
             for k, v in subst_list.iteritems():
                 v = re.sub(r'[\n\r\t"\']', "", v)

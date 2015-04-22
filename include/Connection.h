@@ -26,7 +26,6 @@ class Connection {
     void close();
     const bool alive();
     bool tryReconnect();
-    void markDead(const char* reason);
     void markDead(const char* reason, int delay);
     int socketFd() const;
 
@@ -53,6 +52,7 @@ class Connection {
 
     void reset();
     static void setRetryTimeout(int timeout);
+    static const int getRetryTimeout();
     static void setConnectTimeout(int timeout);
 
     size_t m_counter;
@@ -101,6 +101,12 @@ inline const uint32_t Connection::port() {
 inline const uint32_t Connection::weight() {
   return m_weight;
 }
+
+
+inline const int Connection::getRetryTimeout() {
+  return s_retryTimeout;
+}
+
 
 } // namespace mc
 } // namespace douban
