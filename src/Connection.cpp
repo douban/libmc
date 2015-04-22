@@ -185,12 +185,6 @@ bool Connection::tryReconnect() {
   return m_alive;
 }
 
-
-void Connection::markDead(const char* reason) {
-  return markDead(reason, s_retryTimeout);
-}
-
-
 void Connection::markDead(const char* reason, int delay) {
   if (m_alive) {
     time(&m_deadUntil);

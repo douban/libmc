@@ -369,6 +369,7 @@ err_code_t ConnectionPool::waitPoll() {
     if (m_nInvalidKey > 0) {
       return RET_INVALID_KEY_ERR;
     } else {
+      // hard server error
       return RET_MC_SERVER_ERR;
     }
   }
@@ -393,13 +394,13 @@ err_code_t ConnectionPool::waitPoll() {
   while (m_nActiveConn) {
     int rv = poll(pollfds, n_fds, s_pollTimeout);
     if (rv == -1) {
-      markDeadAll(pollfds, keywords::kPOLL_ERROR);
+      markDeadAll(pollfds, keywords::kPOLL_ERROR, 0);
       ret_code = RET_POLL_ERR;
       break;
     } else if (rv == 0) {
       log_warn("poll timeout. (m_nActiveConn: %d)", m_nActiveConn);
       // NOTE: MUST reset all active TCP connections after timeout.
-      markDeadAll(pollfds, keywords::kPOLL_TIMEOUT);
+      markDeadAll(pollfds, keywords::kPOLL_TIMEOUT, 0);
       ret_code = RET_POLL_TIMEOUT_ERR;
       break;
     } else {
@@ -409,7 +410,7 @@ err_code_t ConnectionPool::waitPoll() {
         Connection* conn = fd2conn[fd_idx];
 
         if (pollfd_ptr->revents & (POLLERR | POLLHUP | POLLNVAL)) {
-          markDeadConn(conn, keywords::kCONN_POLL_ERROR, pollfd_ptr);
+          markDeadConn(conn, keywords::kCONN_POLL_ERROR, pollfd_ptr, Connection::getRetryTimeout());
           ret_code = RET_CONN_POLL_ERR;
           m_nActiveConn -= 1;
           goto next_fd;
@@ -420,7 +421,7 @@ err_code_t ConnectionPool::waitPoll() {
           // POLLOUT send
           ssize_t nToSend = conn->send();
           if (nToSend == -1) {
-            markDeadConn(conn, keywords::kSEND_ERROR, pollfd_ptr);
+            markDeadConn(conn, keywords::kSEND_ERROR, pollfd_ptr, Connection::getRetryTimeout());
             ret_code = RET_SEND_ERR;
             m_nActiveConn -= 1;
             goto next_fd;
@@ -444,7 +445,7 @@ err_code_t ConnectionPool::waitPoll() {
           // POLLIN recv
           ssize_t nRecv = conn->recv();
           if (nRecv == -1 || nRecv == 0) {
-            markDeadConn(conn, keywords::kRECV_ERROR, pollfd_ptr);
+            markDeadConn(conn, keywords::kRECV_ERROR, pollfd_ptr, Connection::getRetryTimeout());
             ret_code = RET_RECV_ERR;
             m_nActiveConn -= 1;
             goto next_fd;
@@ -459,13 +460,14 @@ err_code_t ConnectionPool::waitPoll() {
             case RET_INCOMPLETE_BUFFER_ERR:
               break;
             case RET_PROGRAMMING_ERR:
-              markDeadConn(conn, keywords::kPROGRAMMING_ERROR, pollfd_ptr);
+              markDeadConn(conn, keywords::kPROGRAMMING_ERROR, pollfd_ptr, Connection::getRetryTimeout());
               ret_code = RET_PROGRAMMING_ERR;
               m_nActiveConn -= 1;
               goto next_fd;
               break;
             case RET_MC_SERVER_ERR:
-              markDeadConn(conn, keywords::kSERVER_ERROR, pollfd_ptr);
+              // soft server error
+              markDeadConn(conn, keywords::kSERVER_ERROR, pollfd_ptr, 0);
               ret_code = RET_MC_SERVER_ERR;
               m_nActiveConn -= 1;
               goto next_fd;
@@ -586,8 +588,8 @@ void ConnectionPool::markDeadAll(pollfd_t* pollfds, const char* reason, int dela
 }
 
 
-void ConnectionPool::markDeadConn(Connection* conn, const char* reason, pollfd_t* fd_ptr) {
-  conn->markDead(reason);
+void ConnectionPool::markDeadConn(Connection* conn, const char* reason, pollfd_t* fd_ptr, int delay) {
+  conn->markDead(reason, delay);
   fd_ptr->events = ~POLLOUT & ~POLLIN;
   fd_ptr->fd = conn->socketFd();
 }

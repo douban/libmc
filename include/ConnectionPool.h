@@ -44,8 +44,8 @@ class ConnectionPool {
   static void setPollTimeout(int timeout);
 
  protected:
-  void markDeadAll(pollfd_t* pollfds, const char*, int delay = 0);
-  void markDeadConn(Connection*, const char*, pollfd_t*);
+  void markDeadAll(pollfd_t* pollfds, const char*, int delay);
+  void markDeadConn(Connection* conn, const char* reason, pollfd_t* fd_ptr, int delay);
 
   uint32_t m_nActiveConn; // wait for poll
   uint32_t m_nInvalidKey;
