@@ -28,11 +28,11 @@ def test_soft_server_error():
 
     assert mc.set('foo', 1)
     assert not mc.set(slow_memcached_server.KEY_SET_SERVER_ERROR, 1)
-    assert not mc.set('foo', 1)  # still fail
-    time.sleep(RETRY_TIMEOUT / 2)
-    assert not mc.set('foo', 1)  # still fail
-    time.sleep(RETRY_TIMEOUT + 1)
     assert mc.set('foo', 1)  # back to live
+    time.sleep(RETRY_TIMEOUT / 2)
+    assert mc.set('foo', 1)  # alive
+    time.sleep(RETRY_TIMEOUT + 1)
+    assert mc.set('foo', 1)  # alive
 
 
 def test_hard_server_error():
@@ -50,7 +50,6 @@ def test_hard_server_error():
     assert not mc.set('foo', 1)  # still fail
     time.sleep(RETRY_TIMEOUT + 1)
     assert mc.set('foo', 1)  # back to live
-    memcached_server_ctl('stop', normal_port)
 
 
 def main():

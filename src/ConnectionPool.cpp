@@ -467,7 +467,7 @@ err_code_t ConnectionPool::waitPoll() {
               break;
             case RET_MC_SERVER_ERR:
               // soft server error
-              markDeadConn(conn, keywords::kSERVER_ERROR, pollfd_ptr, Connection::getRetryTimeout());
+              markDeadConn(conn, keywords::kSERVER_ERROR, pollfd_ptr, 0);
               ret_code = RET_MC_SERVER_ERR;
               m_nActiveConn -= 1;
               goto next_fd;
