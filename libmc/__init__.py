@@ -24,8 +24,8 @@ from ._client import (
     MC_RETURN_OK,
 )
 
-__VERSION__ = '0.5.1'
-__version__ = "v0.5.1-8-ge9fa777"
+__VERSION__ = '0.5.2'
+__version__ = "v0.5.2"
 __author__ = "mckelvin"
 __email__ = "mckelvin@users.noreply.github.com"
 __date__ = "Thu Apr 23 14:45:46 2015 +0800"
