@@ -421,7 +421,7 @@ err_code_t ConnectionPool::waitPoll() {
           // POLLOUT send
           ssize_t nToSend = conn->send();
           if (nToSend == -1) {
-            markDeadConn(conn, keywords::kSEND_ERROR, pollfd_ptr, Connection::getRetryTimeout());
+            markDeadConn(conn, keywords::kSEND_ERROR, pollfd_ptr, 0);
             ret_code = RET_SEND_ERR;
             m_nActiveConn -= 1;
             goto next_fd;
@@ -445,7 +445,7 @@ err_code_t ConnectionPool::waitPoll() {
           // POLLIN recv
           ssize_t nRecv = conn->recv();
           if (nRecv == -1 || nRecv == 0) {
-            markDeadConn(conn, keywords::kRECV_ERROR, pollfd_ptr, Connection::getRetryTimeout());
+            markDeadConn(conn, keywords::kRECV_ERROR, pollfd_ptr, 0);
             ret_code = RET_RECV_ERR;
             m_nActiveConn -= 1;
             goto next_fd;
