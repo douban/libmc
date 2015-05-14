@@ -43,11 +43,11 @@ class KetamaSelector {
 
   std::vector<continuum_item_t> m_continuum;
   size_t m_nServers;
-  static size_t s_pointerPerHash;
-  static size_t s_pointerPerServer;
   bool m_useFailover;
   hash_function_t m_hashFunction;
-  static hash_function_t s_defaultHashFunction;
+  static const size_t s_pointerPerHash;
+  static const size_t s_pointerPerServer;
+  static const hash_function_t s_defaultHashFunction;
 
 #ifndef NDEBUG
   bool m_sorted;

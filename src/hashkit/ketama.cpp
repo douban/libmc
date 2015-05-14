@@ -11,9 +11,9 @@ namespace mc {
 namespace hashkit {
 
 
-size_t KetamaSelector::s_pointerPerHash = 1;
-size_t KetamaSelector::s_pointerPerServer = 100;
-hash_function_t KetamaSelector::s_defaultHashFunction = &hash_md5;
+const size_t KetamaSelector::s_pointerPerHash = 1;
+const size_t KetamaSelector::s_pointerPerServer = 100;
+const hash_function_t KetamaSelector::s_defaultHashFunction = &hash_md5;
 
 KetamaSelector::KetamaSelector()
   :m_nServers(0), m_useFailover(false), m_hashFunction(NULL)

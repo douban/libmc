@@ -26,7 +26,7 @@ class Connection {
     void close();
     const bool alive();
     bool tryReconnect();
-    void markDead(const char* reason, int delay);
+    void markDead(const char* reason, int delay = 0);
     int socketFd() const;
 
     const char* name();
@@ -51,9 +51,9 @@ class Connection {
 
 
     void reset();
-    static void setRetryTimeout(int timeout);
-    static const int getRetryTimeout();
-    static void setConnectTimeout(int timeout);
+    void setRetryTimeout(int timeout);
+    const int getRetryTimeout();
+    void setConnectTimeout(int timeout);
 
     size_t m_counter;
 
@@ -72,8 +72,8 @@ class Connection {
     io::BufferReader* m_buffer_reader; // for recv
     PacketParser m_parser;
 
-    static int s_retryTimeout;
-    static int s_connectTimeout;
+    int m_connectTimeout;
+    int m_retryTimeout;
 
  private:
     Connection(const Connection& conn);
@@ -104,7 +104,7 @@ inline const uint32_t Connection::weight() {
 
 
 inline const int Connection::getRetryTimeout() {
-  return s_retryTimeout;
+  return m_retryTimeout;
 }
 
 
