@@ -3,7 +3,6 @@
 #include <cstdlib>
 #include "Common.h"
 
-#define MIN_DATABLOCK_CAPACITY 8192
 
 namespace douban {
 namespace mc {
@@ -51,7 +50,7 @@ class DataBlock {
   size_t m_capacity;
   size_t m_size;
   size_t m_nBytesRef;
-  static size_t s_minCapacity;
+  static size_t s_minCapacity;  // FIXME: bad design
 };
 
 

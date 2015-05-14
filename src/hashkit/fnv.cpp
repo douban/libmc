@@ -6,10 +6,10 @@ namespace douban {
 namespace mc {
 namespace hashkit {
 
-static uint32_t FNV_32_INIT = 2166136261UL;
+static const uint32_t FNV_32_INIT = 2166136261UL;
 
 #if defined(NO_FNV_GCC_OPTIMIZATION)
-static uint32_t FNV_32_PRIME = 16777619UL;
+static const uint32_t FNV_32_PRIME = 16777619UL;
 #endif
 
 uint32_t hash_fnv1_32(const char *key, size_t key_length) {

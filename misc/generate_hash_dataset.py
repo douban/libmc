@@ -1,6 +1,6 @@
 import os
 import sys
-import zlib
+import binascii
 import hashlib
 import numpy as np
 
@@ -8,7 +8,7 @@ FNV_32_INIT = 0x811c9dc5
 FNV_32_PRIME = 0x01000193
 
 def compute_crc_32(key):
-    return np.uint32(zlib.crc32(key))
+    return np.uint32(binascii.crc32(key))
 
 
 def compute_fnv1_32(key):

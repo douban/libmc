@@ -22,13 +22,13 @@ Client::~Client() {
 void Client::config(config_options_t opt, int val) {
   switch (opt) {
     case CFG_POLL_TIMEOUT:
-      ConnectionPool::setPollTimeout(val);
+      setPollTimeout(val);
       break;
     case CFG_CONNECT_TIMEOUT:
-      Connection::setConnectTimeout(val);
+      setConnectTimeout(val);
       break;
     case CFG_RETRY_TIMEOUT:
-      Connection::setRetryTimeout(val);
+      setRetryTimeout(val);
       break;
     case CFG_HASH_FUNCTION:
       ConnectionPool::setHashFunction(static_cast<douban::mc::hash_function_options_t>(val));

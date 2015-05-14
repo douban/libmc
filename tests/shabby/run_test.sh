@@ -31,4 +31,9 @@ echo
 echo "=== test reconnect delay ==="
 echo
 python $BASEDIR/reconnect_delay.py
+echo
+echo "=== test independent timeout ==="
+echo
+python $BASEDIR/independent_timeout.py
+
 kill $pid || exit 0

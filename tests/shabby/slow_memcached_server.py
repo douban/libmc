@@ -2,6 +2,7 @@
 
 import sys
 import time
+import socket
 import SocketServer
 
 PORT = 0x2305
@@ -117,7 +118,14 @@ class Handler(SocketServer.BaseRequestHandler):
         while True:
             req = ''
             while req[-2:] != '\r\n':
-                req += self.request.recv(8192)
+                try:
+                    req += self.request.recv(8192)
+                except socket.error as ex:
+                    if ex.errno == 54:
+                        pass
+                    else:
+                        raise ex
+
             print '> %s' % req[:-2]
             if not req.strip() or req.strip() == 'quit':
                 break

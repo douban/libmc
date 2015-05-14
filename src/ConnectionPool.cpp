@@ -26,11 +26,9 @@ namespace douban {
 namespace mc {
 
 ConnectionPool::ConnectionPool()
-  : m_nActiveConn(0), m_nInvalidKey(0), m_conns(NULL), m_nConns(0) {
+  : m_nActiveConn(0), m_nInvalidKey(0), m_conns(NULL), m_nConns(0),
+    m_pollTimeout(MC_DEFAULT_POLL_TIMEOUT) {
 }
-
-
-int ConnectionPool::s_pollTimeout = MC_DEFAULT_POLL_TIMEOUT;
 
 
 ConnectionPool::~ConnectionPool() {
@@ -392,15 +390,15 @@ err_code_t ConnectionPool::waitPoll() {
 
   err_code_t ret_code = RET_OK;
   while (m_nActiveConn) {
-    int rv = poll(pollfds, n_fds, s_pollTimeout);
+    int rv = poll(pollfds, n_fds, m_pollTimeout);
     if (rv == -1) {
-      markDeadAll(pollfds, keywords::kPOLL_ERROR, 0);
+      markDeadAll(pollfds, keywords::kPOLL_ERROR);
       ret_code = RET_POLL_ERR;
       break;
     } else if (rv == 0) {
       log_warn("poll timeout. (m_nActiveConn: %d)", m_nActiveConn);
       // NOTE: MUST reset all active TCP connections after timeout.
-      markDeadAll(pollfds, keywords::kPOLL_TIMEOUT, 0);
+      markDeadAll(pollfds, keywords::kPOLL_TIMEOUT);
       ret_code = RET_POLL_TIMEOUT_ERR;
       break;
     } else {
@@ -410,7 +408,7 @@ err_code_t ConnectionPool::waitPoll() {
         Connection* conn = fd2conn[fd_idx];
 
         if (pollfd_ptr->revents & (POLLERR | POLLHUP | POLLNVAL)) {
-          markDeadConn(conn, keywords::kCONN_POLL_ERROR, pollfd_ptr, Connection::getRetryTimeout());
+          markDeadConn(conn, keywords::kCONN_POLL_ERROR, pollfd_ptr);
           ret_code = RET_CONN_POLL_ERR;
           m_nActiveConn -= 1;
           goto next_fd;
@@ -421,7 +419,7 @@ err_code_t ConnectionPool::waitPoll() {
           // POLLOUT send
           ssize_t nToSend = conn->send();
           if (nToSend == -1) {
-            markDeadConn(conn, keywords::kSEND_ERROR, pollfd_ptr, 0);
+            markDeadConn(conn, keywords::kSEND_ERROR, pollfd_ptr);
             ret_code = RET_SEND_ERR;
             m_nActiveConn -= 1;
             goto next_fd;
@@ -445,7 +443,7 @@ err_code_t ConnectionPool::waitPoll() {
           // POLLIN recv
           ssize_t nRecv = conn->recv();
           if (nRecv == -1 || nRecv == 0) {
-            markDeadConn(conn, keywords::kRECV_ERROR, pollfd_ptr, 0);
+            markDeadConn(conn, keywords::kRECV_ERROR, pollfd_ptr);
             ret_code = RET_RECV_ERR;
             m_nActiveConn -= 1;
             goto next_fd;
@@ -460,14 +458,14 @@ err_code_t ConnectionPool::waitPoll() {
             case RET_INCOMPLETE_BUFFER_ERR:
               break;
             case RET_PROGRAMMING_ERR:
-              markDeadConn(conn, keywords::kPROGRAMMING_ERROR, pollfd_ptr, Connection::getRetryTimeout());
+              markDeadConn(conn, keywords::kPROGRAMMING_ERROR, pollfd_ptr);
               ret_code = RET_PROGRAMMING_ERR;
               m_nActiveConn -= 1;
               goto next_fd;
               break;
             case RET_MC_SERVER_ERR:
               // soft server error
-              markDeadConn(conn, keywords::kSERVER_ERROR, pollfd_ptr, 0);
+              markDeadConn(conn, keywords::kSERVER_ERROR, pollfd_ptr);
               ret_code = RET_MC_SERVER_ERR;
               m_nActiveConn -= 1;
               goto next_fd;
@@ -569,11 +567,27 @@ void ConnectionPool::reset() {
 
 
 void ConnectionPool::setPollTimeout(int timeout) {
-  s_pollTimeout = timeout;
+  m_pollTimeout = timeout;
 }
 
 
-void ConnectionPool::markDeadAll(pollfd_t* pollfds, const char* reason, int delay) {
+void ConnectionPool::setConnectTimeout(int timeout) {
+  for (size_t idx = 0; idx < m_nConns; ++idx) {
+    Connection* conn = m_conns + idx;
+    conn->setConnectTimeout(timeout);
+  }
+}
+
+
+void ConnectionPool::setRetryTimeout(int timeout) {
+  for (size_t idx = 0; idx < m_nConns; ++idx) {
+    Connection* conn = m_conns + idx;
+    conn->setRetryTimeout(timeout);
+  }
+}
+
+
+void ConnectionPool::markDeadAll(pollfd_t* pollfds, const char* reason) {
 
   nfds_t fd_idx = 0;
   for (std::vector<Connection*>::iterator it = m_activeConns.begin();
@@ -582,14 +596,14 @@ void ConnectionPool::markDeadAll(pollfd_t* pollfds, const char* reason, int dela
     Connection* conn = *it;
     pollfd_t* pollfd_ptr = &pollfds[fd_idx];
     if (pollfd_ptr->events & (POLLOUT | POLLIN)) {
-      conn->markDead(reason, delay);
+      conn->markDead(reason);
     }
   }
 }
 
 
-void ConnectionPool::markDeadConn(Connection* conn, const char* reason, pollfd_t* fd_ptr, int delay) {
-  conn->markDead(reason, delay);
+void ConnectionPool::markDeadConn(Connection* conn, const char* reason, pollfd_t* fd_ptr) {
+  conn->markDead(reason);
   fd_ptr->events = ~POLLOUT & ~POLLIN;
   fd_ptr->fd = conn->socketFd();
 }

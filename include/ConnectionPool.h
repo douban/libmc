@@ -41,11 +41,13 @@ class ConnectionPool {
   void collectBroadcastResult(std::vector<types::broadcast_result_t>& results);
   void collectUnsignedResult(std::vector<types::unsigned_result_t*>& results);
   void reset();
-  static void setPollTimeout(int timeout);
+  void setPollTimeout(int timeout);
+  void setConnectTimeout(int timeout);
+  void setRetryTimeout(int timeout);
 
  protected:
-  void markDeadAll(pollfd_t* pollfds, const char*, int delay);
-  void markDeadConn(Connection* conn, const char* reason, pollfd_t* fd_ptr, int delay);
+  void markDeadAll(pollfd_t* pollfds, const char*);
+  void markDeadConn(Connection* conn, const char* reason, pollfd_t* fd_ptr);
 
   uint32_t m_nActiveConn; // wait for poll
   uint32_t m_nInvalidKey;
@@ -53,7 +55,7 @@ class ConnectionPool {
   hashkit::KetamaSelector m_connSelector;
   Connection *m_conns;
   size_t m_nConns;
-  static int s_pollTimeout;
+  int m_pollTimeout;
 };
 
 } // namespace mc

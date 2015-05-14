@@ -18,13 +18,11 @@ using douban::mc::io::BufferReader;
 namespace douban{
 namespace mc {
 
-int Connection::s_retryTimeout = MC_DEFAULT_RETRY_TIMEOUT;
-int Connection::s_connectTimeout = MC_DEFAULT_CONNECT_TIMEOUT;
-
-
 Connection::Connection()
     : m_counter(0), m_port(0), m_weight(0) , m_socketFd(-1),
-      m_alive(false), m_deadUntil(0) {
+      m_alive(false), m_deadUntil(0),
+      m_connectTimeout(MC_DEFAULT_CONNECT_TIMEOUT),
+      m_retryTimeout(MC_DEFAULT_RETRY_TIMEOUT) {
   m_name[0] = '\0';
   m_host[0] = '\0';
   m_buffer_writer = new BufferWriter();
@@ -139,7 +137,7 @@ int Connection::connectPoll(int fd, struct addrinfo* ai_ptr) {
         pollfds[0].events = POLLOUT;
         int max_timeout = 6;
         while (--max_timeout) {
-          int rv = poll(pollfds, n_fds, s_connectTimeout);
+          int rv = poll(pollfds, n_fds, m_connectTimeout);
           if (rv == 1) {
             if (pollfds[0].revents & (POLLERR | POLLHUP | POLLNVAL)) {
               return -1;
@@ -177,7 +175,7 @@ bool Connection::tryReconnect() {
         }
         m_deadUntil = 0;
       } else {
-        m_deadUntil = now + s_retryTimeout;
+        m_deadUntil = now + m_retryTimeout;
         // log_info("%s is still dead", m_name);
       }
     }
@@ -188,7 +186,7 @@ bool Connection::tryReconnect() {
 void Connection::markDead(const char* reason, int delay) {
   if (m_alive) {
     time(&m_deadUntil);
-    m_deadUntil += delay; // check after `delay` seconds
+    m_deadUntil += delay; // check after `delay` seconds, default 0
     this->close();
     log_warn("Connection %s is dead(reason: %s, delay: %d), next check at %lu",
              m_name, reason, delay, m_deadUntil);
@@ -299,11 +297,11 @@ void Connection::reset() {
 }
 
 void Connection::setRetryTimeout(int timeout) {
-  s_retryTimeout = timeout;
+  m_retryTimeout = timeout;
 }
 
 void Connection::setConnectTimeout(int timeout) {
-  s_connectTimeout = timeout;
+  m_connectTimeout = timeout;
 }
 
 } // namespace mc

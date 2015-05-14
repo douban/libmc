@@ -41,6 +41,8 @@
 #define MC_MSG_MORE MSG_MORE
 #endif
 
+
+#define MIN_DATABLOCK_CAPACITY 8192
 #define MC_BUFFER_SIZE 8192
 #define RECV_BUFFER_SIZE 8192
 #define MIN(A, B) (((A) > (B)) ? (B) : (A))
