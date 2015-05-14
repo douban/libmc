@@ -49,6 +49,7 @@ void DataBlock::init(size_t len) {
 
 
 void DataBlock::setMinCapacity(size_t len) {
+  log_warn("make sure this line is never called in production");
   s_minCapacity = len;
 }
 
