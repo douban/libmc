@@ -131,6 +131,8 @@ int main() {
   double t0 = getCPUTime(); \
   (REPR); \
   double t1 = getCPUTime(); \
+  (void) t0; \
+  (void) t1; \
   log_info(#REPR" in %.3f s", t1 - t0); \
 } while (0)
 
