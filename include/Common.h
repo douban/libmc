@@ -68,6 +68,14 @@
 )
 
 void printBacktrace();
+
+#define MC_LOG_LEVEL_ERROR 1
+#define MC_LOG_LEVEL_WARNING 2
+#define MC_LOG_LEVEL_INFO 3
+#define MC_LOG_LEVEL_DEBUG 4
+
+#define MC_LOG_LEVEL MC_LOG_LEVEL_ERROR
+
 #ifdef NDEBUG
 #define debug(M, ...) __VOID_CAST(0)
 
@@ -77,10 +85,15 @@ void printBacktrace();
   __VOID_CAST(0) \
 )
 #else
+
+#if MC_LOG_LEVEL >= MC_LOG_LEVEL_DEBUG
 #define debug(M, ...) ( \
   _mc_output_stderr(DEBUG, "[E: %s] " M, _mc_clean_errno(), ##__VA_ARGS__), \
   __VOID_CAST(0) \
 )
+#else
+#define debug(M, ...) __VOID_CAST(0)
+#endif
 
 #define _ASSERTION_FAILED(cond) ( \
   _mc_output_stderr(PANIC, "failed assertion `%s'" , #cond), \
@@ -88,21 +101,6 @@ void printBacktrace();
   abort() \
 )
 #endif
-
-#define log_info(M, ...) ( \
-  _mc_output_stderr(INFO, M, ##__VA_ARGS__), \
-  __VOID_CAST(0) \
-)
-
-#define log_warn(M, ...) ( \
-  _mc_output_stderr(WARN, "[E: %s] " M, _mc_clean_errno(), ##__VA_ARGS__), \
-  __VOID_CAST(0) \
-)
-
-#define log_err(M, ...) ( \
-  _mc_output_stderr(ERROR, "[E: %s] " M, _mc_clean_errno(), ##__VA_ARGS__), \
-  __VOID_CAST(0) \
-)
 
 #define ASSERT(cond) ( \
   (cond) ? \
@@ -112,6 +110,32 @@ void printBacktrace();
 
 #define NOT_REACHED() ASSERT(0)
 
+#if MC_LOG_LEVEL >= MC_LOG_LEVEL_INFO
+#define log_info(M, ...) ( \
+  _mc_output_stderr(INFO, M, ##__VA_ARGS__), \
+  __VOID_CAST(0) \
+)
+#else
+#define log_info(M, ...) __VOID_CAST(0)
+#endif
+
+#if MC_LOG_LEVEL >= MC_LOG_LEVEL_WARNING
+#define log_warn(M, ...) ( \
+  _mc_output_stderr(WARN, "[E: %s] " M, _mc_clean_errno(), ##__VA_ARGS__), \
+  __VOID_CAST(0) \
+)
+#else
+#define log_warn(M, ...) __VOID_CAST(0)
+#endif
+
+#if MC_LOG_LEVEL >= MC_LOG_LEVEL_ERROR
+#define log_err(M, ...) ( \
+  _mc_output_stderr(ERROR, "[E: %s] " M, _mc_clean_errno(), ##__VA_ARGS__), \
+  __VOID_CAST(0) \
+)
+#else
+#define log_err(M, ...) __VOID_CAST(0)
+#endif
 
 namespace douban {
 namespace mc {

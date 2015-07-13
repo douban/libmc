@@ -27,6 +27,7 @@ class MiscCase(unittest.TestCase):
 class SingleServerCase(unittest.TestCase):
     def setUp(self):
         self.mc = Client(["127.0.0.1:21211"])
+        self.mc_alt = Client(["127.0.0.1:21211"])
         self.compressed_mc = Client(["127.0.0.1:21211"], comp_threshold=1024)
         self.noreply_mc = Client(["127.0.0.1:21211"], noreply=True)
 
@@ -198,11 +199,28 @@ class SingleServerCase(unittest.TestCase):
         assert self.mc.get(key) == val + large_patch
         self.mc.delete(key)
 
+    def test_quit(self):
+        assert self.mc.delete('all_is_well')
+        assert self.mc.set('all_is_well', 'bingo')
+        assert self.mc_alt.delete('all_is_well')
+        assert self.mc_alt.set('all_is_well', 'bingo')
+        assert self.mc.version()  # establish all conns
+        assert self.mc_alt.version()  # establish all conns
+        nc1 = self.mc.stats()[self.mc.servers[0]]['curr_connections']
+        nc2 = self.mc_alt.stats()[self.mc.servers[0]]['curr_connections']
+        assert nc1 == nc2
+        assert self.mc.quit()
+        nc2 = self.mc_alt.stats()[self.mc.servers[0]]['curr_connections']
+        assert nc1 - 1 == nc2
+        # back to life immediately
+        assert self.mc.get('all_is_well') == 'bingo'
+
 
 class TwoServersCase(SingleServerCase):
 
     def setUp(self):
         self.mc = Client(["127.0.0.1:21211", "127.0.0.1:21212"])
+        self.mc_alt = Client(["127.0.0.1:21211", "127.0.0.1:21212"])
         self.compressed_mc = Client(["127.0.0.1:21211", "127.0.0.1:21212"],
                                     comp_threshold=1024)
         self.noreply_mc = Client(
@@ -214,6 +232,7 @@ class TenServersCase(SingleServerCase):
 
     def setUp(self):
         self.mc = Client(["127.0.0.1:%d" % (21211 + i) for i in range(10)])
+        self.mc_alt = Client(["127.0.0.1:%d" % (21211 + i) for i in range(10)])
         self.compressed_mc = Client(
             ["127.0.0.1:%d" % (21211 + i) for i in range(10)],
             comp_threshold=1024

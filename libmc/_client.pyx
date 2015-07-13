@@ -108,60 +108,85 @@ cdef extern from "Client.h" namespace "douban::mc":
         char* getServerAddressByKey(const char* key, size_t keyLen) nogil
         void enableConsistentFailover() nogil
         void disableConsistentFailover() nogil
-        int get(const char* const* keys, const size_t* keyLens, size_t nKeys,
-                retrieval_result_t*** results, size_t* nResults) nogil
-        int gets(const char* const* keys, const size_t* keyLens, size_t nKeys,
-                retrieval_result_t*** results, size_t* nResults) nogil
+        err_code_t get(
+            const char* const* keys, const size_t* keyLens, size_t nKeys,
+            retrieval_result_t*** results, size_t* nResults
+        ) nogil
+        err_code_t gets(
+            const char* const* keys, const size_t* keyLens, size_t nKeys,
+            retrieval_result_t*** results, size_t* nResults
+        ) nogil
         void destroyRetrievalResult() nogil
 
-        int set(const char* const* keys, const size_t* key_lens,
-                const flags_t* flags, const exptime_t exptime,
-                const cas_unique_t* cas_uniques, const bool_t noreply,
-                const char* const* vals, const size_t* val_lens,
-                size_t n_items, message_result_t*** results, size_t* nResults) nogil
-        int add(const char* const* keys, const size_t* key_lens,
-                const flags_t* flags, const exptime_t exptime,
-                const cas_unique_t* cas_uniques, const bool_t noreply,
-                const char* const* vals, const size_t* val_lens,
-                size_t n_items, message_result_t*** results, size_t* nResults) nogil
-        int replace(const char* const* keys, const size_t* key_lens,
-                const flags_t* flags, const exptime_t exptime,
-                const cas_unique_t* cas_uniques, const bool_t noreply,
-                const char* const* vals, const size_t* val_lens,
-                size_t n_items, message_result_t*** results, size_t* nResults) nogil
-        int prepend(const char* const* keys, const size_t* key_lens,
-                const flags_t* flags, const exptime_t exptime,
-                const cas_unique_t* cas_uniques, const bool_t noreply,
-                const char* const* vals, const size_t* val_lens,
-                size_t n_items, message_result_t*** results, size_t* nResults) nogil
-        int append(const char* const* keys, const size_t* key_lens,
-                const flags_t* flags, const exptime_t exptime,
-                const cas_unique_t* cas_uniques, const bool_t noreply,
-                const char* const* vals, const size_t* val_lens,
-                size_t n_items, message_result_t*** results, size_t* nResults) nogil
-        int cas(const char* const* keys, const size_t* key_lens,
-                const flags_t* flags, const exptime_t exptime,
-                const cas_unique_t* cas_uniques, const bool_t noreply,
-                const char* const* vals, const size_t* val_lens,
-                size_t n_items, message_result_t*** results, size_t* nResults) nogil
-        int _delete(const char* const* keys, const size_t* key_lens,
-                const bool_t noreply, size_t n_items,
-                message_result_t*** results, size_t* nResults) nogil
-        int touch(const char* const* keys, const size_t* keyLens,
-                const exptime_t exptime, const bool_t noreply, size_t nItems,
-                message_result_t*** results, size_t* nResults) nogil
+        err_code_t set(
+            const char* const* keys, const size_t* key_lens,
+            const flags_t* flags, const exptime_t exptime,
+            const cas_unique_t* cas_uniques, const bool_t noreply,
+            const char* const* vals, const size_t* val_lens,
+            size_t n_items, message_result_t*** results, size_t* nResults
+        ) nogil
+        err_code_t add(
+            const char* const* keys, const size_t* key_lens,
+            const flags_t* flags, const exptime_t exptime,
+            const cas_unique_t* cas_uniques, const bool_t noreply,
+            const char* const* vals, const size_t* val_lens,
+            size_t n_items, message_result_t*** results, size_t* nResults
+        ) nogil
+        err_code_t replace(
+            const char* const* keys, const size_t* key_lens,
+            const flags_t* flags, const exptime_t exptime,
+            const cas_unique_t* cas_uniques, const bool_t noreply,
+            const char* const* vals, const size_t* val_lens,
+            size_t n_items, message_result_t*** results, size_t* nResults
+        ) nogil
+        err_code_t prepend(
+            const char* const* keys, const size_t* key_lens,
+            const flags_t* flags, const exptime_t exptime,
+            const cas_unique_t* cas_uniques, const bool_t noreply,
+            const char* const* vals, const size_t* val_lens,
+            size_t n_items, message_result_t*** results, size_t* nResults
+        ) nogil
+        err_code_t append(
+            const char* const* keys, const size_t* key_lens,
+            const flags_t* flags, const exptime_t exptime,
+            const cas_unique_t* cas_uniques, const bool_t noreply,
+            const char* const* vals, const size_t* val_lens,
+            size_t n_items, message_result_t*** results, size_t* nResults
+        ) nogil
+        err_code_t cas(
+            const char* const* keys, const size_t* key_lens,
+            const flags_t* flags, const exptime_t exptime,
+            const cas_unique_t* cas_uniques, const bool_t noreply,
+            const char* const* vals, const size_t* val_lens,
+            size_t n_items, message_result_t*** results, size_t* nResults
+        ) nogil
+        err_code_t _delete(
+            const char* const* keys, const size_t* key_lens,
+            const bool_t noreply, size_t n_items,
+            message_result_t*** results, size_t* nResults
+        ) nogil
+        err_code_t touch(
+            const char* const* keys, const size_t* keyLens,
+            const exptime_t exptime, const bool_t noreply, size_t nItems,
+            message_result_t*** results, size_t* nResults
+        ) nogil
         void destroyMessageResult() nogil
 
-        int version(broadcast_result_t** results, size_t* nHosts) nogil
-        int stats(broadcast_result_t** results, size_t* nHosts) nogil
+        err_code_t version(broadcast_result_t** results, size_t* nHosts) nogil
+        err_code_t quit() nogil
+        err_code_t stats(broadcast_result_t** results, size_t* nHosts) nogil
         void destroyBroadcastResult() nogil
 
-        int incr(const char* key, const size_t keyLen, const uint64_t delta,
-                 const bool_t noreply, unsigned_result_t*** results,
-                 size_t* nResults) nogil
-        int decr(const char* key, const size_t keyLen, const uint64_t delta,
-                 const bool_t noreply, unsigned_result_t*** results,
-                 size_t* nResults) nogil
+        err_code_t incr(
+            const char* key, const size_t keyLen, const uint64_t delta,
+            const bool_t noreply, unsigned_result_t*** results,
+            size_t* nResults
+        ) nogil
+        err_code_t decr(
+            const char* key, const size_t keyLen, const uint64_t delta,
+            const bool_t noreply, unsigned_result_t*** results,
+            size_t* nResults
+        ) nogil
         void destroyUnsignedResult() nogil
         void _sleep(uint32_t ms) nogil
 
@@ -865,6 +890,15 @@ cdef class PyClient:
         with nogil:
             self._imp.destroyBroadcastResult()
         return rv
+
+    def quit(self):
+        self._record_thread_ident()
+        with nogil:
+            self.last_error = self._imp.quit()
+            self._imp.destroyBroadcastResult()
+        if self.last_error in {RET_CONN_POLL_ERR, RET_RECV_ERR}:
+            return True
+        return False
 
     def stats(self):
         self._record_thread_ident()

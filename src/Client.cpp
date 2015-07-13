@@ -150,6 +150,13 @@ err_code_t Client::version(types::broadcast_result_t** results, size_t* nHosts) 
 }
 
 
+err_code_t Client::quit() {
+  broadcastCommand(keywords::kQUIT, 4);
+  err_code_t rv = waitPoll();
+  return rv;
+}
+
+
 err_code_t Client::stats(types::broadcast_result_t** results, size_t* nHosts) {
   broadcastCommand(keywords::kSTATS, 5);
   err_code_t rv = waitPoll();

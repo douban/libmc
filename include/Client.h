@@ -45,6 +45,7 @@ class Client : public ConnectionPool {
   void destroyBroadcastResult();
 
   err_code_t version(types::broadcast_result_t** results, size_t* nHosts);
+  err_code_t quit();
   err_code_t stats(types::broadcast_result_t** results, size_t* nHosts);
 
   // touch
