@@ -150,19 +150,17 @@ void PacketParser::process_packets(err_code_t& err) {
       case FSM_GET_BYTES_CAS: // got "bytes\r" or "bytes cas\r"
         {
           assert(mt_kvPtr != NULL);
-          if (m_state == FSM_GET_BYTES_CAS) {
-            const char c = m_buffer_reader->peek(err, 0);
-            if (err != RET_OK) {
-              return;
-            }
-            if (c == '\n') {  // get
-              mt_kvPtr->cas_unique = 0;
-            } else {  // gets
-              READ_UNSIGNED(mt_kvPtr->cas_unique);
-              SKIP_BYTES(1); // '\r' after cas
-            }
-            m_state = FSM_GET_VALUE_REMAINING;
+          const char c = m_buffer_reader->peek(err, 0);
+          if (err != RET_OK) {
+            return;
           }
+          if (c == '\n') {  // get
+            mt_kvPtr->cas_unique = 0;
+          } else {  // gets
+            READ_UNSIGNED(mt_kvPtr->cas_unique);
+            SKIP_BYTES(1); // '\r' after cas
+          }
+          m_state = FSM_GET_VALUE_REMAINING;
         }
         break;
       case FSM_GET_VALUE_REMAINING: // not got "\n" + all bytes + "\r\n"
