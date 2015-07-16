@@ -24,11 +24,11 @@ from ._client import (
     MC_RETURN_OK,
 )
 
-__VERSION__ = '0.5.3'
-__version__ = "v0.5.3-3-g3eb1a97"
+__VERSION__ = "0.5.4"
+__version__ = "v0.5.4"
 __author__ = "mckelvin"
 __email__ = "mckelvin@users.noreply.github.com"
-__date__ = "Sat Jul 11 14:24:54 2015 +0800"
+__date__ = "Thu Jul 16 18:20:00 2015 +0800"
 
 
 class Client(PyClient):
