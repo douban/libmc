@@ -28,7 +28,7 @@ __VERSION__ = "0.5.4"
 __version__ = "v0.5.4"
 __author__ = "mckelvin"
 __email__ = "mckelvin@users.noreply.github.com"
-__date__ = "Thu Jul 16 18:20:00 2015 +0800"
+__date__ = "Thu Jul 16 18:21:13 2015 +0800"
 
 
 class Client(PyClient):
