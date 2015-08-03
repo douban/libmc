@@ -20,7 +20,6 @@ BENCH_TIME = 1.0
 N_SERVERS = 20
 
 
-import cmemcached
 import pylibmc
 import libmc
 
@@ -131,7 +130,7 @@ def bench_get(mc, key, data):
 
 @benchmark_method
 def bench_set(mc, key, data):
-    if isinstance(mc.mc, (libmc.Client, cmemcached.Client)):
+    if isinstance(mc.mc, libmc.Client):
         if not mc.set(key, data):
             logger.warn('%r.set(%r, ...) fail', mc, key)
     else:
@@ -148,7 +147,7 @@ def bench_get_multi(mc, keys, pairs):
 @benchmark_method
 def bench_set_multi(mc, keys, pairs):
     ret = mc.set_multi(pairs)
-    if isinstance(mc.mc, (libmc.Client, cmemcached.Client)):
+    if isinstance(mc.mc, libmc.Client):
         if not ret:
             logger.warn('%r.set_multi fail', mc)
     else:
@@ -260,14 +259,6 @@ participants = [
         ), 'libmc1')
     ),
 
-    Participant(
-        name='python-libmemcached(md5 / ketama / nodelay / nonblocking'
-             ', from douban)',
-        factory=lambda: Prefix(__import__('cmemcached').Client(
-            servers, comp_threshold=4000
-        ), 'cmemcached1')
-    ),
-
 ]
 
 
@@ -308,7 +299,6 @@ def bench(participants=participants, benchmarks=benchmarks,
 def main(args=sys.argv[1:]):
     logger.info('pylibmc: %s', pylibmc.__file__)
     logger.info('libmc: %s', libmc.__file__)
-    logger.info('cmemcached: %s', cmemcached.__file__)
 
     ps = [p for p in participants if p.name in args]
     ps = ps if ps else participants

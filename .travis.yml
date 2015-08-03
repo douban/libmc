@@ -1,42 +1,37 @@
 language: python
 
-os:
-  - linux
-  - osx
+cache:
+  directories:
+    - $HOME/.cache/pip
 
 python:
   - 2.7
 
 env:
+  matrix:
   - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Release PRJ_COMPILER=clang
   - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Debug PRJ_COMPILER=clang
   - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Release PRJ_COMPILER=gcc
   - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Debug PRJ_COMPILER=gcc
   - TEST_SUITE=benchmark
 
-install:
-  - if [ $TRAVIS_OS_NAME = "linux" ]; then sudo apt-get update -yqq; fi
-  - if [ $TRAVIS_OS_NAME = "linux" ]; then sudo apt-get install -yqq valgrind cppcheck; fi
-  - if [ $TRAVIS_OS_NAME = "osx" ]; then brew update; fi
-  - if [ $TRAVIS_OS_NAME = "osx" ]; then brew install valgrind cppcheck cmake; fi
-  # install patched libmemcached from douban
-  - wget https://github.com/xtao/douban-patched/raw/master/libmemcached-douban-1.0.18.tar.gz
-  - tar zxf libmemcached-douban-1.0.18.tar.gz
-  - cd libmemcached-1.0.18
-  - ./configure --prefix=/usr && make && sudo make install
-  - cd ..
-  - rm -rf python-libmemcached
-  - rm -rf libmemcached*
-  - if [ $TRAVIS_OS_NAME = "linux" ]; then sudo ldconfig; fi
-  # install python deps
-  - pip install -q Cython
-  - pip install -q git+https://github.com/douban/python-libmemcached.git@master#egg=cmemcached;
-  - if [ $TEST_SUITE = "unittest" ]; then pip install -q pytest greenify gevent numpy; fi
-  - if [ $TEST_SUITE = "benchmark" ]; then pip install -q git+https://github.com/lericson/pylibmc@master#egg=pylibmc; fi
-  - if [ $TEST_SUITE = "benchmark" ]; then pip install -q git+https://github.com/linsomniac/python-memcached.git@master#egg=memcache; fi
+addons:
+  apt:
+    packages:
+      - valgrind
+      - cppcheck
+      - memcached
+      - libmemcached6
 
-services:
-  - memcached
+before_install:
+  - pip install --upgrade pip
+
+install:
+  # install python deps
+  - pip install Cython
+  - if [ $TEST_SUITE = "unittest" ]; then pip install pytest greenify gevent numpy; fi
+  - if [ $TEST_SUITE = "benchmark" ]; then pip install git+https://github.com/lericson/pylibmc@master#egg=pylibmc; fi
+  - if [ $TEST_SUITE = "benchmark" ]; then pip install git+https://github.com/linsomniac/python-memcached.git@master#egg=memcache; fi
 
 before_script:
   - ./misc/memcached_server start

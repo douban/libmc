@@ -5,7 +5,7 @@ set(CMAKE_MACOSX_RPATH 1)
 add_definitions(-DMC_USE_SMALL_VECTOR)
 
 if (NOT CMAKE_BUILD_TYPE)
-   set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel." FORCE)
+   set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build, options are: Debug Release." FORCE)
 endif (NOT CMAKE_BUILD_TYPE)
 
 set(CMAKE_CXX_FLAGS_COMMON "-Wall -fno-rtti -fno-exceptions")
