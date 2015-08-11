@@ -104,7 +104,8 @@ cdef extern from "Client.h" namespace "douban::mc":
     cdef cppclass Client:
         Client()
         void config(config_options_t opt, int val) nogil
-        int init(const char* const * hosts, const uint32_t* ports, size_t n) nogil
+        int init(const char* const * hosts, const uint32_t* ports, size_t n,
+                 const char* const * aliases) nogil
         char* getServerAddressByKey(const char* key, size_t keyLen) nogil
         void enableConsistentFailover() nogil
         void disableConsistentFailover() nogil
@@ -335,19 +336,38 @@ cdef class PyClient:
         cdef size_t n = len(servers)
         cdef char** c_hosts = <char**>PyMem_Malloc(n * sizeof(char*))
         cdef uint32_t* c_ports = <uint32_t*>PyMem_Malloc(n * sizeof(uint32_t))
-        servers_ = [s.split(':') for s in servers]
+        cdef char** c_aliases = <char**>PyMem_Malloc(n * sizeof(char*))
+        servers_ = []
+        for srv in servers:
+            addr_alias = srv.split(' ')
+            addr = addr_alias[0]
+            if len(addr_alias) == 1:
+                alias = None
+            else:
+                alias = addr_alias[1]
+
+            host_port = addr.split(':')
+            host = host_port[0]
+            if len(host_port) == 1:
+                port = MC_DEFAULT_PORT
+            else:
+                port = int(host_port[1])
+            servers_.append((host, port, alias))
+
         Py_INCREF(servers_)
         for i in range(n):
-            addr = servers_[i]
-            c_hosts[i] = PyString_AsString(addr[0])
-            c_ports[i] = MC_DEFAULT_PORT
-            if len(addr) == 2:
-                c_ports[i] = PyInt_AsLong(int(addr[1]))
+            host, port, alias = servers_[i]
+            c_hosts[i] = PyString_AsString(host)
+            c_ports[i] = PyInt_AsLong(port)
+            if alias is None:
+                c_aliases[i] = NULL
+            else:
+                c_aliases[i] = PyString_AsString(alias)
 
         cdef int rv = 0
         self._imp = new Client()
         self._imp.config(CFG_HASH_FUNCTION, hash_fn)
-        rv = self._imp.init(c_hosts, c_ports, n)
+        rv = self._imp.init(c_hosts, c_ports, n, c_aliases)
         if failover:
             self._imp.enableConsistentFailover()
         else:
@@ -355,6 +375,7 @@ cdef class PyClient:
 
         PyMem_Free(c_hosts)
         PyMem_Free(c_ports)
+        PyMem_Free(c_aliases)
         self.do_split = do_split
         self.comp_threshold = comp_threshold
         self.noreply = noreply

@@ -51,9 +51,31 @@ mc::Client* newClient(int n) {
     21211, 21212, 21213, 21214, 21215, 21216, 21217, 21218, 21219, 21220,
     21221, 21222, 21223, 21224, 21225, 21226, 21227, 21228, 21229, 21230
   };
+  const char * aliases[] = {
+    "alfa",
+    "bravo",
+    "charlie",
+    "delta",
+    "echo",
+    NULL,
+    "golf",
+    "hotel",
+    "india",
+    "juliett",
+    "kilo",
+    "lima",
+    "mike",
+    "november",
+    "oscar",
+    "papa",
+    "quebec",
+    "romeo",
+    "sierra",
+    "tango"
+  };
   mc::Client* client = new mc::Client();
   client->config(mc::CFG_HASH_FUNCTION, mc::OPT_HASH_MD5);
-  client->init(hosts, ports, n);
+  client->init(hosts, ports, n, aliases);
   types::broadcast_result_t* results;
   size_t nHosts;
   int ret = client->version(&results, &nHosts);

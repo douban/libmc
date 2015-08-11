@@ -12,8 +12,18 @@ set(CMAKE_CXX_FLAGS_COMMON "-Wall -fno-rtti -fno-exceptions")
 set(CMAKE_CXX_FLAGS_DEBUG "-DDEBUG -g2 ${CMAKE_CXX_FLAGS_COMMON}" CACHE STRING "CXX DEBUG FLAGS" FORCE)
 set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -O3 ${CMAKE_CXX_FLAGS_COMMON}" CACHE STRING "CXX RELEASE FLAGS" FORCE)
 
-FILE(GLOB mc_HEADERS include/*.h include/hashkit/*.h include/llvm/*.h)
-FILE(GLOB mc_SOURCES src/*.cpp src/hashkit/*.cpp)
+FILE(
+    GLOB mc_HEADERS
+    include/*.h
+    include/hashkit/*.h
+    include/llvm/*.h
+    include/rapidjson/*.h
+)
+FILE(
+    GLOB mc_SOURCES
+    src/*.cpp
+    src/hashkit/*.cpp
+)
 
 include_directories(include)
 
