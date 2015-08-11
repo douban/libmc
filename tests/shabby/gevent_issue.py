@@ -7,7 +7,8 @@ gevent.monkey.patch_time()
 import greenify
 greenify.greenify()
 import libmc
-assert greenify.patch_lib(libmc._client.__file__)
+for so_path in libmc.DYNAMIC_LIBRARIES:
+    assert greenify.patch_lib(so_path)
 mc = libmc.Client(["127.0.0.1:%d" % slow_memcached_server.PORT])
 mc.config(libmc._client.MC_POLL_TIMEOUT,
           slow_memcached_server.BLOCKING_SECONDS * 1000 * 2)  # ms
