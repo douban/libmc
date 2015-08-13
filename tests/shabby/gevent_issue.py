@@ -20,7 +20,11 @@ stack = []
 def mc_sleep():
     print 'begin mc sleep'
     stack.append('mc_sleep_begin')
-    assert mc.set('foo', 'bar'), "Run `python slow_memcached_server.py` first"
+    for i in range(3):
+        if mc.set('foo', 'bar'):
+            break
+    else:
+        raise Exception("Run `python slow_memcached_server.py` first")
     stack.append('mc_sleep_end')
     print 'end mc sleep'
 
