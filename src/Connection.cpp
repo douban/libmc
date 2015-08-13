@@ -15,12 +15,12 @@
 using douban::mc::io::BufferWriter;
 using douban::mc::io::BufferReader;
 
-namespace douban{
+namespace douban {
 namespace mc {
 
 Connection::Connection()
-    : m_counter(0), m_port(0), m_weight(0) , m_socketFd(-1),
-      m_alive(false), m_deadUntil(0),
+    : m_counter(0), m_port(0), m_socketFd(-1),
+      m_alive(false), m_hasAlias(false), m_deadUntil(0),
       m_connectTimeout(MC_DEFAULT_CONNECT_TIMEOUT),
       m_retryTimeout(MC_DEFAULT_RETRY_TIMEOUT) {
   m_name[0] = '\0';
@@ -40,11 +40,16 @@ Connection::~Connection() {
   delete m_buffer_reader;
 }
 
-int Connection::init(const char* host, uint32_t port, uint32_t weight) {
+int Connection::init(const char* host, uint32_t port, const char* alias) {
   snprintf(m_host, sizeof m_host, "%s", host);
   m_port = port;
-  snprintf(m_name, sizeof m_name, "%s:%u", m_host, m_port);
-  m_weight = weight;
+  if (alias == NULL) {
+    m_hasAlias = false;
+    snprintf(m_name, sizeof m_name, "%s:%u", m_host, m_port);
+  } else {
+    m_hasAlias = true;
+    snprintf(m_name, sizeof m_name, "%s", alias);
+  }
   return -1; // -1 means the connection is not established yet
 }
 

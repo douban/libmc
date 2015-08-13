@@ -49,18 +49,23 @@ void KetamaSelector::addServers(Connection* conns, size_t nConns) {
     int sort_host_len = 0;
     for (size_t pointer_idx= 0; pointer_idx < s_pointerPerServer / s_pointerPerHash;
          pointer_idx++) {
-      if (conn->port() != MC_DEFAULT_PORT) {
-        sort_host_len = snprintf(sort_host, sizeof(sort_host), "%s:%u-%zu",
-                                 conn->host(), conn->port(), pointer_idx);
+      if (conn->hasAlias()) {
+          sort_host_len = snprintf(sort_host, sizeof(sort_host), "%s-%zu",
+                                   conn->name(), pointer_idx);
       } else {
-        sort_host_len = snprintf(sort_host, sizeof(sort_host), "%s-%zu",
-                                 conn->host(), pointer_idx);
+        if (conn->port() != MC_DEFAULT_PORT) {
+          sort_host_len = snprintf(sort_host, sizeof(sort_host), "%s:%u-%zu",
+                                   conn->host(), conn->port(), pointer_idx);
+        } else {
+          sort_host_len = snprintf(sort_host, sizeof(sort_host), "%s-%zu",
+                                   conn->host(), pointer_idx);
+        }
       }
       continuum_item_t item;
       // Equivalent to `MEMCACHED_BEHAVIOR_KETAMA_HASH` behavior in libmemcached,
       // but here it always use hash_md5.
       item.hash_value = hash_md5(sort_host, sort_host_len);
-      item.pool_idx = i;
+      item.conn_idx = i;
       item.conn = conn;
       m_continuum.push_back(item);
     }
@@ -98,7 +103,7 @@ std::vector<continuum_item_t>::iterator KetamaSelector::getServerIt(const char* 
         log_warn("hash function is not specified, use hash_md5");
       }
       target_item.hash_value = m_hashFunction(key, key_len);
-      target_item.pool_idx = 0;
+      target_item.conn_idx = 0;
       target_item.conn = NULL;
       it = std::lower_bound(m_continuum.begin(), m_continuum.end(), target_item,
                             continuum_item_t::compare);
@@ -148,7 +153,7 @@ int KetamaSelector::getServer(const char* key, size_t key_len, bool check_alive)
   if (it == m_continuum.end()) {
     return -1;
   }
-  return static_cast<int>(it->pool_idx);
+  return static_cast<int>(it->conn_idx);
 }
 
 Connection* KetamaSelector::getConn(const char* key, size_t key_len, bool check_alive) {

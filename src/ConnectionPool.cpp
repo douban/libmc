@@ -58,14 +58,14 @@ void ConnectionPool::setHashFunction(hash_function_options_t fn_opt) {
 
 
 int ConnectionPool::init(const char* const * hosts, const uint32_t* ports, const size_t n,
-                         const uint32_t* weights) {
+                         const char* const * aliases) {
   delete[] m_conns;
   m_connSelector.reset();
   int rv = 0;
   m_nConns = n;
   m_conns = new Connection[m_nConns];
   for (size_t i = 0; i < m_nConns; i++) {
-    rv += m_conns[i].init(hosts[i], ports[i]);
+    rv += m_conns[i].init(hosts[i], ports[i], aliases == NULL ? NULL : aliases[i]);
   }
   m_connSelector.addServers(m_conns, m_nConns);
   return rv;

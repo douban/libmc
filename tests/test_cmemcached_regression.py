@@ -470,11 +470,53 @@ class CmemcachedRegressionPrefixCase(unittest.TestCase):
         for k in rs:
             self.assertEqual(mc.get_host_by_key(k), rs[k])
 
+    def test_ketama_with_jocky_alias(self):
+        mc = Client([
+            'localhost localhost',
+            'myhost:11211 myhost',
+            '127.0.0.1:11212 127.0.0.1:11212',
+            'myhost:11213 myhost:11213'
+        ])
+        rs = {
+            'test:10000': 'localhost',
+            'test:20000': '127.0.0.1:11212',
+            'test:30000': '127.0.0.1:11212',
+            'test:40000': '127.0.0.1:11212',
+            'test:50000': '127.0.0.1:11212',
+            'test:60000': 'myhost:11213',
+            'test:70000': '127.0.0.1:11212',
+            'test:80000': '127.0.0.1:11212',
+            'test:90000': '127.0.0.1:11212',
+        }
+        for k in rs:
+            self.assertEqual(mc.get_host_by_key(k), rs[k])
+
+    def test_ketama_with_alias(self):
+        mc = Client([
+            '192.168.1.211:11211 tango.mc.douban.com',
+            '192.168.1.212:11212 uniform.mc.douban.com',
+            '192.168.1.211:11212 victor.mc.douban.com',
+            '192.168.1.212:11211 whiskey.mc.douban.com',
+        ])
+        rs = {
+            'test:10000': 'whiskey.mc.douban.com',
+            'test:20000': 'victor.mc.douban.com',
+            'test:30000': 'victor.mc.douban.com',
+            'test:40000': 'victor.mc.douban.com',
+            'test:50000': 'victor.mc.douban.com',
+            'test:60000': 'uniform.mc.douban.com',
+            'test:70000': 'tango.mc.douban.com',
+            'test:80000': 'victor.mc.douban.com',
+            'test:90000': 'victor.mc.douban.com',
+        }
+        for k in rs:
+            self.assertEqual(mc.get_host_by_key(k), rs[k])
+
     def test_prefixed_ketama(self):
         mc = Client(
             ['localhost', 'myhost:11211', '127.0.0.1:11212', 'myhost:11213'],
             prefix="/prefix"
-            )
+        )
         rs = {
             'test:10000': '127.0.0.1:11212',
             'test:20000': 'localhost:11211',

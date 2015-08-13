@@ -13,7 +13,7 @@ namespace hashkit {
 
 typedef struct  continuum_item_s {
   uint32_t hash_value;
-  size_t pool_idx;
+  size_t conn_idx;
   douban::mc::Connection* conn;
 
   static struct compare_s {
