@@ -1,6 +1,5 @@
 import time
 from libmc import Client
-# from cmemcached import Client
 
 
 def main():

@@ -56,15 +56,34 @@ Configuration
     )
 
     mc = libmc.Client(
-        ['localhost:11211', 'localhost:11212'], do_split=True,
-        comp_threshold=0, noreply=False, prefix=None,
-        hash_fn=MC_HASH_MD5, failover=False
+        [
+        'localhost:11211',
+        'localhost:11212',
+        'remote_host',
+        'remote_host mc.mike',
+        'remote_host:11213 mc.oscar'
+        ],
+        do_split=True,
+        comp_threshold=0,
+        noreply=False,
+        prefix=None,
+        hash_fn=MC_HASH_MD5,
+        failover=False
     )
 
     mc.config(MC_POLL_TIMEOUT, 100)  # 100 ms
     mc.config(MC_CONNECT_TIMEOUT, 300)  # 300 ms
     mc.config(MC_RETRY_TIMEOUT, 5)  # 5 s
 
+
+-  ``servers``: is a list of memcached server addresses. Each address
+   can be in format of ``hostname[:port] [alias]``. ``port`` and ``alias``
+   are optional. If ``port`` is not given, default port ``11211`` will
+   be used. ``alias`` will be used to compute server hash if given,
+   otherwise server hash will be computed based on ``host`` and ``port``
+   (i.e.: If ``port`` is not given or it is equal to ``11211``, ``host`` will be
+   used to compute server hash. If ``port`` is not equal to ``11211``,
+   ``host:port`` will be used).
 -  ``do_split``: Memcached server will refuse to store value if size >=
    1MB, if ``do_split`` is enabled, large value (< 10 MB) will be
    splitted into several blocks. If the value is too large (>= 10 MB),

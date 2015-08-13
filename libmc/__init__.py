@@ -1,3 +1,4 @@
+import os
 from ._client import (
     PyClient, ThreadUnsafe,
     encode_value,
@@ -22,17 +23,21 @@ from ._client import (
     MC_RETURN_INVALID_KEY_ERR,
     MC_RETURN_INCOMPLETE_BUFFER_ERR,
     MC_RETURN_OK,
+    __file__ as _libmc_so_file
 )
 
-__VERSION__ = '0.5.3'
-__version__ = "v0.5.3-3-g3eb1a97"
+__VERSION__ = "0.5.4"
+__version__ = "v0.5.4-5-g8a969de"
 __author__ = "mckelvin"
 __email__ = "mckelvin@users.noreply.github.com"
-__date__ = "Sat Jul 11 14:24:54 2015 +0800"
+__date__ = "Tue Aug 11 14:44:19 2015 +0800"
 
 
 class Client(PyClient):
     pass
+
+
+DYNAMIC_LIBRARIES = [os.path.abspath(_libmc_so_file)]
 
 
 __all__ = [
@@ -47,5 +52,5 @@ __all__ = [
     'MC_RETURN_POLL_TIMEOUT_ERR', 'MC_RETURN_POLL_ERR',
     'MC_RETURN_MC_SERVER_ERR', 'MC_RETURN_PROGRAMMING_ERR',
     'MC_RETURN_INVALID_KEY_ERR', 'MC_RETURN_INCOMPLETE_BUFFER_ERR',
-    'MC_RETURN_OK',
+    'MC_RETURN_OK', 'DYNAMIC_LIBRARIES'
 ]
