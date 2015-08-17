@@ -2,6 +2,7 @@ import os
 from ._client import (
     PyClient, ThreadUnsafe,
     encode_value,
+    decode_value,
 
     MC_DEFAULT_EXPTIME,
     MC_POLL_TIMEOUT,
@@ -27,10 +28,10 @@ from ._client import (
 )
 
 __VERSION__ = "0.5.4"
-__version__ = "v0.5.4-5-g8a969de"
-__author__ = "mckelvin"
+__version__ = "v0.5.4-7-g467dcd9"
+__author__ = "PAN, Myautsai"
 __email__ = "mckelvin@users.noreply.github.com"
-__date__ = "Tue Aug 11 14:44:19 2015 +0800"
+__date__ = "Thu Aug 13 14:26:19 2015 +0800"
 
 
 class Client(PyClient):
@@ -41,7 +42,7 @@ DYNAMIC_LIBRARIES = [os.path.abspath(_libmc_so_file)]
 
 
 __all__ = [
-    'Client', 'ThreadUnsafe', '__VERSION__', 'encode_value',
+    'Client', 'ThreadUnsafe', '__VERSION__', 'encode_value', 'decode_value',
 
     'MC_DEFAULT_EXPTIME', 'MC_POLL_TIMEOUT', 'MC_CONNECT_TIMEOUT',
     'MC_RETRY_TIMEOUT',

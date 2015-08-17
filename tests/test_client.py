@@ -3,7 +3,8 @@
 import sys
 import unittest
 from libmc import (
-    Client, encode_value, MC_RETURN_OK, MC_RETURN_INVALID_KEY_ERR,
+    Client, encode_value, decode_value,
+    MC_RETURN_OK, MC_RETURN_INVALID_KEY_ERR,
     MC_RETURN_MC_SERVER_ERR
 )
 
@@ -11,6 +12,15 @@ from libmc import (
 # defined in _client.pyx
 _FLAG_DOUBAN_CHUNKED = 1 << 12
 _DOUBAN_CHUNK_SIZE = 1000000
+
+
+class DiveMaster(object):
+
+    def __init__(self, id_):
+        self.id = id_
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and other.id == self.id
 
 
 class MiscCase(unittest.TestCase):
@@ -22,6 +32,22 @@ class MiscCase(unittest.TestCase):
         vi = sys.version_info
         if vi.major == 2 and vi.micro == 7 and vi.minor < 9:
             assert encode_value(('douban', 0), 0) == expect
+
+    def test_decode_value(self):
+        dataset = [
+            True,
+            0,
+            100,
+            1000L,
+            10.24,
+            DiveMaster(1024),
+            "scubadiving",
+        ]
+        for d in dataset:
+            new_d = decode_value(*encode_value(d, 0))
+            assert new_d == d
+            if isinstance(d, DiveMaster):
+              assert d is not new_d
 
 
 class SingleServerCase(unittest.TestCase):

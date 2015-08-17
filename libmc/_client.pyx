@@ -282,11 +282,11 @@ cdef bytes _encode_value(object val, int comp_threshold, flags_t *flags):
 
 def encode_value(object val, int comp_threshold):
     cdef flags_t flags
-    cdef bytes = _encode_value(val, comp_threshold, &flags)
-    return bytes, flags
+    cdef bytes buf = _encode_value(val, comp_threshold, &flags)
+    return buf, flags
 
 
-cdef object _decode_value(bytes val, flags_t flags):
+cpdef object decode_value(bytes val, flags_t flags):
     cdef object dec_val = None
     if flags & _FLAG_COMPRESS:
         try:
@@ -482,7 +482,7 @@ cdef class PyClient:
         if py_value is None:
             return
 
-        return _decode_value(py_value, flags)
+        return decode_value(py_value, flags)
 
     def gets(self, basestring key):
         self._record_thread_ident()
@@ -500,7 +500,7 @@ cdef class PyClient:
         if py_value is None:
             return
 
-        return _decode_value(py_value, flags), cas_unique
+        return decode_value(py_value, flags), cas_unique
 
     def _get_multi_raw(self, size_t n, list keys):
         cdef size_t n_res = 0
@@ -551,7 +551,7 @@ cdef class PyClient:
                 raw_bytes, flags  = self._get_large_raw(keys[i], n_splits, flags)
             if raw_bytes is None:
                 continue
-            dct[out_key] = _decode_value(raw_bytes, flags)
+            dct[out_key] = decode_value(raw_bytes, flags)
 
         return dct
 
