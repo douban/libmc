@@ -3,9 +3,9 @@ set -e
 BASEDIR=`dirname $0`
 
 python  -c 'import greenify; import gevent;'
-python $BASEDIR/slow_memcached_server.py > /dev/null &
+python $BASEDIR/slow_memcached_server.py &
 pid=$!
-
+echo "pid of slow memcached server: $pid"
 
 if [ `uname` = 'Linux' ]; then
     echo
