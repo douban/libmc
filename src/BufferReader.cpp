@@ -45,7 +45,9 @@ void BufferReader::reset() {
                "This should ONLY be happened on error. "
                "nBytes: %zu:",
                dbPtr, dbPtr->nBytesRef());
+#if MC_LOG_LEVEL >= MC_LOG_LEVEL_WARNING
       utility::fprintBuffer(stderr, dbPtr->at(0), std::min(dbPtr->nBytesRef(), 128UL));
+#endif
     }
     dbPtr->reset();
     if (i > 0) {
