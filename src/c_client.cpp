@@ -1,0 +1,38 @@
+#include "c_client.h"
+#include "Client.h"
+
+
+using douban::mc::Client;
+
+
+void* client_create() {
+  return new Client();
+}
+
+
+void client_init(void* client, const char* const * hosts, const uint32_t* ports,
+                 size_t n, const char* const * aliases, const int failover) {
+  douban::mc::Client* c = static_cast<Client*>(client);
+  c->config(douban::mc::CFG_HASH_FUNCTION, douban::mc::OPT_HASH_CRC_32); // TODO
+  c->init(hosts, ports, n, aliases);
+  if (failover) {
+    c->enableConsistentFailover();
+  } else {
+    c->disableConsistentFailover();
+  }
+}
+
+
+void client_destroy(void* client) {
+  douban::mc::Client* c = static_cast<Client*>(client);
+  delete c;
+}
+
+int client_version(void* client, broadcast_result_t** results, size_t* nHosts) {
+  douban::mc::Client* c = static_cast<Client*>(client);
+  return c->version(results, nHosts);
+}
+void client_destroy_broadcast_result(void* client) {
+  douban::mc::Client* c = static_cast<Client*>(client);
+  return c->destroyBroadcastResult();
+}

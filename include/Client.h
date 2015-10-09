@@ -44,9 +44,9 @@ class Client : public ConnectionPool {
   // broadcast commands
   void destroyBroadcastResult();
 
-  err_code_t version(types::broadcast_result_t** results, size_t* nHosts);
+  err_code_t version(broadcast_result_t** results, size_t* nHosts);
   err_code_t quit();
-  err_code_t stats(types::broadcast_result_t** results, size_t* nHosts);
+  err_code_t stats(broadcast_result_t** results, size_t* nHosts);
 
   // touch
   err_code_t touch(const char* const* keys, const size_t* keyLens,
@@ -67,12 +67,12 @@ class Client : public ConnectionPool {
  protected:
   void collectRetrievalResult(types::retrieval_result_t*** results, size_t* nResults);
   void collectMessageResult(types::message_result_t*** results, size_t* nResults);
-  void collectBroadcastResult(types::broadcast_result_t** results, size_t* nHosts);
+  void collectBroadcastResult(broadcast_result_t** results, size_t* nHosts);
   void collectUnsignedResult(types::unsigned_result_t*** results, size_t* nResults);
 
   std::vector<types::retrieval_result_t*> m_outRetrievalResultPtrs;
   std::vector<types::message_result_t*> m_outMessageResultPtrs;
-  std::vector<types::broadcast_result_t> m_outBroadcastResultPtrs;
+  std::vector<broadcast_result_t> m_outBroadcastResultPtrs;
   std::vector<types::unsigned_result_t*> m_outUnsignedResultPtrs;
 };
 

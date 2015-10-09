@@ -27,7 +27,7 @@ FILE(
 
 include_directories(include)
 
-add_library(mc SHARED ${mc_SOURCES})
+add_library(mc STATIC ${mc_SOURCES})
 
 
 set(EXT_PROJECTS_DIR ${CMAKE_SOURCE_DIR}/ext)

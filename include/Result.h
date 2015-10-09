@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include "Export.h"
 #include "BufferReader.h"
 #ifdef MC_USE_SMALL_VECTOR
 #include "llvm/SmallVector.h"
@@ -67,14 +68,6 @@ typedef struct {
 } message_result_t;
 
 
-// Broadcast Line Result
-
-typedef struct {
-  char* host;
-  char** lines;
-  size_t* line_lens;
-  size_t len;
-} broadcast_result_t;
 void delete_broadcast_result(broadcast_result_t* ptr);
 
 

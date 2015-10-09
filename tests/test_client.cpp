@@ -194,11 +194,11 @@ TEST(test_client, test_version) {
   if (client == NULL) {
     hint();
   } else {
-    douban::mc::types::broadcast_result_t* results = NULL;
+    broadcast_result_t* results = NULL;
     size_t nHosts = 0;
     client->version(&results, &nHosts);
     for (size_t i = 0; i < nHosts; i++) {
-      douban::mc::types::broadcast_result_t* r = results + i;
+      broadcast_result_t* r = results + i;
       ASSERT_TRUE(r->len == 1);
       ASSERT_TRUE(r->line_lens[0]);
       char c = r->lines[0][r->line_lens[0] - 1];
@@ -219,11 +219,11 @@ TEST(test_client, test_stats) {
   if (client == NULL) {
     hint();
   } else {
-    douban::mc::types::broadcast_result_t* results = NULL;
+    broadcast_result_t* results = NULL;
     size_t nHosts = 0;
     client->stats(&results, &nHosts);
     for (size_t i = 0; i < nHosts; i++) {
-      douban::mc::types::broadcast_result_t* r = results + i;
+      broadcast_result_t* r = results + i;
       ASSERT_TRUE(strlen(r->host) > 0);
       // printf("host: %s\n", r->host);
       ASSERT_TRUE(r->len > 10);

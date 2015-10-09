@@ -38,7 +38,7 @@ class ConnectionPool {
 
   void collectRetrievalResult(std::vector<types::retrieval_result_t*>& results);
   void collectMessageResult(std::vector<types::message_result_t*>& results);
-  void collectBroadcastResult(std::vector<types::broadcast_result_t>& results);
+  void collectBroadcastResult(std::vector<broadcast_result_t>& results);
   void collectUnsignedResult(std::vector<types::unsigned_result_t*>& results);
   void reset();
   void setPollTimeout(int timeout);

@@ -514,11 +514,11 @@ void ConnectionPool::collectMessageResult(std::vector<types::message_result_t*>&
 }
 
 
-void ConnectionPool::collectBroadcastResult(std::vector<types::broadcast_result_t>& results) {
+void ConnectionPool::collectBroadcastResult(std::vector<broadcast_result_t>& results) {
   results.resize(m_nConns);
   for (size_t i = 0; i < m_nConns; ++i) {
     Connection* conn = m_conns + i;
-    types::broadcast_result_t* conn_result = &results[i];
+    broadcast_result_t* conn_result = &results[i];
     conn_result->host = const_cast<char*>(conn->name());
     types::LineResultList* rst = conn->getLineResults();
     conn_result->len = rst->size();

@@ -5,7 +5,7 @@
 #include "Client.h"
 #include "Keywords.h"
 
-namespace douban{
+namespace douban {
 namespace mc {
 
 using types::retrieval_result_t;
@@ -124,7 +124,7 @@ err_code_t Client::_delete(const char* const* keys, const size_t* key_lens,
 }
 
 
-void Client::collectBroadcastResult(types::broadcast_result_t** results, size_t* nHosts) {
+void Client::collectBroadcastResult(broadcast_result_t** results, size_t* nHosts) {
   assert(m_outBroadcastResultPtrs.size() == 0);
   *nHosts = m_nConns;
   ConnectionPool::collectBroadcastResult(m_outBroadcastResultPtrs);
@@ -134,15 +134,15 @@ void Client::collectBroadcastResult(types::broadcast_result_t** results, size_t*
 
 void Client::destroyBroadcastResult() {
   ConnectionPool::reset();
-  for (std::vector<types::broadcast_result_t>::iterator it = m_outBroadcastResultPtrs.begin();
+  for (std::vector<broadcast_result_t>::iterator it = m_outBroadcastResultPtrs.begin();
        it != m_outBroadcastResultPtrs.end(); ++it) {
-    delete_broadcast_result(&(*it));
+    types::delete_broadcast_result(&(*it));
   }
   m_outBroadcastResultPtrs.clear();
 }
 
 
-err_code_t Client::version(types::broadcast_result_t** results, size_t* nHosts) {
+err_code_t Client::version(broadcast_result_t** results, size_t* nHosts) {
   broadcastCommand(keywords::kVERSION, 7);
   err_code_t rv = waitPoll();
   collectBroadcastResult(results, nHosts);
@@ -157,7 +157,7 @@ err_code_t Client::quit() {
 }
 
 
-err_code_t Client::stats(types::broadcast_result_t** results, size_t* nHosts) {
+err_code_t Client::stats(broadcast_result_t** results, size_t* nHosts) {
   broadcastCommand(keywords::kSTATS, 5);
   err_code_t rv = waitPoll();
   collectBroadcastResult(results, nHosts);
