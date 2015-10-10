@@ -28,3 +28,21 @@ typedef struct {
   flags_t flags;  // 4B
   uint8_t key_len; // 1B
 } retrieval_result_t;
+
+
+enum message_result_type {
+  MSG_EXISTS,
+  MSG_OK,
+  MSG_STORED,
+  MSG_NOT_STORED,
+  MSG_NOT_FOUND,
+  MSG_DELETED,
+  MSG_TOUCHED,
+};
+
+
+typedef struct {
+  enum message_result_type type;
+  char* key;
+  size_t key_len;
+} message_result_t;

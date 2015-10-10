@@ -8,8 +8,6 @@
 namespace douban {
 namespace mc {
 
-using types::message_result_t;
-
 Client::Client() {
 }
 
@@ -73,7 +71,7 @@ void Client::destroyRetrievalResult() {
 }
 
 
-void Client::collectMessageResult(types::message_result_t*** results, size_t* nResults) {
+void Client::collectMessageResult(message_result_t*** results, size_t* nResults) {
   assert(m_outMessageResultPtrs.size() == 0);
   ConnectionPool::collectMessageResult(m_outMessageResultPtrs);
   *nResults = m_outMessageResultPtrs.size();
@@ -97,7 +95,7 @@ err_code_t Client::M(const char* const* keys, const size_t* key_lens, \
                  const flags_t* flags, const exptime_t exptime, \
                  const cas_unique_t* cas_uniques, const bool noreply, \
                  const char* const* vals, const size_t* val_lens, \
-                 size_t nItems, types::message_result_t*** results, size_t* nResults) { \
+                 size_t nItems, message_result_t*** results, size_t* nResults) { \
   dispatchStorage((O), keys, key_lens, flags, exptime, cas_uniques, noreply, vals, \
                   val_lens, nItems); \
   err_code_t rv = waitPoll(); \
@@ -115,7 +113,7 @@ IMPL_STORAGE_CMD(cas, CAS_OP)
 
 err_code_t Client::_delete(const char* const* keys, const size_t* key_lens,
                      const bool noreply, size_t nItems,
-                     types::message_result_t*** results, size_t* nResults) {
+                     message_result_t*** results, size_t* nResults) {
   dispatchDeletion(keys, key_lens, noreply, nItems);
   err_code_t rv = waitPoll();
   collectMessageResult(results, nResults);
@@ -166,7 +164,7 @@ err_code_t Client::stats(broadcast_result_t** results, size_t* nHosts) {
 
 err_code_t Client::touch(const char* const* keys, const size_t* keyLens,
                    const exptime_t exptime, const bool noreply, size_t nItems,
-                   types::message_result_t*** results, size_t* nResults) {
+                   message_result_t*** results, size_t* nResults) {
   dispatchTouch(keys, keyLens, exptime, noreply, nItems);
   err_code_t rv = waitPoll();
   collectMessageResult(results, nResults);

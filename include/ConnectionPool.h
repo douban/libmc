@@ -37,7 +37,7 @@ class ConnectionPool {
   err_code_t waitPoll();
 
   void collectRetrievalResult(std::vector<retrieval_result_t*>& results);
-  void collectMessageResult(std::vector<types::message_result_t*>& results);
+  void collectMessageResult(std::vector<message_result_t*>& results);
   void collectBroadcastResult(std::vector<broadcast_result_t>& results);
   void collectUnsignedResult(std::vector<types::unsigned_result_t*>& results);
   void reset();

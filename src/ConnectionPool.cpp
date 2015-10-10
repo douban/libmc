@@ -501,7 +501,7 @@ void ConnectionPool::collectRetrievalResult(std::vector<retrieval_result_t*>& re
 }
 
 
-void ConnectionPool::collectMessageResult(std::vector<types::message_result_t*>& results) {
+void ConnectionPool::collectMessageResult(std::vector<message_result_t*>& results) {
   for (std::vector<Connection*>::iterator it = m_activeConns.begin();
        it != m_activeConns.end(); ++it) {
     types::MessageResultList* rst = (*it)->getMessageResults();
@@ -547,7 +547,7 @@ void ConnectionPool::collectUnsignedResult(std::vector<types::unsigned_result_t*
     if (numericRst->size() == 1) {
       results.push_back(&numericRst->front());
     } else if (msgRst->size() == 1) {
-      ASSERT(msgRst->front().type == types::MSG_NOT_FOUND);
+      ASSERT(msgRst->front().type == MSG_NOT_FOUND);
       results.push_back(NULL);
     }
   }

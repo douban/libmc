@@ -33,10 +33,10 @@ void PacketParser::setMode(ParserMode md) {
 }
 
 
-void PacketParser::processMessageResult(enum types::message_result_type tp) {
-  m_messageResults.push_back(types::message_result_t());
+void PacketParser::processMessageResult(enum message_result_type tp) {
+  m_messageResults.push_back(message_result_t());
 
-  types::message_result_t* inner_rst = &m_messageResults.back();
+  message_result_t* inner_rst = &m_messageResults.back();
   struct ::iovec iov = m_requestKeys.front();
   m_requestKeys.pop();
   inner_rst->type = tp;
@@ -313,7 +313,7 @@ int PacketParser::start_state(err_code_t& err) {
         } else if (c2 == 'X') {
           // EXISTS
           EXPECT_BYTES("EXISTS\r\n", 8);
-          processMessageResult(types::MSG_EXISTS);
+          processMessageResult(MSG_EXISTS);
         }
       }
       break;
@@ -321,7 +321,7 @@ int PacketParser::start_state(err_code_t& err) {
       {
         // OK
         EXPECT_BYTES("OK\r\n", 4);
-        processMessageResult(types::MSG_OK);
+        processMessageResult(MSG_OK);
       }
       break;
     case 'S':
@@ -338,7 +338,7 @@ int PacketParser::start_state(err_code_t& err) {
           if (c3 == 'O') {
             // STORED
             EXPECT_BYTES("STORED\r\n", 8);
-            processMessageResult(types::MSG_STORED);
+            processMessageResult(MSG_STORED);
           } else {
             // STAT
             EXPECT_BYTES("STAT ", 5);
@@ -366,7 +366,7 @@ int PacketParser::start_state(err_code_t& err) {
       {
         // DELETED
         EXPECT_BYTES("DELETED\r\n", 9);
-        processMessageResult(types::MSG_DELETED);
+        processMessageResult(MSG_DELETED);
       }
       break;
     case 'N':
@@ -379,11 +379,11 @@ int PacketParser::start_state(err_code_t& err) {
         if (c5 == 'F') {
           // NOT_FOUND
           EXPECT_BYTES("NOT_FOUND\r\n", 11);
-          processMessageResult(types::MSG_NOT_FOUND);
+          processMessageResult(MSG_NOT_FOUND);
         } else if (c5 == 'S') {
           // NOT_STORED
           EXPECT_BYTES("NOT_STORED\r\n", 12);
-          processMessageResult(types::MSG_NOT_STORED);
+          processMessageResult(MSG_NOT_STORED);
         }
       }
       break;
@@ -391,7 +391,7 @@ int PacketParser::start_state(err_code_t& err) {
       {
         // TOUCHED
         EXPECT_BYTES("TOUCHED\r\n", 9);
-        processMessageResult(types::MSG_TOUCHED);
+        processMessageResult(MSG_TOUCHED);
       }
       break;
     case 'C':

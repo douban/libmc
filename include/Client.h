@@ -28,7 +28,7 @@ class Client : public ConnectionPool {
            const flags_t* flags, const exptime_t exptime, \
            const cas_unique_t* cas_uniques, const bool noreply, \
            const char* const* vals, const size_t* val_lens, \
-           size_t nItems, types::message_result_t*** results, size_t* nResults)
+           size_t nItems, message_result_t*** results, size_t* nResults)
 
   DECL_STORAGE_CMD(set);
   DECL_STORAGE_CMD(add);
@@ -39,7 +39,7 @@ class Client : public ConnectionPool {
 
   err_code_t _delete(const char* const* keys, const size_t* key_lens,
                const bool noreply, size_t nItems,
-               types::message_result_t*** results, size_t* nResults);
+               message_result_t*** results, size_t* nResults);
 
   // broadcast commands
   void destroyBroadcastResult();
@@ -51,7 +51,7 @@ class Client : public ConnectionPool {
   // touch
   err_code_t touch(const char* const* keys, const size_t* keyLens,
              const exptime_t exptime, const bool noreply, size_t nItems,
-             types::message_result_t*** results, size_t* nResults);
+             message_result_t*** results, size_t* nResults);
 
   // incr / decr
   void destroyUnsignedResult();
@@ -66,12 +66,12 @@ class Client : public ConnectionPool {
 
  protected:
   void collectRetrievalResult(retrieval_result_t*** results, size_t* nResults);
-  void collectMessageResult(types::message_result_t*** results, size_t* nResults);
+  void collectMessageResult(message_result_t*** results, size_t* nResults);
   void collectBroadcastResult(broadcast_result_t** results, size_t* nHosts);
   void collectUnsignedResult(types::unsigned_result_t*** results, size_t* nResults);
 
   std::vector<retrieval_result_t*> m_outRetrievalResultPtrs;
-  std::vector<types::message_result_t*> m_outMessageResultPtrs;
+  std::vector<message_result_t*> m_outMessageResultPtrs;
   std::vector<broadcast_result_t> m_outBroadcastResultPtrs;
   std::vector<types::unsigned_result_t*> m_outUnsignedResultPtrs;
 };

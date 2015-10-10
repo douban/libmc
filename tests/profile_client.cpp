@@ -12,7 +12,6 @@
 #endif
 
 using douban::mc::Client;
-using douban::mc::types::message_result_t;
 using douban::mc::tests::newClient;
 using douban::mc::tests::gen_random;
 

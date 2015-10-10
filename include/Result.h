@@ -35,23 +35,6 @@ class RetrievalResult {
 
 // Message Result
 
-enum message_result_type {
-  MSG_EXISTS,
-  MSG_OK,
-  MSG_STORED,
-  MSG_NOT_STORED,
-  MSG_NOT_FOUND,
-  MSG_DELETED,
-  MSG_TOUCHED,
-};
-
-
-typedef struct {
-  enum message_result_type type;
-  char* key;
-  size_t key_len;
-} message_result_t;
-
 
 void delete_broadcast_result(broadcast_result_t* ptr);
 
@@ -83,7 +66,7 @@ typedef llvm::SmallVector<types::RetrievalResult, 100> RetrievalResultList;
 #else
 typedef std::vector<types::RetrievalResult> RetrievalResultList;
 #endif
-typedef std::vector<types::message_result_t> MessageResultList;
+typedef std::vector<message_result_t> MessageResultList;
 typedef std::vector<types::LineResult> LineResultList;
 typedef std::vector<types::unsigned_result_t> UnsignedResultList;
 

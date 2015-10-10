@@ -81,9 +81,6 @@ cdef extern from "Export.h":
         size_t* line_lens
         size_t len
 
-
-cdef extern from "Result.h" namespace "douban::mc::types":
-
     ctypedef enum message_result_type:
         MSG_EXISTS
         MSG_OK
@@ -97,6 +94,9 @@ cdef extern from "Result.h" namespace "douban::mc::types":
         message_result_type type
         char* key
         size_t key_len
+
+
+cdef extern from "Result.h" namespace "douban::mc::types":
 
     ctypedef struct unsigned_result_t:
         char* key
