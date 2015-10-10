@@ -13,8 +13,6 @@
 
 using douban::mc::Client;
 using douban::mc::types::message_result_t;
-using douban::mc::types::retrieval_result_t;
-using douban::mc::types::flags_t;
 using douban::mc::tests::newClient;
 using douban::mc::tests::gen_random;
 
@@ -38,7 +36,7 @@ static double getCPUTime() {
 void set_(Client* client, const char* const* keys, const size_t* key_lens,
           const flags_t* flags, const char* const* vals, const size_t* val_len, size_t n = 1) {
 
-  const douban::mc::types::exptime_t exptime = 0;
+  const exptime_t exptime = 0;
   const int noreply = 0;
 
   message_result_t **m_results = NULL;

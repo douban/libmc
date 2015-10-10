@@ -6,9 +6,6 @@
 #include "gtest/gtest.h"
 
 using douban::mc::Client;
-using douban::mc::types::flags_t;
-using douban::mc::types::exptime_t;
-using douban::mc::types::retrieval_result_t;
 using douban::mc::types::message_result_t;
 using douban::mc::types::unsigned_result_t;
 using douban::mc::io::DataBlock;

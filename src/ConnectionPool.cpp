@@ -20,7 +20,6 @@ using douban::mc::keywords::k_NOREPLY;
 using douban::mc::hashkit::KetamaSelector;
 
 using douban::mc::types::RetrievalResult;
-using douban::mc::types::retrieval_result_t;
 
 namespace douban {
 namespace mc {
@@ -94,8 +93,8 @@ void ConnectionPool::disableConsistentFailover() {
 
 void ConnectionPool::dispatchStorage(op_code_t op,
                                       const char* const* keys, const size_t* keyLens,
-                                      const types::flags_t* flags, const types::exptime_t exptime,
-                                      const types::cas_unique_t* cas_uniques, const bool noreply,
+                                      const flags_t* flags, const exptime_t exptime,
+                                      const cas_unique_t* cas_uniques, const bool noreply,
                                       const char* const* vals, const size_t* val_lens,
                                       size_t nItems) {
 
@@ -260,7 +259,7 @@ void ConnectionPool::dispatchDeletion(const char* const* keys, const size_t* key
 
 void ConnectionPool::dispatchTouch(
     const char* const* keys, const size_t* keyLens,
-    const types::exptime_t exptime, const bool noreply, size_t nItems) {
+    const exptime_t exptime, const bool noreply, size_t nItems) {
 
   size_t i = 0, idx = 0;
   for (; i < nItems; ++i) {
@@ -484,7 +483,7 @@ next_fd: {}
 }
 
 
-void ConnectionPool::collectRetrievalResult(std::vector<types::retrieval_result_t*>& results) {
+void ConnectionPool::collectRetrievalResult(std::vector<retrieval_result_t*>& results) {
   for (std::vector<Connection*>::iterator it = m_activeConns.begin();
        it != m_activeConns.end(); ++it) {
     types::RetrievalResultList* rst = (*it)->getRetrievalResults();

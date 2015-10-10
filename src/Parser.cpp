@@ -131,7 +131,7 @@ void PacketParser::process_packets(err_code_t& err) {
           assert(mt_kvPtr != NULL and mt_kvPtr->key.size() > 0);
           uint64_t flags;
           READ_UNSIGNED(flags);
-          mt_kvPtr->flags = static_cast<types::flags_t>(flags);
+          mt_kvPtr->flags = static_cast<flags_t>(flags);
           SKIP_BYTES(1);
           m_state = FSM_GET_FLAG;
         }

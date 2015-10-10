@@ -8,7 +8,6 @@
 namespace douban {
 namespace mc {
 
-using types::retrieval_result_t;
 using types::message_result_t;
 
 Client::Client() {
@@ -56,7 +55,7 @@ err_code_t Client::gets(const char* const* keys, const size_t* keyLens, size_t n
 }
 
 
-void Client::collectRetrievalResult(types::retrieval_result_t*** results, size_t* nResults) {
+void Client::collectRetrievalResult(retrieval_result_t*** results, size_t* nResults) {
   assert(m_outRetrievalResultPtrs.size() == 0);
   ConnectionPool::collectRetrievalResult(m_outRetrievalResultPtrs);
   *nResults = m_outRetrievalResultPtrs.size();
@@ -95,8 +94,8 @@ void Client::destroyMessageResult() {
 
 #define IMPL_STORAGE_CMD(M, O) \
 err_code_t Client::M(const char* const* keys, const size_t* key_lens, \
-                 const types::flags_t* flags, const types::exptime_t exptime, \
-                 const types::cas_unique_t* cas_uniques, const bool noreply, \
+                 const flags_t* flags, const exptime_t exptime, \
+                 const cas_unique_t* cas_uniques, const bool noreply, \
                  const char* const* vals, const size_t* val_lens, \
                  size_t nItems, types::message_result_t*** results, size_t* nResults) { \
   dispatchStorage((O), keys, key_lens, flags, exptime, cas_uniques, noreply, vals, \
@@ -166,7 +165,7 @@ err_code_t Client::stats(broadcast_result_t** results, size_t* nHosts) {
 
 
 err_code_t Client::touch(const char* const* keys, const size_t* keyLens,
-                   const types::exptime_t exptime, const bool noreply, size_t nItems,
+                   const exptime_t exptime, const bool noreply, size_t nItems,
                    types::message_result_t*** results, size_t* nResults) {
   dispatchTouch(keys, keyLens, exptime, noreply, nItems);
   err_code_t rv = waitPoll();

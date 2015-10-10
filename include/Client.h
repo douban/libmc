@@ -17,16 +17,16 @@ class Client : public ConnectionPool {
   // retrieval commands
   void destroyRetrievalResult();
   err_code_t get(const char* const* keys, const size_t* keyLens, size_t nKeys,
-           types::retrieval_result_t*** results, size_t* nResults);
+           retrieval_result_t*** results, size_t* nResults);
   err_code_t gets(const char* const* keys, const size_t* keyLens, size_t nKeys,
-           types::retrieval_result_t*** results, size_t* nResults);
+           retrieval_result_t*** results, size_t* nResults);
 
   // storage commands
   void destroyMessageResult();
 #define DECL_STORAGE_CMD(M) \
   err_code_t M(const char* const* keys, const size_t* key_lens, \
-           const types::flags_t* flags, const types::exptime_t exptime, \
-           const types::cas_unique_t* cas_uniques, const bool noreply, \
+           const flags_t* flags, const exptime_t exptime, \
+           const cas_unique_t* cas_uniques, const bool noreply, \
            const char* const* vals, const size_t* val_lens, \
            size_t nItems, types::message_result_t*** results, size_t* nResults)
 
@@ -50,7 +50,7 @@ class Client : public ConnectionPool {
 
   // touch
   err_code_t touch(const char* const* keys, const size_t* keyLens,
-             const types::exptime_t exptime, const bool noreply, size_t nItems,
+             const exptime_t exptime, const bool noreply, size_t nItems,
              types::message_result_t*** results, size_t* nResults);
 
   // incr / decr
@@ -65,12 +65,12 @@ class Client : public ConnectionPool {
   void _sleep(uint32_t seconds); // check GIL in Python
 
  protected:
-  void collectRetrievalResult(types::retrieval_result_t*** results, size_t* nResults);
+  void collectRetrievalResult(retrieval_result_t*** results, size_t* nResults);
   void collectMessageResult(types::message_result_t*** results, size_t* nResults);
   void collectBroadcastResult(broadcast_result_t** results, size_t* nHosts);
   void collectUnsignedResult(types::unsigned_result_t*** results, size_t* nResults);
 
-  std::vector<types::retrieval_result_t*> m_outRetrievalResultPtrs;
+  std::vector<retrieval_result_t*> m_outRetrievalResultPtrs;
   std::vector<types::message_result_t*> m_outMessageResultPtrs;
   std::vector<broadcast_result_t> m_outBroadcastResultPtrs;
   std::vector<types::unsigned_result_t*> m_outUnsignedResultPtrs;

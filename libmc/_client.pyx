@@ -61,10 +61,11 @@ cdef extern from "Common.h" namespace "douban::mc":
         RET_OK
 
 
-cdef extern from "Result.h" namespace "douban::mc::types":
+cdef extern from "Export.h":
     ctypedef int64_t exptime_t
     ctypedef uint32_t flags_t
     ctypedef uint64_t cas_unique_t
+
     ctypedef struct retrieval_result_t:
         retrieval_result_t()
         char* key
@@ -73,6 +74,15 @@ cdef extern from "Result.h" namespace "douban::mc::types":
         char* data_block
         uint32_t bytes
         cas_unique_t cas_unique
+
+    ctypedef struct broadcast_result_t:
+        char* host
+        char** lines
+        size_t* line_lens
+        size_t len
+
+
+cdef extern from "Result.h" namespace "douban::mc::types":
 
     ctypedef enum message_result_type:
         MSG_EXISTS
@@ -87,12 +97,6 @@ cdef extern from "Result.h" namespace "douban::mc::types":
         message_result_type type
         char* key
         size_t key_len
-
-    ctypedef struct broadcast_result_t:
-        char* host
-        char** lines
-        size_t* line_lens
-        size_t len
 
     ctypedef struct unsigned_result_t:
         char* key

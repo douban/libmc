@@ -8,7 +8,6 @@
 using douban::mc::err_code_t;
 using douban::mc::RET_INCOMPLETE_BUFFER_ERR;
 using douban::mc::types::RetrievalResult;
-using douban::mc::types::retrieval_result_t;
 
 using douban::mc::io::BufferReader;
 using douban::mc::io::DataBlock;

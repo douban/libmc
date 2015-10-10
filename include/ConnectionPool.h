@@ -22,21 +22,21 @@ class ConnectionPool {
                     size_t n_keys);
   void dispatchStorage(op_code_t op,
                         const char* const* keys, const size_t* keyLens,
-                        const types::flags_t* flags, const types::exptime_t exptime,
-                        const types::cas_unique_t* cas_uniques, const bool noreply,
+                        const flags_t* flags, const exptime_t exptime,
+                        const cas_unique_t* cas_uniques, const bool noreply,
                         const char* const* vals, const size_t* val_lens,
                         size_t nItems);
   void dispatchDeletion(const char* const* keys, const size_t* keyLens,
                        const bool noreply, size_t nItems);
   void dispatchTouch(const char* const* keys, const size_t* keyLens,
-                     const types::exptime_t exptime, const bool noreply, size_t nItems);
+                     const exptime_t exptime, const bool noreply, size_t nItems);
   void dispatchIncrDecr(op_code_t op, const char* key, const size_t keyLen,
                         const uint64_t delta, const bool noreply);
   void broadcastCommand(const char * const cmd, const size_t cmdLens);
 
   err_code_t waitPoll();
 
-  void collectRetrievalResult(std::vector<types::retrieval_result_t*>& results);
+  void collectRetrievalResult(std::vector<retrieval_result_t*>& results);
   void collectMessageResult(std::vector<types::message_result_t*>& results);
   void collectBroadcastResult(std::vector<broadcast_result_t>& results);
   void collectUnsignedResult(std::vector<types::unsigned_result_t*>& results);
