@@ -28,11 +28,26 @@ void client_destroy(void* client) {
   delete c;
 }
 
+
 int client_version(void* client, broadcast_result_t** results, size_t* nHosts) {
   douban::mc::Client* c = static_cast<Client*>(client);
   return c->version(results, nHosts);
 }
+
+
 void client_destroy_broadcast_result(void* client) {
   douban::mc::Client* c = static_cast<Client*>(client);
   return c->destroyBroadcastResult();
+}
+
+
+int client_get(void* client, const char* const* keys, const size_t* keyLens,
+               size_t nKeys, retrieval_result_t*** results, size_t* nResults) {
+  douban::mc::Client* c = static_cast<Client*>(client);
+  return c->get(keys, keyLens, nKeys, results, nResults);
+}
+
+void client_destroy_retrieval_result(void* client) {
+  douban::mc::Client* c = static_cast<Client*>(client);
+  return c->destroyRetrievalResult();
 }

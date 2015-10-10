@@ -18,5 +18,8 @@ func TestFoo(t *testing.T) {
 	if len(version) == 0 || err != nil {
 		t.Error(ERROR_VERSION)
 	}
+
+	val, err := client.Get("foo") // FIXME set manually first
+	fmt.Println(string((*val).Value))
 	client.Destroy()
 }

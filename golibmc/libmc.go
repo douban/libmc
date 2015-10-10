@@ -30,6 +30,31 @@ type Client struct {
 	noreply bool
 }
 
+// credits to bradfitz/gomemcache
+// Item is an item to be got or stored in a memcached server.
+type Item struct {
+	// Key is the Item's key (250 bytes maximum).
+	Key string
+
+	// Value is the Item's value.
+	Value []byte
+
+	// Object is the Item's value for use with a Codec.
+	Object interface{}
+
+	// Flags are server-opaque flags whose semantics are entirely
+	// up to the app.
+	Flags uint32
+
+	// Expiration is the cache expiration time, in seconds: either a relative
+	// time from now (up to 1 month), or an absolute Unix epoch time.
+	// Zero means the Item has no expiration time.
+	Expiration int32
+
+	// Compare and swap ID.
+	casid uint64
+}
+
 func (self *Client) Init(servers []string, noreply bool, prefix string,
 	hash_fn string, failover bool) {
 	// TODO handle hash_fn
@@ -87,6 +112,46 @@ func (self *Client) Init(servers []string, noreply bool, prefix string,
 
 func (self *Client) Destroy() {
 	C.client_destroy(self._imp)
+}
+
+func (self *Client) normalizeKey(key string) string {
+	if len(self.prefix) == 0 {
+		return key
+	}
+	if strings.HasPrefix(key, "?") {
+		return strings.Join([]string{"?", self.prefix, key[1:]}, "")
+	} else {
+		return strings.Join([]string{self.prefix, key}, "")
+	}
+}
+
+func (self *Client) Get(key string) (*Item, error) {
+	raw_key := self.normalizeKey(key)
+	c_key := C.CString(key)
+	defer C.free(unsafe.Pointer(c_key))
+	c_keyLen := C.size_t(len(raw_key))
+	var rst **C.retrieval_result_t
+	var n C.size_t
+
+	err_code := C.client_get(self._imp, &c_key, &c_keyLen, 1, &rst, &n)
+	defer C.client_destroy_retrieval_result(self._imp)
+
+	if err_code != 0 {
+		return nil, errors.New(strconv.Itoa(int(err_code)))
+	}
+
+	if int(n) == 0 {
+		return nil, nil
+	}
+
+	data_block := C.GoBytes(unsafe.Pointer((*rst).data_block), C.int((*rst).bytes))
+	flags := uint32((*rst).flags)
+	return &Item{Key: key, Value: data_block, Flags: flags}, nil
+}
+
+func (self *Client) GetMulti(key []string) (map[string]*Item, error) {
+	// TODO
+	return nil, nil
 }
 
 func (self *Client) Version() (map[string]string, error) {

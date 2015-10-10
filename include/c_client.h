@@ -12,8 +12,13 @@ extern "C" {
   void client_init(void* client, const char* const * hosts, const uint32_t* ports,
                    size_t n, const char* const * aliases, const int failover);
   void client_destroy(void* client);
+
   int client_version(void* client, broadcast_result_t** results, size_t* nHosts);
   void client_destroy_broadcast_result(void* client);
+
+  int client_get(void* client, const char* const* keys, const size_t* keyLens,
+          size_t nKeys, retrieval_result_t*** results, size_t* nResults);
+  void client_destroy_retrieval_result(void* client);
 
 #ifdef __cplusplus
 }
