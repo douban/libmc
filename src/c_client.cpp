@@ -51,3 +51,20 @@ void client_destroy_retrieval_result(void* client) {
   douban::mc::Client* c = static_cast<Client*>(client);
   return c->destroyRetrievalResult();
 }
+
+
+int client_set(void* client, const char* const* keys, const size_t* key_lens,
+               const flags_t* flags, const exptime_t exptime,
+               const cas_unique_t* cas_uniques, const bool noreply,
+               const char* const* vals, const size_t* val_lens,
+               size_t nItems, message_result_t*** results, size_t* nResults) {
+  douban::mc::Client* c = static_cast<Client*>(client);
+  return c->set(keys, key_lens, flags, exptime, cas_uniques,
+                noreply, vals, val_lens, nItems, results, nResults);
+}
+
+
+void client_destroy_message_result(void* client) {
+  douban::mc::Client* c = static_cast<Client*>(client);
+  return c->destroyMessageResult();
+}

@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include "Export.h"
 
 #ifdef __cplusplus
@@ -17,9 +18,15 @@ extern "C" {
   void client_destroy_broadcast_result(void* client);
 
   int client_get(void* client, const char* const* keys, const size_t* keyLens,
-          size_t nKeys, retrieval_result_t*** results, size_t* nResults);
+                 size_t nKeys, retrieval_result_t*** results, size_t* nResults);
   void client_destroy_retrieval_result(void* client);
 
+  int client_set(void* client, const char* const* keys, const size_t* key_lens,
+                 const flags_t* flags, const exptime_t exptime,
+                 const cas_unique_t* cas_uniques, const bool noreply,
+                 const char* const* vals, const size_t* val_lens,
+                 size_t nItems, message_result_t*** results, size_t* nResults);
+  void client_destroy_message_result(void* client);
 #ifdef __cplusplus
 }
 #endif
