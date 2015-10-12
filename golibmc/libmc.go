@@ -49,7 +49,7 @@ type Item struct {
 	// Expiration is the cache expiration time, in seconds: either a relative
 	// time from now (up to 1 month), or an absolute Unix epoch time.
 	// Zero means the Item has no expiration time.
-	Expiration int32
+	Expiration int64
 
 	// Compare and swap ID.
 	casid uint64

@@ -28,7 +28,7 @@ from ._client import (
 )
 
 __VERSION__ = "0.5.5"
-__version__ = "v0.5.5-11-g56b5ae2"
+__version__ = "v0.5.5-11-gfbf228f"
 __author__ = "mckelvin"
 __email__ = "mckelvin@users.noreply.github.com"
 __date__ = "Mon Oct 12 17:09:34 2015 +0800"
