@@ -114,7 +114,18 @@ func (self *Client) Destroy() {
 	C.client_destroy(self._imp)
 }
 
-func (self *Client) normalizeKey(key string) string {
+func (self *Client) removePrefix(key string) string {
+	if len(self.prefix) == 0 {
+		return key
+	}
+	if strings.HasPrefix(key, "?") {
+		return strings.Join([]string{"?", strings.Replace(key[1:], self.prefix, "", 1)}, "")
+	} else {
+		return strings.Replace(key, self.prefix, "", 1)
+	}
+}
+
+func (self *Client) addPrefix(key string) string {
 	if len(self.prefix) == 0 {
 		return key
 	}
@@ -154,7 +165,7 @@ func (self *Client) Set(item *Item) error {
 }
 
 func (self *Client) Get(key string) (*Item, error) {
-	raw_key := self.normalizeKey(key)
+	raw_key := self.addPrefix(key)
 	c_key := C.CString(key)
 	defer C.free(unsafe.Pointer(c_key))
 	c_keyLen := C.size_t(len(raw_key))
@@ -177,9 +188,53 @@ func (self *Client) Get(key string) (*Item, error) {
 	return &Item{Key: key, Value: data_block, Flags: flags}, nil
 }
 
-func (self *Client) GetMulti(key []string) (map[string]*Item, error) {
-	// TODO
-	return nil, nil
+func (self *Client) GetMulti(keys []string) (map[string]*Item, error) {
+	nKeys := len(keys)
+	raw_keys := make([]string, len(keys))
+	for i, key := range keys {
+		raw_keys[i] = self.addPrefix(key)
+	}
+
+	c_keys := make([]*C.char, nKeys)
+	c_keyLens := make([]C.size_t, nKeys)
+	c_nKeys := C.size_t(nKeys)
+
+	for i, raw_key := range raw_keys {
+		c_key := C.CString(raw_key)
+		defer C.free(unsafe.Pointer(c_key))
+		c_keyLen := C.size_t(len(raw_key))
+		c_keys[i] = c_key
+		c_keyLens[i] = c_keyLen
+	}
+
+	var rst **C.retrieval_result_t
+	var n C.size_t
+
+	err_code := C.client_get(self._imp, &c_keys[0], &c_keyLens[0], c_nKeys, &rst, &n)
+	defer C.client_destroy_retrieval_result(self._imp)
+
+	rv := map[string]*Item{}
+
+	if err_code != 0 {
+		return rv, errors.New(strconv.Itoa(int(err_code)))
+	}
+
+	if int(n) == 0 {
+		return rv, nil
+	}
+
+	sr := unsafe.Sizeof(*rst)
+
+	for i := 0; i < int(n); i += 1 {
+		raw_key := C.GoStringN((*rst).key, C.int((*rst).key_len))
+		data_block := C.GoBytes(unsafe.Pointer((*rst).data_block), C.int((*rst).bytes))
+		flags := uint32((*rst).flags)
+		key := self.removePrefix(raw_key)
+		rv[key] = &Item{Key: key, Value: data_block, Flags: flags}
+		rst = (**C.retrieval_result_t)(unsafe.Pointer(uintptr(unsafe.Pointer(rst)) + sr))
+	}
+
+	return rv, nil
 }
 
 func (self *Client) Version() (map[string]string, error) {
