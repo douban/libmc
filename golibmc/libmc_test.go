@@ -93,6 +93,21 @@ func TestSetNGet(t *testing.T) {
 		t.Error(ERROR_GET_AS)
 	}
 
+	err = client.Delete(KEY_TO_SET)
+	if err != nil {
+		t.Error(ERROR_GET_AS)
+	}
+
+	val, err = client.Get(KEY_TO_SET)
+	if !(val == nil && err == nil) {
+		t.Error(ERROR_GET_AS)
+	}
+
+	dct, err = client.GetMulti([]string{KEY_TO_SET})
+	if !(len(dct) == 0 && err == nil) {
+		t.Error(ERROR_GET_AS)
+	}
+
 	client.Destroy()
 }
 

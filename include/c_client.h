@@ -27,6 +27,11 @@ extern "C" {
                  const char* const* vals, const size_t* val_lens,
                  size_t nItems, message_result_t*** results, size_t* nResults);
   void client_destroy_message_result(void* client);
+
+  int client_delete(void*client, const char* const* keys, const size_t* key_lens,
+                    const bool noreply, size_t n_items,
+                    message_result_t*** results, size_t* nResults);
+
 #ifdef __cplusplus
 }
 #endif

@@ -164,6 +164,28 @@ func (self *Client) Set(item *Item) error {
 	return nil
 }
 
+func (self *Client) Delete(key string) error {
+	c_key := C.CString(key)
+	defer C.free(unsafe.Pointer(c_key))
+	c_keyLen := C.size_t(len(key))
+	c_noreply := C.bool(self.noreply)
+
+	var rst **C.message_result_t
+	var n C.size_t
+
+	err_code := C.client_delete(
+		self._imp, &c_key, &c_keyLen, c_noreply, 1, &rst, &n,
+	)
+	defer C.client_destroy_message_result(self._imp)
+
+	if err_code != 0 {
+		return errors.New(strconv.Itoa(int(err_code)))
+	}
+
+	// assert n == 1 TODO parse message
+	return nil
+}
+
 func (self *Client) Get(key string) (*Item, error) {
 	raw_key := self.addPrefix(key)
 	c_key := C.CString(key)

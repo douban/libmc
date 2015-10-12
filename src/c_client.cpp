@@ -68,3 +68,11 @@ void client_destroy_message_result(void* client) {
   douban::mc::Client* c = static_cast<Client*>(client);
   return c->destroyMessageResult();
 }
+
+
+int client_delete(void*client, const char* const* keys, const size_t* key_lens,
+                  const bool noreply, size_t n_items,
+                  message_result_t*** results, size_t* nResults) {
+  douban::mc::Client* c = static_cast<Client*>(client);
+  return c->_delete(keys, key_lens, noreply, n_items, results, nResults);
+}
