@@ -66,7 +66,7 @@ func (self *Client) Init(servers []string, noreply bool, prefix string,
 	c_aliases := make([]*C.char, n)
 
 	for i, srv := range servers {
-		addr_alias := strings.Split(srv, ":")
+		addr_alias := strings.Split(srv, " ")
 
 		addr := addr_alias[0]
 		if len(addr_alias) == 2 {
