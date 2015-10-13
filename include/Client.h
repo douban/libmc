@@ -36,7 +36,7 @@ class Client : public ConnectionPool {
   DECL_STORAGE_CMD(append);
   DECL_STORAGE_CMD(prepend);
   DECL_STORAGE_CMD(cas);
-
+#undef DECL_STORAGE_CMD
   err_code_t _delete(const char* const* keys, const size_t* key_lens,
                const bool noreply, size_t nItems,
                message_result_t*** results, size_t* nResults);

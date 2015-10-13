@@ -109,7 +109,7 @@ IMPL_STORAGE_CMD(replace, REPLACE_OP)
 IMPL_STORAGE_CMD(append, APPEND_OP)
 IMPL_STORAGE_CMD(prepend, PREPEND_OP)
 IMPL_STORAGE_CMD(cas, CAS_OP)
-
+#undef IMPL_STORAGE_CMD
 
 err_code_t Client::_delete(const char* const* keys, const size_t* key_lens,
                      const bool noreply, size_t nItems,

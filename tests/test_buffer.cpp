@@ -1,12 +1,8 @@
 #include "Common.h"
+#include "Export.h"
 #include "BufferReader.h"
 #include <cstring>
 #include "gtest/gtest.h"
-
-using douban::mc::err_code_t;
-using douban::mc::RET_PROGRAMMING_ERR;
-using douban::mc::RET_INCOMPLETE_BUFFER_ERR;
-using douban::mc::RET_OK;
 
 using douban::mc::io::BufferReader;
 using douban::mc::io::DataBlock;

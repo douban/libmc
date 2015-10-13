@@ -5,8 +5,6 @@
 #include <cstring>
 #include "gtest/gtest.h"
 
-using douban::mc::err_code_t;
-using douban::mc::RET_INCOMPLETE_BUFFER_ERR;
 using douban::mc::types::RetrievalResult;
 
 using douban::mc::io::BufferReader;

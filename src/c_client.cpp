@@ -57,15 +57,24 @@ void client_destroy_retrieval_result(void* client) {
 }
 
 
-int client_set(void* client, const char* const* keys, const size_t* key_lens,
-               const flags_t* flags, const exptime_t exptime,
-               const cas_unique_t* cas_uniques, const bool noreply,
-               const char* const* vals, const size_t* val_lens,
-               size_t nItems, message_result_t*** results, size_t* n_results) {
-  douban::mc::Client* c = static_cast<Client*>(client);
-  return c->set(keys, key_lens, flags, exptime, cas_uniques,
-                noreply, vals, val_lens, nItems, results, n_results);
+#define IMPL_STORAGE_CMD(M) \
+int client_##M(void* client, const char* const* keys, const size_t* key_lens, \
+               const flags_t* flags, const exptime_t exptime, \
+               const cas_unique_t* cas_uniques, const bool noreply, \
+               const char* const* vals, const size_t* val_lens, \
+               size_t nItems, message_result_t*** results, size_t* n_results) { \
+  douban::mc::Client* c = static_cast<Client*>(client); \
+  return c->M(keys, key_lens, flags, exptime, cas_uniques, \
+                noreply, vals, val_lens, nItems, results, n_results); \
 }
+
+IMPL_STORAGE_CMD(set)
+IMPL_STORAGE_CMD(add)
+IMPL_STORAGE_CMD(replace)
+IMPL_STORAGE_CMD(append)
+IMPL_STORAGE_CMD(prepend)
+IMPL_STORAGE_CMD(cas)
+#undef IMPL_STORAGE_CMD
 
 
 void client_destroy_message_result(void* client) {

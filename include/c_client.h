@@ -23,11 +23,19 @@ extern "C" {
                  size_t nKeys, retrieval_result_t*** results, size_t* n_results);
   void client_destroy_retrieval_result(void* client);
 
-  int client_set(void* client, const char* const* keys, const size_t* key_lens,
-                 const flags_t* flags, const exptime_t exptime,
-                 const cas_unique_t* cas_uniques, const bool noreply,
-                 const char* const* vals, const size_t* val_lens,
-                 size_t nItems, message_result_t*** results, size_t* n_results);
+#define DECL_STORAGE_CMD(M) \
+  int client_##M(void* client, const char* const* keys, const size_t* key_lens, \
+               const flags_t* flags, const exptime_t exptime, \
+               const cas_unique_t* cas_uniques, const bool noreply, \
+               const char* const* vals, const size_t* val_lens, \
+               size_t nItems, message_result_t*** results, size_t* n_results)
+  DECL_STORAGE_CMD(set);
+  DECL_STORAGE_CMD(add);
+  DECL_STORAGE_CMD(replace);
+  DECL_STORAGE_CMD(append);
+  DECL_STORAGE_CMD(prepend);
+  DECL_STORAGE_CMD(cas);
+#undef DECL_STORAGE_CMD
   void client_destroy_message_result(void* client);
 
   int client_delete(void*client, const char* const* keys, const size_t* key_lens,

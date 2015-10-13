@@ -48,19 +48,6 @@ cdef extern from "Common.h" namespace "douban::mc":
         OPT_HASH_FNV1A_32
         OPT_HASH_CRC_32
 
-    ctypedef enum err_code_t:
-        RET_SEND_ERR
-        RET_RECV_ERR
-        RET_CONN_POLL_ERR
-        RET_POLL_TIMEOUT_ERR
-        RET_POLL_ERR
-        RET_MC_SERVER_ERR
-        RET_PROGRAMMING_ERR
-        RET_INVALID_KEY_ERR
-        RET_INCOMPLETE_BUFFER_ERR
-        RET_OK
-
-
 cdef extern from "Export.h":
     ctypedef int64_t exptime_t
     ctypedef uint32_t flags_t
@@ -94,6 +81,18 @@ cdef extern from "Export.h":
         message_result_type type
         char* key
         size_t key_len
+
+    ctypedef enum err_code_t:
+        RET_SEND_ERR
+        RET_RECV_ERR
+        RET_CONN_POLL_ERR
+        RET_POLL_TIMEOUT_ERR
+        RET_POLL_ERR
+        RET_MC_SERVER_ERR
+        RET_PROGRAMMING_ERR
+        RET_INVALID_KEY_ERR
+        RET_INCOMPLETE_BUFFER_ERR
+        RET_OK
 
 
 cdef extern from "Result.h" namespace "douban::mc::types":

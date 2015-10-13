@@ -6,6 +6,19 @@
 #include <stdlib.h>
 #endif
 
+typedef enum {
+  RET_SEND_ERR = -9,
+  RET_RECV_ERR = -8,
+  RET_CONN_POLL_ERR = -7,
+  RET_POLL_TIMEOUT_ERR = -6,
+  RET_POLL_ERR = -5,
+  RET_MC_SERVER_ERR = -4,
+  RET_PROGRAMMING_ERR = -3,
+  RET_INVALID_KEY_ERR = -2,
+  RET_INCOMPLETE_BUFFER_ERR = -1,
+  RET_OK = 0
+} err_code_t;
+
 
 typedef int64_t exptime_t;
 typedef uint32_t flags_t;
