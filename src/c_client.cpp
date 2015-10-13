@@ -80,6 +80,13 @@ IMPL_STORAGE_CMD(cas)
 #undef IMPL_STORAGE_CMD
 
 
+int client_touch(void* client, const char* const* keys, const size_t* key_lens,
+                 const exptime_t exptime, const bool noreply, size_t n_items,
+                 message_result_t*** results, size_t* n_results) {
+  douban::mc::Client* c = static_cast<Client*>(client);
+  return c->touch(keys, key_lens, exptime, noreply, n_items, results, n_results);
+}
+
 void client_destroy_message_result(void* client) {
   douban::mc::Client* c = static_cast<Client*>(client);
   return c->destroyMessageResult();

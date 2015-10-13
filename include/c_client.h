@@ -41,6 +41,10 @@ extern "C" {
   DECL_STORAGE_CMD(prepend);
   DECL_STORAGE_CMD(cas);
 #undef DECL_STORAGE_CMD
+
+  int client_touch(void* client, const char* const* keys, const size_t* key_lens,
+                   const exptime_t exptime, const bool noreply, size_t n_items,
+                   message_result_t*** results, size_t* n_results);
   void client_destroy_message_result(void* client);
 
   int client_delete(void*client, const char* const* keys, const size_t* key_lens,
