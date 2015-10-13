@@ -117,9 +117,12 @@ func finalizer(self *Client) {
 	C.client_destroy(self._imp)
 }
 
-// TODO
-func (self *Client) GetHostByKey(key string) string {
-	return ""
+func (self *Client) GetServerAddressByKey(key string) string {
+	c_key := C.CString(key)
+	defer C.free(unsafe.Pointer(c_key))
+	c_keyLen := C.size_t(len(key))
+	c_server_addr := C.client_get_server_address_by_key(self._imp, c_key, c_keyLen)
+	return C.GoString(c_server_addr)
 }
 
 func (self *Client) removePrefix(key string) string {

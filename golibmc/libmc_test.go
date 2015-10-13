@@ -52,6 +52,17 @@ func TestPrefix(t *testing.T) {
 	}
 }
 
+func TestGetServerAddress(t *testing.T) {
+	servers := []string{LOCAL_MC}
+	noreply := false
+	prefix := ""
+	failover := false
+	client := New(servers, noreply, prefix, "TODO", failover)
+	if client.GetServerAddressByKey("key") != LOCAL_MC {
+		t.Error(ERROR_GENERAL)
+	}
+}
+
 func TestSetNGet(t *testing.T) {
 	servers := []string{LOCAL_MC}
 	noreply := false

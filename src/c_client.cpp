@@ -28,10 +28,14 @@ void client_destroy(void* client) {
   delete c;
 }
 
-
-int client_version(void* client, broadcast_result_t** results, size_t* nHosts) {
+const char* client_get_server_address_by_key(void* client, const char* key, size_t key_len) {
   douban::mc::Client* c = static_cast<Client*>(client);
-  return c->version(results, nHosts);
+  return c->getServerAddressByKey(key, key_len);
+}
+
+int client_version(void* client, broadcast_result_t** results, size_t* n_hosts) {
+  douban::mc::Client* c = static_cast<Client*>(client);
+  return c->version(results, n_hosts);
 }
 
 
@@ -41,10 +45,10 @@ void client_destroy_broadcast_result(void* client) {
 }
 
 
-int client_get(void* client, const char* const* keys, const size_t* keyLens,
-               size_t nKeys, retrieval_result_t*** results, size_t* nResults) {
+int client_get(void* client, const char* const* keys, const size_t* key_lens,
+               size_t n_keys, retrieval_result_t*** results, size_t* n_results) {
   douban::mc::Client* c = static_cast<Client*>(client);
-  return c->get(keys, keyLens, nKeys, results, nResults);
+  return c->get(keys, key_lens, n_keys, results, n_results);
 }
 
 void client_destroy_retrieval_result(void* client) {
@@ -57,10 +61,10 @@ int client_set(void* client, const char* const* keys, const size_t* key_lens,
                const flags_t* flags, const exptime_t exptime,
                const cas_unique_t* cas_uniques, const bool noreply,
                const char* const* vals, const size_t* val_lens,
-               size_t nItems, message_result_t*** results, size_t* nResults) {
+               size_t nItems, message_result_t*** results, size_t* n_results) {
   douban::mc::Client* c = static_cast<Client*>(client);
   return c->set(keys, key_lens, flags, exptime, cas_uniques,
-                noreply, vals, val_lens, nItems, results, nResults);
+                noreply, vals, val_lens, nItems, results, n_results);
 }
 
 
@@ -72,7 +76,7 @@ void client_destroy_message_result(void* client) {
 
 int client_delete(void*client, const char* const* keys, const size_t* key_lens,
                   const bool noreply, size_t n_items,
-                  message_result_t*** results, size_t* nResults) {
+                  message_result_t*** results, size_t* n_results) {
   douban::mc::Client* c = static_cast<Client*>(client);
-  return c->_delete(keys, key_lens, noreply, n_items, results, nResults);
+  return c->_delete(keys, key_lens, noreply, n_items, results, n_results);
 }
