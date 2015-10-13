@@ -44,12 +44,15 @@ void client_destroy_broadcast_result(void* client) {
   return c->destroyBroadcastResult();
 }
 
-
-int client_get(void* client, const char* const* keys, const size_t* key_lens,
-               size_t n_keys, retrieval_result_t*** results, size_t* n_results) {
-  douban::mc::Client* c = static_cast<Client*>(client);
-  return c->get(keys, key_lens, n_keys, results, n_results);
+#define IMPL_RETRIEVAL_CMD(M) \
+int client_##M(void* client, const char* const* keys, const size_t* key_lens, \
+               size_t n_keys, retrieval_result_t*** results, size_t* n_results) { \
+  douban::mc::Client* c = static_cast<Client*>(client); \
+  return c->M(keys, key_lens, n_keys, results, n_results); \
 }
+IMPL_RETRIEVAL_CMD(get)
+IMPL_RETRIEVAL_CMD(gets)
+#undef IMPL_RETRIEVAL_CMD
 
 void client_destroy_retrieval_result(void* client) {
   douban::mc::Client* c = static_cast<Client*>(client);

@@ -19,8 +19,13 @@ extern "C" {
   int client_version(void* client, broadcast_result_t** results, size_t* n_hosts);
   void client_destroy_broadcast_result(void* client);
 
-  int client_get(void* client, const char* const* keys, const size_t* key_lens,
-                 size_t nKeys, retrieval_result_t*** results, size_t* n_results);
+#define DECL_RETRIEVAL_CMD(M) \
+  int client_##M(void* client, const char* const* keys, const size_t* key_lens, \
+                 size_t nKeys, retrieval_result_t*** results, size_t* n_results)
+  DECL_RETRIEVAL_CMD(get);
+  DECL_RETRIEVAL_CMD(gets);
+#undef DECL_RETRIEVAL_CMD
+
   void client_destroy_retrieval_result(void* client);
 
 #define DECL_STORAGE_CMD(M) \

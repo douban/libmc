@@ -16,10 +16,13 @@ class Client : public ConnectionPool {
   void config(config_options_t opt, int val);
   // retrieval commands
   void destroyRetrievalResult();
-  err_code_t get(const char* const* keys, const size_t* keyLens, size_t nKeys,
+
+#define DECL_RETRIEVAL_CMD(M) \
+  err_code_t M(const char* const* keys, const size_t* keyLens, size_t nKeys, \
            retrieval_result_t*** results, size_t* nResults);
-  err_code_t gets(const char* const* keys, const size_t* keyLens, size_t nKeys,
-           retrieval_result_t*** results, size_t* nResults);
+DECL_RETRIEVAL_CMD(get)
+DECL_RETRIEVAL_CMD(gets)
+#undef DECL_RETRIEVAL_CMD
 
   // storage commands
   void destroyMessageResult();

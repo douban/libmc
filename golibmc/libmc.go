@@ -261,7 +261,7 @@ func (self *Client) DeleteMulti(keys []string) ([]string, error) {
 	return []string{}, nil
 }
 
-func (self *Client) Get(key string) (*Item, error) {
+func (self *Client) getOrGets(cmd string, key string) (item *Item, err error) {
 	raw_key := self.addPrefix(key)
 	c_key := C.CString(key)
 	defer C.free(unsafe.Pointer(c_key))
@@ -269,20 +269,43 @@ func (self *Client) Get(key string) (*Item, error) {
 	var rst **C.retrieval_result_t
 	var n C.size_t
 
-	err_code := C.client_get(self._imp, &c_key, &c_keyLen, 1, &rst, &n)
+	var err_code C.int
+	switch cmd {
+	case "get":
+		err_code = C.client_get(self._imp, &c_key, &c_keyLen, 1, &rst, &n)
+	case "gets":
+		err_code = C.client_gets(self._imp, &c_key, &c_keyLen, 1, &rst, &n)
+	}
+
 	defer C.client_destroy_retrieval_result(self._imp)
 
 	if err_code != 0 {
-		return nil, errors.New(strconv.Itoa(int(err_code)))
+		err = errors.New(strconv.Itoa(int(err_code)))
+		return
 	}
 
 	if int(n) == 0 {
-		return nil, nil
+		return
 	}
 
 	data_block := C.GoBytes(unsafe.Pointer((*rst).data_block), C.int((*rst).bytes))
 	flags := uint32((*rst).flags)
-	return &Item{Key: key, Value: data_block, Flags: flags}, nil
+	if cmd == "get" {
+		item = &Item{Key: key, Value: data_block, Flags: flags}
+		return
+	}
+
+	casid := uint64((*rst).cas_unique)
+	item = &Item{Key: key, Value: data_block, Flags: flags, casid: casid}
+	return
+}
+
+func (self *Client) Get(key string) (*Item, error) {
+	return self.getOrGets("get", key)
+}
+
+func (self *Client) Gets(key string) (*Item, error) {
+	return self.getOrGets("gets", key)
 }
 
 func (self *Client) GetMulti(keys []string) (map[string]*Item, error) {
@@ -332,11 +355,6 @@ func (self *Client) GetMulti(keys []string) (map[string]*Item, error) {
 	}
 
 	return rv, nil
-}
-
-// TODO
-func (self *Client) Gets(key string) (*Item, error) {
-	return nil, nil
 }
 
 // TODO

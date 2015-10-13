@@ -119,6 +119,40 @@ func TestSetNGet(t *testing.T) {
 	}
 }
 
+func testCasAndGets(t *testing.T) {
+	servers := []string{LOCAL_MC}
+	noreply := false
+	prefix := ""
+	failover := false
+	client := New(servers, noreply, prefix, "TODO", failover)
+	key := "test_cas_and_gets"
+	val := []byte("o")
+	val2 := []byte("2")
+	item := &Item{Key: key, Value: val}
+	err := client.Set(item)
+	if err != nil {
+		t.Error(ERROR_GENERAL)
+	}
+	item2, err := client.Gets(key)
+	fmt.Printf("item2 %s, err %d\n", item2, err)
+	if item2 == nil || err != nil {
+		t.Error(ERROR_GENERAL)
+	}
+	(*item).Value = val2
+	client.Set(item)
+	item3, err := client.Gets(key)
+	if item3 == nil || err != nil {
+		t.Error(ERROR_GENERAL)
+	}
+	if string((*item2).Value) != string(val) ||
+		string((*item3).Value) != string(val2) {
+		t.Error(ERROR_GENERAL)
+	}
+	if (*item2).casid == (*item3).casid {
+		t.Error(ERROR_GENERAL)
+	}
+}
+
 func BenchmarkSetAndGet(b *testing.B) {
 	servers := []string{LOCAL_MC}
 	noreply := false
