@@ -147,27 +147,8 @@ func (self *Client) addPrefix(key string) string {
 	}
 }
 
-// TODO
-func (self *Client) Add(item *Item) error {
-	return nil
-}
+func (self *Client) store(cmd string, item *Item) error {
 
-// TODO
-func (self *Client) Replace(item *Item) error {
-	return nil
-}
-
-// TODO
-func (self *Client) Prepend(item *Item) error {
-	return nil
-}
-
-// TODO
-func (self *Client) Append(item *Item) error {
-	return nil
-}
-
-func (self *Client) Set(item *Item) error {
 	c_key := C.CString(item.Key)
 	defer C.free(unsafe.Pointer(c_key))
 	c_keyLen := C.size_t(len(item.Key))
@@ -181,10 +162,39 @@ func (self *Client) Set(item *Item) error {
 	var rst **C.message_result_t
 	var n C.size_t
 
-	err_code := C.client_set(
-		self._imp, &c_key, &c_keyLen, &c_flags, c_exptime, nil,
-		c_noreply, &c_value, &c_valueSize, 1, &rst, &n,
-	)
+	var err_code C.int
+	switch cmd {
+	case "set":
+		err_code = C.client_set(
+			self._imp, &c_key, &c_keyLen, &c_flags, c_exptime, nil,
+			c_noreply, &c_value, &c_valueSize, 1, &rst, &n,
+		)
+	case "add":
+		err_code = C.client_add(
+			self._imp, &c_key, &c_keyLen, &c_flags, c_exptime, nil,
+			c_noreply, &c_value, &c_valueSize, 1, &rst, &n,
+		)
+	case "replace":
+		err_code = C.client_replace(
+			self._imp, &c_key, &c_keyLen, &c_flags, c_exptime, nil,
+			c_noreply, &c_value, &c_valueSize, 1, &rst, &n,
+		)
+	case "prepend":
+		err_code = C.client_prepend(
+			self._imp, &c_key, &c_keyLen, &c_flags, c_exptime, nil,
+			c_noreply, &c_value, &c_valueSize, 1, &rst, &n,
+		)
+	case "append":
+		err_code = C.client_prepend(
+			self._imp, &c_key, &c_keyLen, &c_flags, c_exptime, nil,
+			c_noreply, &c_value, &c_valueSize, 1, &rst, &n,
+		)
+	case "cas":
+		err_code = C.client_cas(
+			self._imp, &c_key, &c_keyLen, &c_flags, c_exptime, nil,
+			c_noreply, &c_value, &c_valueSize, 1, &rst, &n,
+		)
+	}
 	defer C.client_destroy_message_result(self._imp)
 
 	if err_code != 0 {
@@ -195,14 +205,33 @@ func (self *Client) Set(item *Item) error {
 	return nil
 }
 
+func (self *Client) Add(item *Item) error {
+	return self.store("add", item)
+}
+
+func (self *Client) Replace(item *Item) error {
+	return self.store("replace", item)
+}
+
+func (self *Client) Prepend(item *Item) error {
+	return self.store("prepend", item)
+}
+
+func (self *Client) Append(item *Item) error {
+	return self.store("append", item)
+}
+
+func (self *Client) Set(item *Item) error {
+	return self.store("set", item)
+}
+
 // TODO
 func (self *Client) SetMulti(items []*Item) ([]string, error) {
 	return []string{}, nil
 }
 
-// TODO CompareAndSwap
 func (self *Client) Cas(item *Item) error {
-	return nil
+	return self.store("cas", item)
 }
 
 func (self *Client) Delete(key string) error {
