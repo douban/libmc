@@ -10,6 +10,7 @@ import "C"
 import (
 	"errors"
 	"fmt"
+	"runtime"
 	"strconv"
 	"strings"
 	"unsafe"
@@ -55,8 +56,8 @@ type Item struct {
 	casid uint64
 }
 
-func (self *Client) Init(servers []string, noreply bool, prefix string,
-	hash_fn string, failover bool) {
+func New(servers []string, noreply bool, prefix string, hash_fn string, failover bool) (self *Client) {
+	self = new(Client)
 	// TODO handle hash_fn
 	self._imp = C.client_create()
 
@@ -108,10 +109,17 @@ func (self *Client) Init(servers []string, noreply bool, prefix string,
 
 	self.prefix = prefix
 	self.noreply = noreply
+	runtime.SetFinalizer(self, finalizer)
+	return
 }
 
-func (self *Client) Destroy() {
+func finalizer(self *Client) {
 	C.client_destroy(self._imp)
+}
+
+// TODO
+func (self *Client) GetHostByKey(key string) string {
+	return ""
 }
 
 func (self *Client) removePrefix(key string) string {
@@ -134,6 +142,26 @@ func (self *Client) addPrefix(key string) string {
 	} else {
 		return strings.Join([]string{self.prefix, key}, "")
 	}
+}
+
+// TODO
+func (self *Client) Add(item *Item) error {
+	return nil
+}
+
+// TODO
+func (self *Client) Replace(item *Item) error {
+	return nil
+}
+
+// TODO
+func (self *Client) Prepend(item *Item) error {
+	return nil
+}
+
+// TODO
+func (self *Client) Append(item *Item) error {
+	return nil
 }
 
 func (self *Client) Set(item *Item) error {
@@ -164,6 +192,16 @@ func (self *Client) Set(item *Item) error {
 	return nil
 }
 
+// TODO
+func (self *Client) SetMulti(items []*Item) ([]string, error) {
+	return []string{}, nil
+}
+
+// TODO CompareAndSwap
+func (self *Client) Cas(item *Item) error {
+	return nil
+}
+
 func (self *Client) Delete(key string) error {
 	c_key := C.CString(key)
 	defer C.free(unsafe.Pointer(c_key))
@@ -184,6 +222,11 @@ func (self *Client) Delete(key string) error {
 
 	// assert n == 1 TODO parse message
 	return nil
+}
+
+// TODO
+func (self *Client) DeleteMulti(keys []string) ([]string, error) {
+	return []string{}, nil
 }
 
 func (self *Client) Get(key string) (*Item, error) {
@@ -257,6 +300,26 @@ func (self *Client) GetMulti(keys []string) (map[string]*Item, error) {
 	}
 
 	return rv, nil
+}
+
+// TODO
+func (self *Client) Gets(key string) (*Item, error) {
+	return nil, nil
+}
+
+// TODO
+func (self *Client) Touch(key string, expiration int64) error {
+	return nil
+}
+
+// TODO
+func (self *Client) Incr(key string, delta uint64) (uint64, error) {
+	return 0, nil
+}
+
+// TODO
+func (self *Client) Decr(key string, delta uint64) (uint64, error) {
+	return 0, nil
 }
 
 func (self *Client) Version() (map[string]string, error) {

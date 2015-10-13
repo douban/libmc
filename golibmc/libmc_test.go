@@ -53,12 +53,11 @@ func TestPrefix(t *testing.T) {
 }
 
 func TestSetNGet(t *testing.T) {
-	client := new(Client)
 	servers := []string{LOCAL_MC}
 	noreply := false
 	prefix := ""
 	failover := false
-	client.Init(servers, noreply, prefix, "TODO", failover)
+	client := New(servers, noreply, prefix, "TODO", failover)
 	version, err := client.Version()
 	if len(version) == 0 || err != nil {
 		t.Error(ERROR_VERSION)
@@ -107,17 +106,14 @@ func TestSetNGet(t *testing.T) {
 	if !(len(dct) == 0 && err == nil) {
 		t.Error(ERROR_GET_AS)
 	}
-
-	client.Destroy()
 }
 
 func BenchmarkSetAndGet(b *testing.B) {
-	client := new(Client)
 	servers := []string{LOCAL_MC}
 	noreply := false
 	prefix := ""
 	failover := false
-	client.Init(servers, noreply, prefix, "TODO", failover)
+	client := New(servers, noreply, prefix, "TODO", failover)
 	item := Item{
 		Key:        KEY_TO_SET,
 		Value:      []byte(VALUE_TO_SET),
@@ -128,5 +124,4 @@ func BenchmarkSetAndGet(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		client.Get(KEY_TO_SET)
 	}
-	client.Destroy()
 }
