@@ -23,6 +23,12 @@ void client_init(void* client, const char* const * hosts, const uint32_t* ports,
 }
 
 
+void client_config(void* client, config_options_t opt, int val) {
+  douban::mc::Client* c = static_cast<Client*>(client);
+  return c->config(opt, val);
+}
+
+
 void client_destroy(void* client) {
   douban::mc::Client* c = static_cast<Client*>(client);
   delete c;

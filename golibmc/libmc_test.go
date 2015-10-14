@@ -13,6 +13,27 @@ const VALUE_TO_SET = "goog"
 
 var ERROR_VERSION = fmt.Sprintf("Bad version, make sure %s is started", LOCAL_MC)
 
+func newSimpleClient() *Client {
+	servers := []string{LOCAL_MC}
+	noreply := false
+	prefix := ""
+	hash_fn := MC_HASH_CRC_32
+	failover := false
+	return New(servers, noreply, prefix, hash_fn, failover)
+}
+
+func TestInputServer(t *testing.T) {
+	servers := []string{"localhost:invalid_port"}
+	noreply := false
+	prefix := ""
+	hash_fn := MC_HASH_CRC_32
+	failover := false
+	c := New(servers, noreply, prefix, hash_fn, failover)
+	if c != nil {
+		t.Error(ERROR_GENERAL)
+	}
+}
+
 func TestPrefix(t *testing.T) {
 	c1 := Client{}
 	testPrefix := "prefix"
@@ -53,22 +74,14 @@ func TestPrefix(t *testing.T) {
 }
 
 func TestGetServerAddress(t *testing.T) {
-	servers := []string{LOCAL_MC}
-	noreply := false
-	prefix := ""
-	failover := false
-	client := New(servers, noreply, prefix, "TODO", failover)
+	client := newSimpleClient()
 	if client.GetServerAddressByKey("key") != LOCAL_MC {
 		t.Error(ERROR_GENERAL)
 	}
 }
 
 func TestSetNGet(t *testing.T) {
-	servers := []string{LOCAL_MC}
-	noreply := false
-	prefix := ""
-	failover := false
-	client := New(servers, noreply, prefix, "TODO", failover)
+	client := newSimpleClient()
 	version, err := client.Version()
 	if len(version) == 0 || err != nil {
 		t.Error(ERROR_VERSION)
@@ -130,11 +143,7 @@ func TestSetMulti(t *testing.T) {
 		},
 	}
 
-	servers := []string{LOCAL_MC}
-	noreply := false
-	prefix := ""
-	failover := false
-	client := New(servers, noreply, prefix, "TODO", failover)
+	client := newSimpleClient()
 	if err := client.Delete(items[0].Key); err != nil {
 		t.Error(ERROR_GENERAL)
 	}
@@ -154,7 +163,7 @@ func testCasAndGets(t *testing.T) {
 	noreply := false
 	prefix := ""
 	failover := false
-	client := New(servers, noreply, prefix, "TODO", failover)
+	client := New(servers, noreply, prefix, MC_HASH_CRC_32, failover)
 	key := "test_cas_and_gets"
 	val := []byte("o")
 	val2 := []byte("2")
@@ -184,11 +193,7 @@ func testCasAndGets(t *testing.T) {
 }
 
 func BenchmarkSetAndGet(b *testing.B) {
-	servers := []string{LOCAL_MC}
-	noreply := false
-	prefix := ""
-	failover := false
-	client := New(servers, noreply, prefix, "TODO", failover)
+	client := newSimpleClient()
 	item := Item{
 		Key:        KEY_TO_SET,
 		Value:      []byte(VALUE_TO_SET),

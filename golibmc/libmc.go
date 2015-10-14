@@ -16,15 +16,27 @@ import (
 	"unsafe"
 )
 
-// TODO
-// unicode key, normalize key
+const (
+	MC_POLL_TIMEOUT    = C.CFG_POLL_TIMEOUT
+	MC_CONNECT_TIMEOUT = C.CFG_CONNECT_TIMEOUT
+	MC_RETRY_TIMEOUT   = C.CFG_RETRY_TIMEOUT
+	MC_HASH_FUNCTION   = C.CFG_HASH_FUNCTION
+)
 
 const (
-	MC_HASH_MD5      = 0
-	MC_HASH_FNV1_32  = 1
-	MC_HASH_FNV1A_32 = 2
-	MC_HASH_CRC_32   = 3
+	MC_HASH_MD5 = iota
+	MC_HASH_FNV1_32
+	MC_HASH_FNV1A_32
+	MC_HASH_CRC_32
 )
+
+var hashFunctionMapping = map[int]C.hash_function_options_t{
+	MC_HASH_MD5:      C.OPT_HASH_MD5,
+	MC_HASH_FNV1_32:  C.OPT_HASH_FNV1_32,
+	MC_HASH_FNV1A_32: C.OPT_HASH_FNV1A_32,
+	MC_HASH_CRC_32:   C.OPT_HASH_CRC_32,
+}
+
 const MC_DEFAULT_PORT = 11211
 
 type Client struct {
@@ -59,10 +71,10 @@ type Item struct {
 	casid uint64
 }
 
-func New(servers []string, noreply bool, prefix string, hash_fn string, failover bool) (self *Client) {
+func New(servers []string, noreply bool, prefix string, hash_fn int, failover bool) (self *Client) {
 	self = new(Client)
-	// TODO handle hash_fn
 	self._imp = C.client_create()
+	runtime.SetFinalizer(self, finalizer)
 
 	n := len(servers)
 	c_hosts := make([]*C.char, n)
@@ -88,7 +100,8 @@ func New(servers []string, noreply bool, prefix string, hash_fn string, failover
 		if len(host_port) == 2 {
 			port, err := strconv.Atoi(host_port[1])
 			if err != nil {
-				fmt.Println(err) // TODO handle error
+				fmt.Errorf("[%s]: %s", srv, err)
+				return nil
 			}
 			c_ports[i] = C.uint32_t(port)
 		} else {
@@ -110,9 +123,9 @@ func New(servers []string, noreply bool, prefix string, hash_fn string, failover
 		C.int(failoverInt),
 	)
 
+	self.Config(MC_HASH_FUNCTION, int(hashFunctionMapping[hash_fn]))
 	self.prefix = prefix
 	self.noreply = noreply
-	runtime.SetFinalizer(self, finalizer)
 	return
 }
 
@@ -120,10 +133,16 @@ func finalizer(self *Client) {
 	C.client_destroy(self._imp)
 }
 
+func (self *Client) Config(opt C.config_options_t, val int) {
+	C.client_config(self._imp, opt, C.int(val))
+}
+
 func (self *Client) GetServerAddressByKey(key string) string {
-	c_key := C.CString(key)
+	rawKey := self.addPrefix(key)
+
+	c_key := C.CString(rawKey)
 	defer C.free(unsafe.Pointer(c_key))
-	c_keyLen := C.size_t(len(key))
+	c_keyLen := C.size_t(len(rawKey))
 	c_server_addr := C.client_get_server_address_by_key(self._imp, c_key, c_keyLen)
 	return C.GoString(c_server_addr)
 }
@@ -151,10 +170,11 @@ func (self *Client) addPrefix(key string) string {
 }
 
 func (self *Client) store(cmd string, item *Item) error {
+	key := self.addPrefix(item.Key)
 
-	c_key := C.CString(item.Key)
+	c_key := C.CString(key)
 	defer C.free(unsafe.Pointer(c_key))
-	c_keyLen := C.size_t(len(item.Key))
+	c_keyLen := C.size_t(len(key))
 	c_flags := C.flags_t(item.Flags)
 	c_exptime := C.exptime_t(item.Expiration)
 	c_noreply := C.bool(self.noreply)
@@ -200,12 +220,15 @@ func (self *Client) store(cmd string, item *Item) error {
 	}
 	defer C.client_destroy_message_result(self._imp)
 
-	if err_code != 0 {
-		return errors.New(strconv.Itoa(int(err_code)))
+	if err_code == 0 {
+		if self.noreply {
+			return nil
+		} else if int(n) == 1 && (*rst).type_ == C.MSG_STORED {
+			return nil
+		}
 	}
 
-	// assert n == 1 TODO parse message
-	return nil
+	return errors.New(strconv.Itoa(int(err_code)))
 }
 
 func (self *Client) Add(item *Item) error {
@@ -237,11 +260,13 @@ func (self *Client) SetMulti(items []*Item) ([]string, error) {
 	c_flagsList := make([]C.flags_t, nItems)
 
 	for i, item := range items {
-		c_key := C.CString(item.Key)
+		rawKey := self.addPrefix(item.Key)
+
+		c_key := C.CString(rawKey)
 		defer C.free(unsafe.Pointer(c_key))
 		c_keys[i] = c_key
 
-		c_keyLen := C.size_t(len(item.Key))
+		c_keyLen := C.size_t(len(rawKey))
 		c_keyLens[i] = c_keyLen
 
 		c_val := C.CString(string(item.Value))
@@ -299,7 +324,7 @@ func (self *Client) SetMulti(items []*Item) ([]string, error) {
 		if _, contains := storedKeySet[item.Key]; contains {
 			continue
 		}
-		failedKeys[i] = item.Key
+		failedKeys[i] = self.removePrefix(item.Key)
 		i += 1
 	}
 	return failedKeys, err
@@ -310,9 +335,11 @@ func (self *Client) Cas(item *Item) error {
 }
 
 func (self *Client) Delete(key string) error {
-	c_key := C.CString(key)
+	rawKey := self.addPrefix(key)
+
+	c_key := C.CString(rawKey)
 	defer C.free(unsafe.Pointer(c_key))
-	c_keyLen := C.size_t(len(key))
+	c_keyLen := C.size_t(len(rawKey))
 	c_noreply := C.bool(self.noreply)
 
 	var rst **C.message_result_t
@@ -323,16 +350,29 @@ func (self *Client) Delete(key string) error {
 	)
 	defer C.client_destroy_message_result(self._imp)
 
-	if err_code != 0 {
-		return errors.New(strconv.Itoa(int(err_code)))
+	if err_code == 0 {
+		if self.noreply {
+			return nil
+		} else if int(n) == 1 && ((*rst).type_ == C.MSG_DELETED || (*rst).type_ == C.MSG_NOT_FOUND) {
+			return nil
+		}
 	}
 
-	// assert n == 1 TODO parse message
-	return nil
+	return errors.New(strconv.Itoa(int(err_code)))
 }
 
 func (self *Client) DeleteMulti(keys []string) (failedKeys []string, err error) {
-	nKeys := len(keys)
+	var rawKeys []string
+	if len(self.prefix) == 0 {
+		rawKeys = keys
+	} else {
+		rawKeys = make([]string, len(keys))
+		for i, key := range keys {
+			rawKeys[i] = key
+		}
+	}
+
+	nKeys := len(rawKeys)
 	c_nKeys := C.size_t(nKeys)
 	c_keys := make([]*C.char, nKeys)
 	c_keyLens := make([]C.size_t, nKeys)
@@ -341,7 +381,7 @@ func (self *Client) DeleteMulti(keys []string) (failedKeys []string, err error) 
 	var results **C.message_result_t
 	var n C.size_t
 
-	for i, key := range keys {
+	for i, key := range rawKeys {
 		c_key := C.CString(key)
 		defer C.free(unsafe.Pointer(c_key))
 		c_keys[i] = c_key
@@ -360,6 +400,11 @@ func (self *Client) DeleteMulti(keys []string) (failedKeys []string, err error) 
 		return
 	}
 
+	if self.noreply {
+		failedKeys = keys
+		return
+	}
+
 	deletedKeySet := make(map[string]struct{})
 	sr := unsafe.Sizeof(*results)
 	for i := 0; i <= int(n); i += 1 {
@@ -373,23 +418,24 @@ func (self *Client) DeleteMulti(keys []string) (failedKeys []string, err error) 
 		)
 	}
 	err = errors.New(strconv.Itoa(int(err_code)))
-	failedKeys = make([]string, len(keys)-len(deletedKeySet))
+	failedKeys = make([]string, len(rawKeys)-len(deletedKeySet))
 	i := 0
-	for _, key := range keys {
+	for _, key := range rawKeys {
 		if _, contains := deletedKeySet[key]; contains {
 			continue
 		}
-		failedKeys[i] = key
+		failedKeys[i] = self.removePrefix(key)
 		i += 1
 	}
 	return
 }
 
 func (self *Client) getOrGets(cmd string, key string) (item *Item, err error) {
-	raw_key := self.addPrefix(key)
-	c_key := C.CString(key)
+	rawKey := self.addPrefix(key)
+
+	c_key := C.CString(rawKey)
 	defer C.free(unsafe.Pointer(c_key))
-	c_keyLen := C.size_t(len(raw_key))
+	c_keyLen := C.size_t(len(rawKey))
 	var rst **C.retrieval_result_t
 	var n C.size_t
 
@@ -432,18 +478,23 @@ func (self *Client) Gets(key string) (*Item, error) {
 	return self.getOrGets("gets", key)
 }
 
-func (self *Client) GetMulti(keys []string) (map[string]*Item, error) {
+func (self *Client) GetMulti(keys []string) (rv map[string]*Item, err error) {
 	nKeys := len(keys)
-	raw_keys := make([]string, len(keys))
-	for i, key := range keys {
-		raw_keys[i] = self.addPrefix(key)
+	var rawKeys []string
+	if len(self.prefix) == 0 {
+		rawKeys = keys
+	} else {
+		rawKeys = make([]string, len(keys))
+		for i, key := range keys {
+			rawKeys[i] = self.addPrefix(key)
+		}
 	}
 
 	c_keys := make([]*C.char, nKeys)
 	c_keyLens := make([]C.size_t, nKeys)
 	c_nKeys := C.size_t(nKeys)
 
-	for i, raw_key := range raw_keys {
+	for i, raw_key := range rawKeys {
 		c_key := C.CString(raw_key)
 		defer C.free(unsafe.Pointer(c_key))
 		c_keyLen := C.size_t(len(raw_key))
@@ -457,18 +508,17 @@ func (self *Client) GetMulti(keys []string) (map[string]*Item, error) {
 	err_code := C.client_get(self._imp, &c_keys[0], &c_keyLens[0], c_nKeys, &rst, &n)
 	defer C.client_destroy_retrieval_result(self._imp)
 
-	rv := map[string]*Item{}
-
 	if err_code != 0 {
-		return rv, errors.New(strconv.Itoa(int(err_code)))
+		err = errors.New(strconv.Itoa(int(err_code)))
+		return
 	}
 
 	if int(n) == 0 {
-		return rv, nil
+		return
 	}
 
 	sr := unsafe.Sizeof(*rst)
-
+	rv = make(map[string]*Item, int(n))
 	for i := 0; i < int(n); i += 1 {
 		raw_key := C.GoStringN((*rst).key, C.int((*rst).key_len))
 		data_block := C.GoBytes(unsafe.Pointer((*rst).data_block), C.int((*rst).bytes))
@@ -478,13 +528,15 @@ func (self *Client) GetMulti(keys []string) (map[string]*Item, error) {
 		rst = (**C.retrieval_result_t)(unsafe.Pointer(uintptr(unsafe.Pointer(rst)) + sr))
 	}
 
-	return rv, nil
+	return
 }
 
 func (self *Client) Touch(key string, expiration int64) error {
-	c_key := C.CString(key)
+	rawKey := self.addPrefix(key)
+
+	c_key := C.CString(rawKey)
 	defer C.free(unsafe.Pointer(c_key))
-	c_keyLen := C.size_t(len(key))
+	c_keyLen := C.size_t(len(rawKey))
 	c_exptime := C.exptime_t(expiration)
 	c_noreply := C.bool(self.noreply)
 
@@ -496,18 +548,21 @@ func (self *Client) Touch(key string, expiration int64) error {
 	)
 	defer C.client_destroy_message_result(self._imp)
 
-	if err_code != 0 {
-		return errors.New(strconv.Itoa(int(err_code)))
+	if err_code == 0 {
+		if self.noreply {
+			return nil
+		} else if int(n) == 1 && (*rst).type_ == C.MSG_TOUCHED {
+			return nil
+		}
 	}
-
-	// assert n == 1 TODO parse message
-	return nil
+	return errors.New(strconv.Itoa(int(err_code)))
 }
 
 func (self *Client) incrOrDecr(cmd string, key string, delta uint64) (uint64, error) {
-	c_key := C.CString(key)
+	rawKey := self.addPrefix(key)
+	c_key := C.CString(rawKey)
 	defer C.free(unsafe.Pointer(c_key))
-	c_keyLen := C.size_t(len(key))
+	c_keyLen := C.size_t(len(rawKey))
 	c_delta := C.uint64_t(delta)
 	c_noreply := C.bool(self.noreply)
 
@@ -532,11 +587,14 @@ func (self *Client) incrOrDecr(cmd string, key string, delta uint64) (uint64, er
 
 	defer C.client_destroy_unsigned_result(self._imp)
 
-	if err_code != 0 || int(n) == 0 || rst == nil {
-		return 0, errors.New(strconv.Itoa(int(err_code)))
+	if err_code == 0 {
+		if self.noreply {
+			return 0, nil
+		} else if int(n) == 1 && rst != nil {
+			return uint64(rst.value), nil
+		}
 	}
-
-	return uint64(rst.value), nil
+	return 0, errors.New(strconv.Itoa(int(err_code)))
 }
 
 func (self *Client) Incr(key string, delta uint64) (uint64, error) {

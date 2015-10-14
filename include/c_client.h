@@ -12,6 +12,7 @@ extern "C" {
   void* client_create();
   void client_init(void* client, const char* const * hosts, const uint32_t* ports,
                    size_t n, const char* const * aliases, const int failover);
+  void client_config(void* client, config_options_t opt, int val);
   void client_destroy(void* client);
 
   const char* client_get_server_address_by_key(void* client, const char* key, size_t key_len);
