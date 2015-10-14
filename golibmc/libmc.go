@@ -632,6 +632,49 @@ func (self *Client) Version() (map[string]string, error) {
 	return rv, nil
 }
 
+func (self *Client) Stats() (map[string](map[string]string), error) {
+	var rst *C.broadcast_result_t
+	var n C.size_t
+
+	err_code := C.client_stats(self._imp, &rst, &n)
+	defer C.client_destroy_broadcast_result(self._imp)
+
+	rv := make(map[string](map[string]string))
+
+	sr := unsafe.Sizeof(*rst)
+
+	for i := 0; i < int(n); i += 1 {
+		if rst.lines == nil || rst.line_lens == nil {
+			continue
+		}
+		host := C.GoString(rst.host)
+		nMetrics := int(rst.len)
+
+		rv[host] = make(map[string]string)
+
+		var c_lines **C.char = rst.lines
+		var c_lineLens *C.size_t = rst.line_lens
+
+		sLine := unsafe.Sizeof(*c_lines)
+		sLineLen := unsafe.Sizeof(*c_lineLens)
+		for j := 0; j < nMetrics; j += 1 {
+			metricLine := C.GoStringN(*c_lines, C.int(*c_lineLens))
+			kv := strings.SplitN(metricLine, " ", 2)
+			rv[host][kv[0]] = kv[1]
+			c_lines = (**C.char)(unsafe.Pointer(uintptr(unsafe.Pointer(c_lines)) + sLine))
+			c_lineLens = (*C.size_t)(unsafe.Pointer(uintptr(unsafe.Pointer(c_lineLens)) + sLineLen))
+		}
+
+		rst = (*C.broadcast_result_t)(unsafe.Pointer(uintptr(unsafe.Pointer(rst)) + sr))
+	}
+
+	if err_code != 0 {
+		return rv, errors.New(strconv.Itoa(int(err_code)))
+	}
+
+	return rv, nil
+}
+
 func (self *Client) Quit() error {
 	err_code := C.client_quit(self._imp)
 	defer C.client_destroy_broadcast_result(self._imp)

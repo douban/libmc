@@ -131,6 +131,11 @@ void client_destroy_unsigned_result(void* client) {
   return c->destroyUnsignedResult();
 }
 
+int client_stats(void* client, broadcast_result_t** results, size_t* n_servers) {
+  douban::mc::Client* c = static_cast<Client*>(client);
+  return c->stats(results, n_servers);
+}
+
 int client_quit(void* client) {
   douban::mc::Client* c = static_cast<Client*>(client);
   return c->quit();

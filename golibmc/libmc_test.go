@@ -3,6 +3,7 @@ package libmc
 import "fmt"
 import "strings"
 import "testing"
+import "strconv"
 
 const LOCAL_MC = "localhost:21211"
 const ERROR_GENERAL = "Error"
@@ -30,6 +31,17 @@ func TestInputServer(t *testing.T) {
 	failover := false
 	c := New(servers, noreply, prefix, hash_fn, failover)
 	if c != nil {
+		t.Error(ERROR_GENERAL)
+	}
+}
+
+func TestStats(t *testing.T) {
+	c := newSimpleClient()
+	statsDict, err := c.Stats()
+	if !(err == nil && len(statsDict) == 1) {
+		t.Error(ERROR_GENERAL)
+	}
+	if m, _ := strconv.Atoi((statsDict[LOCAL_MC]["cmd_get"])); m < 0 {
 		t.Error(ERROR_GENERAL)
 	}
 }

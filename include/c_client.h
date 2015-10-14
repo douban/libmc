@@ -60,20 +60,8 @@ extern "C" {
                   unsigned_result_t** results, size_t* n_results);
   void client_destroy_unsigned_result(void* client);
 
+  int client_stats(void* client, broadcast_result_t** results, size_t* n_servers);
   int client_quit(void* client);
 #ifdef __cplusplus
 }
 #endif
-  /*
-  void client_config(void* client, config_options_t opt, int val);
-  int client_init(
-    void* client, const char* const * hosts,
-    const uint32_t* ports, size_t n,
-    const char* const * aliases
-  )
-  void client_enable_consistent_failover(void* client)
-  void client_disable_consistent_failover(void* client)
-
-  err_code_t stats(broadcast_result_t** results, size_t* nHosts)
-  void _sleep(uint32_t ms)
-  */
