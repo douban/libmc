@@ -300,7 +300,7 @@ TEST(test_client, test_incr_decr) {
     hint();
   } else {
     message_result_t **m_results = NULL;
-    unsigned_result_t **u_results = NULL;
+    unsigned_result_t *u_results = NULL;
 
     size_t nResults = 0;
     exptime_t exptime = 0;

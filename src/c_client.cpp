@@ -13,7 +13,7 @@ void* client_create() {
 void client_init(void* client, const char* const * hosts, const uint32_t* ports,
                  size_t n, const char* const * aliases, const int failover) {
   douban::mc::Client* c = static_cast<Client*>(client);
-  c->config(douban::mc::CFG_HASH_FUNCTION, douban::mc::OPT_HASH_CRC_32); // TODO
+  c->config(CFG_HASH_FUNCTION, OPT_HASH_CRC_32); // TODO
   c->init(hosts, ports, n, aliases);
   if (failover) {
     c->enableConsistentFailover();
@@ -28,10 +28,12 @@ void client_destroy(void* client) {
   delete c;
 }
 
+
 const char* client_get_server_address_by_key(void* client, const char* key, size_t key_len) {
   douban::mc::Client* c = static_cast<Client*>(client);
   return c->getServerAddressByKey(key, key_len);
 }
+
 
 int client_version(void* client, broadcast_result_t** results, size_t* n_hosts) {
   douban::mc::Client* c = static_cast<Client*>(client);
@@ -53,6 +55,7 @@ int client_##M(void* client, const char* const* keys, const size_t* key_lens, \
 IMPL_RETRIEVAL_CMD(get)
 IMPL_RETRIEVAL_CMD(gets)
 #undef IMPL_RETRIEVAL_CMD
+
 
 void client_destroy_retrieval_result(void* client) {
   douban::mc::Client* c = static_cast<Client*>(client);
@@ -87,6 +90,7 @@ int client_touch(void* client, const char* const* keys, const size_t* key_lens,
   return c->touch(keys, key_lens, exptime, noreply, n_items, results, n_results);
 }
 
+
 void client_destroy_message_result(void* client) {
   douban::mc::Client* c = static_cast<Client*>(client);
   return c->destroyMessageResult();
@@ -98,4 +102,30 @@ int client_delete(void*client, const char* const* keys, const size_t* key_lens,
                   message_result_t*** results, size_t* n_results) {
   douban::mc::Client* c = static_cast<Client*>(client);
   return c->_delete(keys, key_lens, noreply, n_items, results, n_results);
+}
+
+
+int client_incr(void* client, const char* key, const size_t keyLen,
+                const uint64_t delta, const bool noreply,
+                unsigned_result_t** results, size_t* n_results) {
+  douban::mc::Client* c = static_cast<Client*>(client);
+  return c->incr(key, keyLen, delta, noreply, results, n_results);
+}
+
+
+int client_decr(void* client, const char* key, const size_t keyLen,
+                const uint64_t delta, const bool noreply,
+                unsigned_result_t** results, size_t* n_results) {
+  douban::mc::Client* c = static_cast<Client*>(client);
+  return c->decr(key, keyLen, delta, noreply, results, n_results);
+}
+
+void client_destroy_unsigned_result(void* client) {
+  douban::mc::Client* c = static_cast<Client*>(client);
+  return c->destroyUnsignedResult();
+}
+
+int client_quit(void* client) {
+  douban::mc::Client* c = static_cast<Client*>(client);
+  return c->quit();
 }

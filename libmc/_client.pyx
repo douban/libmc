@@ -36,6 +36,8 @@ cdef extern from "Common.h" namespace "douban::mc":
         VERSION_OP
         QUIT_OP
 
+
+cdef extern from "Export.h":
     ctypedef enum config_options_t:
         CFG_POLL_TIMEOUT
         CFG_CONNECT_TIMEOUT
@@ -48,7 +50,6 @@ cdef extern from "Common.h" namespace "douban::mc":
         OPT_HASH_FNV1A_32
         OPT_HASH_CRC_32
 
-cdef extern from "Export.h":
     ctypedef int64_t exptime_t
     ctypedef uint32_t flags_t
     ctypedef uint64_t cas_unique_t
@@ -180,12 +181,12 @@ cdef extern from "Client.h" namespace "douban::mc":
 
         err_code_t incr(
             const char* key, const size_t keyLen, const uint64_t delta,
-            const bool_t noreply, unsigned_result_t*** results,
+            const bool_t noreply, unsigned_result_t** results,
             size_t* nResults
         ) nogil
         err_code_t decr(
             const char* key, const size_t keyLen, const uint64_t delta,
-            const bool_t noreply, unsigned_result_t*** results,
+            const bool_t noreply, unsigned_result_t** results,
             size_t* nResults
         ) nogil
         void destroyUnsignedResult() nogil
@@ -957,19 +958,19 @@ cdef class PyClient:
         Py_INCREF(key)
         PyString_AsStringAndSize(key, &c_key, <Py_ssize_t*>&c_key_len)
 
-        cdef unsigned_result_t** results = NULL
+        cdef unsigned_result_t* result = NULL
         cdef size_t n_res = 0
         with nogil:
             if op == INCR_OP:
-                self.last_error = self._imp.incr(c_key, c_key_len, delta, self.noreply, &results, &n_res)
+                self.last_error = self._imp.incr(c_key, c_key_len, delta, self.noreply, &result, &n_res)
             elif op == DECR_OP:
-                self.last_error = self._imp.decr(c_key, c_key_len, delta, self.noreply, &results, &n_res)
+                self.last_error = self._imp.decr(c_key, c_key_len, delta, self.noreply, &result, &n_res)
             else:
                 pass
 
         rv = None
-        if n_res == 1 and results[0] != NULL:
-            rv = results[0].value
+        if n_res == 1 and result != NULL:
+            rv = result.value
         with nogil:
             self._imp.destroyUnsignedResult()
         Py_DECREF(key)

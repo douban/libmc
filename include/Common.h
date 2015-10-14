@@ -204,22 +204,5 @@ typedef enum {
 } op_code_t;
 
 
-
-
-typedef enum {
-  CFG_POLL_TIMEOUT,
-  CFG_CONNECT_TIMEOUT,
-  CFG_RETRY_TIMEOUT,
-  CFG_HASH_FUNCTION
-} config_options_t;
-
-
-typedef enum {
-  OPT_HASH_MD5,
-  OPT_HASH_FNV1_32,
-  OPT_HASH_FNV1A_32,
-  OPT_HASH_CRC_32,
-} hash_function_options_t;
-
 } // namespace mc
 } // namespace douban

@@ -1,6 +1,7 @@
 #include <unistd.h>
 #include <vector>
 
+#include "Export.h"
 #include "Common.h"
 #include "Client.h"
 #include "Keywords.h"
@@ -28,7 +29,7 @@ void Client::config(config_options_t opt, int val) {
       setRetryTimeout(val);
       break;
     case CFG_HASH_FUNCTION:
-      ConnectionPool::setHashFunction(static_cast<douban::mc::hash_function_options_t>(val));
+      ConnectionPool::setHashFunction(static_cast<hash_function_options_t>(val));
     default:
       break;
   }
@@ -172,7 +173,7 @@ err_code_t Client::touch(const char* const* keys, const size_t* keyLens,
 }
 
 
-void Client::collectUnsignedResult(unsigned_result_t*** results, size_t* nResults) {
+void Client::collectUnsignedResult(unsigned_result_t** results, size_t* nResults) {
 
   assert(m_outUnsignedResultPtrs.size() == 0);
   ConnectionPool::collectUnsignedResult(m_outUnsignedResultPtrs);
@@ -181,13 +182,13 @@ void Client::collectUnsignedResult(unsigned_result_t*** results, size_t* nResult
   if (*nResults == 0) {
     *results = NULL;
   } else {
-    *results = &m_outUnsignedResultPtrs.front();
+    *results = m_outUnsignedResultPtrs.front();
   }
 }
 
 err_code_t Client::incr(const char* key, const size_t keyLen, const uint64_t delta,
                  const bool noreply,
-                 unsigned_result_t*** results, size_t* nResults) {
+                 unsigned_result_t** results, size_t* nResults) {
   dispatchIncrDecr(INCR_OP, key, keyLen, delta, noreply);
   err_code_t rv = waitPoll();
   collectUnsignedResult(results, nResults);
@@ -197,7 +198,7 @@ err_code_t Client::incr(const char* key, const size_t keyLen, const uint64_t del
 
 err_code_t Client::decr(const char* key, const size_t keyLen, const uint64_t delta,
                  const bool noreply,
-                 unsigned_result_t*** results, size_t* nResults) {
+                 unsigned_result_t** results, size_t* nResults) {
   dispatchIncrDecr(DECR_OP, key, keyLen, delta, noreply);
   err_code_t rv = waitPoll();
   collectUnsignedResult(results, nResults);

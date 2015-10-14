@@ -504,14 +504,47 @@ func (self *Client) Touch(key string, expiration int64) error {
 	return nil
 }
 
-// TODO
-func (self *Client) Incr(key string, delta uint64) (uint64, error) {
-	return 0, nil
+func (self *Client) incrOrDecr(cmd string, key string, delta uint64) (uint64, error) {
+	c_key := C.CString(key)
+	defer C.free(unsafe.Pointer(c_key))
+	c_keyLen := C.size_t(len(key))
+	c_delta := C.uint64_t(delta)
+	c_noreply := C.bool(self.noreply)
+
+	var rst *C.unsigned_result_t
+	var n C.size_t
+
+	var err_code C.int
+
+	switch cmd {
+	case "incr":
+		err_code = C.client_incr(
+			self._imp, c_key, c_keyLen, c_delta, c_noreply,
+			&rst, &n,
+		)
+	case "decr":
+		err_code = C.client_decr(
+			self._imp, c_key, c_keyLen, c_delta, c_noreply,
+			&rst, &n,
+		)
+
+	}
+
+	defer C.client_destroy_unsigned_result(self._imp)
+
+	if err_code != 0 || int(n) == 0 || rst == nil {
+		return 0, errors.New(strconv.Itoa(int(err_code)))
+	}
+
+	return uint64(rst.value), nil
 }
 
-// TODO
+func (self *Client) Incr(key string, delta uint64) (uint64, error) {
+	return self.incrOrDecr("incr", key, delta)
+}
+
 func (self *Client) Decr(key string, delta uint64) (uint64, error) {
-	return 0, nil
+	return self.incrOrDecr("decr", key, delta)
 }
 
 func (self *Client) Version() (map[string]string, error) {
@@ -539,4 +572,14 @@ func (self *Client) Version() (map[string]string, error) {
 	}
 
 	return rv, nil
+}
+
+func (self *Client) Quit() error {
+	err_code := C.client_quit(self._imp)
+	defer C.client_destroy_broadcast_result(self._imp)
+
+	if err_code == 0 {
+		return nil
+	}
+	return errors.New(strconv.Itoa(int(err_code)))
 }
