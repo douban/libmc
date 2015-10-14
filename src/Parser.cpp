@@ -199,7 +199,7 @@ void PacketParser::process_packets(err_code_t& err) {
         break;
       case FSM_INCR_DECR_START:
         {
-          types::unsigned_result_t* inner_rst = &(m_unsignedResults.back());
+          unsigned_result_t* inner_rst = &(m_unsignedResults.back());
           READ_UNSIGNED(inner_rst->value);
           SKIP_BYTES(1);
 
@@ -423,7 +423,7 @@ int PacketParser::start_state(err_code_t& err) {
     case '8':
     case '9':
       {
-        m_unsignedResults.push_back(types::unsigned_result_t());
+        m_unsignedResults.push_back(unsigned_result_t());
         m_state = FSM_INCR_DECR_START;
       }
       break;

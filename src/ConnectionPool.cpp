@@ -539,7 +539,7 @@ void ConnectionPool::collectBroadcastResult(std::vector<broadcast_result_t>& res
 }
 
 
-void ConnectionPool::collectUnsignedResult(std::vector<types::unsigned_result_t*>& results) {
+void ConnectionPool::collectUnsignedResult(std::vector<unsigned_result_t*>& results) {
   if (m_activeConns.size() == 1) {
     types::UnsignedResultList* numericRst =  m_activeConns.front()->getUnsignedResults();
     types::MessageResultList* msgRst = m_activeConns.front()->getMessageResults();

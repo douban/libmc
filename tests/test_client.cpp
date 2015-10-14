@@ -6,7 +6,6 @@
 #include "gtest/gtest.h"
 
 using douban::mc::Client;
-using douban::mc::types::unsigned_result_t;
 using douban::mc::io::DataBlock;
 using douban::mc::tests::newClient;
 

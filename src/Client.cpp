@@ -172,7 +172,7 @@ err_code_t Client::touch(const char* const* keys, const size_t* keyLens,
 }
 
 
-void Client::collectUnsignedResult(types::unsigned_result_t*** results, size_t* nResults) {
+void Client::collectUnsignedResult(unsigned_result_t*** results, size_t* nResults) {
 
   assert(m_outUnsignedResultPtrs.size() == 0);
   ConnectionPool::collectUnsignedResult(m_outUnsignedResultPtrs);
@@ -187,7 +187,7 @@ void Client::collectUnsignedResult(types::unsigned_result_t*** results, size_t* 
 
 err_code_t Client::incr(const char* key, const size_t keyLen, const uint64_t delta,
                  const bool noreply,
-                 types::unsigned_result_t*** results, size_t* nResults) {
+                 unsigned_result_t*** results, size_t* nResults) {
   dispatchIncrDecr(INCR_OP, key, keyLen, delta, noreply);
   err_code_t rv = waitPoll();
   collectUnsignedResult(results, nResults);
@@ -197,7 +197,7 @@ err_code_t Client::incr(const char* key, const size_t keyLen, const uint64_t del
 
 err_code_t Client::decr(const char* key, const size_t keyLen, const uint64_t delta,
                  const bool noreply,
-                 types::unsigned_result_t*** results, size_t* nResults) {
+                 unsigned_result_t*** results, size_t* nResults) {
   dispatchIncrDecr(DECR_OP, key, keyLen, delta, noreply);
   err_code_t rv = waitPoll();
   collectUnsignedResult(results, nResults);

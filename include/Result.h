@@ -12,8 +12,6 @@ namespace mc {
 namespace types {
 
 
-// Retrieval Result
-
 class RetrievalResult {
  public:
   RetrievalResult();
@@ -33,9 +31,6 @@ class RetrievalResult {
 };
 
 
-// Message Result
-
-
 void delete_broadcast_result(broadcast_result_t* ptr);
 
 
@@ -52,15 +47,6 @@ class LineResult {
 };
 
 
-// Unsigned (Integer) Result
-
-typedef struct {
-  char* key;
-  size_t key_len;
-  uint64_t value;
-} unsigned_result_t;
-
-
 #ifdef MC_USE_SMALL_VECTOR
 typedef llvm::SmallVector<types::RetrievalResult, 100> RetrievalResultList;
 #else
@@ -68,7 +54,7 @@ typedef std::vector<types::RetrievalResult> RetrievalResultList;
 #endif
 typedef std::vector<message_result_t> MessageResultList;
 typedef std::vector<types::LineResult> LineResultList;
-typedef std::vector<types::unsigned_result_t> UnsignedResultList;
+typedef std::vector<unsigned_result_t> UnsignedResultList;
 
 
 } // namespace types

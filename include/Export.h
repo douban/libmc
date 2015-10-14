@@ -59,3 +59,10 @@ typedef struct {
   char* key;
   size_t key_len;
 } message_result_t;
+
+
+typedef struct {
+  char* key;
+  size_t key_len;
+  uint64_t value;
+} unsigned_result_t;

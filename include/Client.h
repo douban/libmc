@@ -60,10 +60,10 @@ DECL_RETRIEVAL_CMD(gets)
   void destroyUnsignedResult();
   err_code_t incr(const char* key, const size_t keyLen, const uint64_t delta,
            const bool noreply,
-           types::unsigned_result_t*** result, size_t* nResults);
+           unsigned_result_t*** result, size_t* nResults);
   err_code_t decr(const char* key, const size_t keyLen, const uint64_t delta,
            const bool noreply,
-           types::unsigned_result_t*** result, size_t* nResults);
+           unsigned_result_t*** result, size_t* nResults);
 
   void _sleep(uint32_t seconds); // check GIL in Python
 
@@ -71,12 +71,12 @@ DECL_RETRIEVAL_CMD(gets)
   void collectRetrievalResult(retrieval_result_t*** results, size_t* nResults);
   void collectMessageResult(message_result_t*** results, size_t* nResults);
   void collectBroadcastResult(broadcast_result_t** results, size_t* nHosts);
-  void collectUnsignedResult(types::unsigned_result_t*** results, size_t* nResults);
+  void collectUnsignedResult(unsigned_result_t*** results, size_t* nResults);
 
   std::vector<retrieval_result_t*> m_outRetrievalResultPtrs;
   std::vector<message_result_t*> m_outMessageResultPtrs;
   std::vector<broadcast_result_t> m_outBroadcastResultPtrs;
-  std::vector<types::unsigned_result_t*> m_outUnsignedResultPtrs;
+  std::vector<unsigned_result_t*> m_outUnsignedResultPtrs;
 };
 
 } // namespace mc

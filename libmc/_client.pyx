@@ -94,9 +94,6 @@ cdef extern from "Export.h":
         RET_INCOMPLETE_BUFFER_ERR
         RET_OK
 
-
-cdef extern from "Result.h" namespace "douban::mc::types":
-
     ctypedef struct unsigned_result_t:
         char* key
         size_t key_len
