@@ -331,9 +331,58 @@ func (self *Client) Delete(key string) error {
 	return nil
 }
 
-// TODO
-func (self *Client) DeleteMulti(keys []string) ([]string, error) {
-	return []string{}, nil
+func (self *Client) DeleteMulti(keys []string) (failedKeys []string, err error) {
+	nKeys := len(keys)
+	c_nKeys := C.size_t(nKeys)
+	c_keys := make([]*C.char, nKeys)
+	c_keyLens := make([]C.size_t, nKeys)
+	c_noreply := C.bool(self.noreply)
+
+	var results **C.message_result_t
+	var n C.size_t
+
+	for i, key := range keys {
+		c_key := C.CString(key)
+		defer C.free(unsafe.Pointer(c_key))
+		c_keys[i] = c_key
+
+		c_keyLen := C.size_t(len(key))
+		c_keyLens[i] = c_keyLen
+	}
+	err_code := C.client_delete(
+		self._imp, (**C.char)(&c_keys[0]), (*C.size_t)(&c_keyLens[0]), c_noreply, c_nKeys,
+		&results,
+		&n,
+	)
+	defer C.client_destroy_message_result(self._imp)
+
+	if err_code == 0 {
+		return
+	}
+
+	deletedKeySet := make(map[string]struct{})
+	sr := unsafe.Sizeof(*results)
+	for i := 0; i <= int(n); i += 1 {
+		if (*results).type_ == C.MSG_DELETED {
+			deletedKey := C.GoStringN((*results).key, C.int((*results).key_len))
+			deletedKeySet[deletedKey] = struct{}{}
+		}
+
+		results = (**C.message_result_t)(
+			unsafe.Pointer(uintptr(unsafe.Pointer(results)) + sr),
+		)
+	}
+	err = errors.New(strconv.Itoa(int(err_code)))
+	failedKeys = make([]string, len(keys)-len(deletedKeySet))
+	i := 0
+	for _, key := range keys {
+		if _, contains := deletedKeySet[key]; contains {
+			continue
+		}
+		failedKeys[i] = key
+		i += 1
+	}
+	return
 }
 
 func (self *Client) getOrGets(cmd string, key string) (item *Item, err error) {
