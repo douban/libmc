@@ -55,7 +55,7 @@ enum message_result_type {
 
 
 typedef struct {
-  enum message_result_type type;
+  enum message_result_type type_;
   char* key;
   size_t key_len;
 } message_result_t;

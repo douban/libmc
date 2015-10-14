@@ -39,7 +39,7 @@ void PacketParser::processMessageResult(enum message_result_type tp) {
   message_result_t* inner_rst = &m_messageResults.back();
   struct ::iovec iov = m_requestKeys.front();
   m_requestKeys.pop();
-  inner_rst->type = tp;
+  inner_rst->type_ = tp;
   inner_rst->key = static_cast<char*>(iov.iov_base);
   inner_rst->key_len = iov.iov_len;
 }

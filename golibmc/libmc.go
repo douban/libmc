@@ -16,6 +16,9 @@ import (
 	"unsafe"
 )
 
+// TODO
+// unicode key, normalize key
+
 const (
 	MC_HASH_MD5      = 0
 	MC_HASH_FNV1_32  = 1
@@ -225,9 +228,81 @@ func (self *Client) Set(item *Item) error {
 	return self.store("set", item)
 }
 
-// TODO
 func (self *Client) SetMulti(items []*Item) ([]string, error) {
-	return []string{}, nil
+	nItems := len(items)
+	c_keys := make([]*C.char, nItems)
+	c_keyLens := make([]C.size_t, nItems)
+	c_values := make([]*C.char, nItems)
+	c_valueSizes := make([]C.size_t, nItems)
+	c_flagsList := make([]C.flags_t, nItems)
+
+	for i, item := range items {
+		c_key := C.CString(item.Key)
+		defer C.free(unsafe.Pointer(c_key))
+		c_keys[i] = c_key
+
+		c_keyLen := C.size_t(len(item.Key))
+		c_keyLens[i] = c_keyLen
+
+		c_val := C.CString(string(item.Value))
+		defer C.free(unsafe.Pointer(c_val))
+		c_values[i] = c_val
+
+		c_valueSize := C.size_t(len(item.Value))
+		c_valueSizes[i] = c_valueSize
+
+		c_flags := C.flags_t(item.Flags)
+		c_flagsList[i] = c_flags
+	}
+
+	c_exptime := C.exptime_t(items[0].Expiration)
+	c_noreply := C.bool(self.noreply)
+	c_nItems := C.size_t(nItems)
+
+	var results **C.message_result_t
+	var n C.size_t
+
+	err_code := C.client_set(
+		self._imp,
+		(**C.char)(&c_keys[0]),
+		(*C.size_t)(&c_keyLens[0]),
+		(*C.flags_t)(&c_flagsList[0]),
+		c_exptime,
+		nil,
+		c_noreply,
+		(**C.char)(&c_values[0]),
+		(*C.size_t)(&c_valueSizes[0]),
+		c_nItems,
+		&results, &n,
+	)
+	defer C.client_destroy_message_result(self._imp)
+	if err_code == 0 {
+		return []string{}, nil
+	}
+	err := errors.New(strconv.Itoa(int(err_code)))
+
+	sr := unsafe.Sizeof(*results)
+	storedKeySet := make(map[string]struct{})
+	for i := 0; i <= int(n); i += 1 {
+		if (*results).type_ == C.MSG_STORED {
+			storedKey := C.GoStringN((*results).key, C.int((*results).key_len))
+			storedKeySet[storedKey] = struct{}{}
+		}
+
+		results = (**C.message_result_t)(
+			unsafe.Pointer(uintptr(unsafe.Pointer(results)) + sr),
+		)
+	}
+	failedKeys := make([]string, len(items)-len(storedKeySet))
+	i := 0
+	for _, item := range items {
+		if _, contains := storedKeySet[item.Key]; contains {
+			continue
+		}
+		failedKeys[i] = item.Key
+		i += 1
+	}
+	return failedKeys, err
 }
 
 func (self *Client) Cas(item *Item) error {

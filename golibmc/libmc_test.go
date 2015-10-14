@@ -119,6 +119,36 @@ func TestSetNGet(t *testing.T) {
 	}
 }
 
+func TestSetMulti(t *testing.T) {
+
+	items := []*Item{
+		&Item{
+			Key:        KEY_TO_SET,
+			Value:      []byte(VALUE_TO_SET),
+			Flags:      0,
+			Expiration: 0,
+		},
+	}
+
+	servers := []string{LOCAL_MC}
+	noreply := false
+	prefix := ""
+	failover := false
+	client := New(servers, noreply, prefix, "TODO", failover)
+	if err := client.Delete(items[0].Key); err != nil {
+		t.Error(ERROR_GENERAL)
+	}
+	failedKeys, err := client.SetMulti(items)
+	if len(failedKeys) > 0 || err != nil {
+		t.Error(ERROR_SET)
+	}
+
+	items2, err := client.GetMulti([]string{items[0].Key})
+	if len(items2) != 1 || err != nil {
+		t.Error(ERROR_GENERAL)
+	}
+}
+
 func testCasAndGets(t *testing.T) {
 	servers := []string{LOCAL_MC}
 	noreply := false

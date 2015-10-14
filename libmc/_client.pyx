@@ -78,7 +78,7 @@ cdef extern from "Export.h":
         MSG_TOUCHED
 
     ctypedef struct message_result_t:
-        message_result_type type
+        message_result_type type_
         char* key
         size_t key_len
 
@@ -596,7 +596,7 @@ cdef class PyClient:
             else:
                 pass
 
-        rv = self.last_error == 0 and (self.noreply or (n_res == 1 and results[0][0].type == MSG_STORED))
+        rv = self.last_error == 0 and (self.noreply or (n_res == 1 and results[0][0].type_ == MSG_STORED))
 
         with nogil:
             self._imp.destroyMessageResult()
@@ -745,7 +745,7 @@ cdef class PyClient:
         is_succeed = self.last_error == 0 and (self.noreply or n_rst == n)
         cdef list failed_keys = []
         if not is_succeed and return_failure:
-            succeed_keys = [results[i][0].key[:results[i][0].key_len] for i in range(n_rst) if results[i][0].type == MSG_STORED]
+            succeed_keys = [results[i][0].key[:results[i][0].key_len] for i in range(n_rst) if results[i][0].type_ == MSG_STORED]
             failed_keys = list(set(keys) - set(succeed_keys))
 
         with nogil:
@@ -824,7 +824,7 @@ cdef class PyClient:
         with nogil:
             self.last_error = self._imp._delete(&c_key, &c_key_len, self.noreply, n, &results, &n_res)
 
-        rv = self.last_error == 0 and (self.noreply or (n_res == 1 and (results[0][0].type == MSG_DELETED or results[0][0].type == MSG_NOT_FOUND)))
+        rv = self.last_error == 0 and (self.noreply or (n_res == 1 and (results[0][0].type_ == MSG_DELETED or results[0][0].type_ == MSG_NOT_FOUND)))
 
         with nogil:
             self._imp.destroyMessageResult()
@@ -857,7 +857,7 @@ cdef class PyClient:
         if not is_succeed and return_failure:
             succeed_keys = [results[i][0].key[:results[i][0].key_len]
                             for i in range(n_res)
-                            if results[i][0].type == MSG_DELETED or results[i][0].type == MSG_NOT_FOUND]
+                            if results[i][0].type_ == MSG_DELETED or results[i][0].type_ == MSG_NOT_FOUND]
             failed_keys = list(set(keys) - set(succeed_keys))
 
         with nogil:
@@ -886,7 +886,7 @@ cdef class PyClient:
         with nogil:
             self.last_error = self._imp.touch(&c_key, &c_key_len, exptime, self.noreply, n, &results, &n_res)
 
-        rv = self.last_error == 0 and (self.noreply or (n_res == 1 and results[0][0].type == MSG_TOUCHED))
+        rv = self.last_error == 0 and (self.noreply or (n_res == 1 and results[0][0].type_ == MSG_TOUCHED))
         with nogil:
             self._imp.destroyMessageResult()
         Py_DECREF(key)

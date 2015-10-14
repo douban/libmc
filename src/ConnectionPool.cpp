@@ -547,7 +547,7 @@ void ConnectionPool::collectUnsignedResult(std::vector<types::unsigned_result_t*
     if (numericRst->size() == 1) {
       results.push_back(&numericRst->front());
     } else if (msgRst->size() == 1) {
-      ASSERT(msgRst->front().type == MSG_NOT_FOUND);
+      ASSERT(msgRst->front().type_ == MSG_NOT_FOUND);
       results.push_back(NULL);
     }
   }

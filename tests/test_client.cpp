@@ -50,7 +50,7 @@ TEST(test_client, del_get_set_get_del) {
       ASSERT_TRUE(strncmp(r->key, keys[0], key_lens[0]) == 0 ||
           strncmp(r->key, keys[1], key_lens[1]) == 0 ||
           strncmp(r->key, keys[2], key_lens[2]) == 0);
-      ASSERT_EQ(r->type, MSG_STORED);
+      ASSERT_EQ(r->type_, MSG_STORED);
     }
     client->destroyMessageResult();
 
@@ -68,7 +68,7 @@ TEST(test_client, del_get_set_get_del) {
       ASSERT_TRUE(strncmp(r->key, keys[0], key_lens[0]) == 0 ||
           strncmp(r->key, keys[1], key_lens[1]) == 0 ||
           strncmp(r->key, keys[2], key_lens[2]) == 0);
-      ASSERT_EQ(r->type, MSG_DELETED);
+      ASSERT_EQ(r->type_, MSG_DELETED);
     }
     ASSERT_EQ(nResults, 3);
     client->destroyMessageResult();
@@ -106,42 +106,42 @@ TEST(test_client, test_storage) {
     // set foo
     client->set(keys, key_lens, flags, exptime, NULL, 0, vals, val_lens, 1, &m_results, &nResults);
     EXPECT_EQ(nResults, 1);
-    ASSERT_EQ(m_results[0]->type, MSG_STORED);
+    ASSERT_EQ(m_results[0]->type_, MSG_STORED);
     client->destroyMessageResult();
 
     // add tuiche
     client->add(keys + 1, key_lens + 1, flags + 1, exptime, NULL, 0,
         vals + 1, val_lens + 1, 1, &m_results, &nResults);
     EXPECT_EQ(nResults, 1);
-    ASSERT_EQ(m_results[0]->type, MSG_STORED);
+    ASSERT_EQ(m_results[0]->type_, MSG_STORED);
     client->destroyMessageResult();
 
     // add tuiche
     client->add(keys + 1, key_lens + 1, flags + 1, exptime, NULL, 0,
         vals + 1, val_lens + 1, 1, &m_results, &nResults);
     EXPECT_EQ(nResults, 1);
-    ASSERT_EQ(m_results[0]->type, MSG_NOT_STORED);
+    ASSERT_EQ(m_results[0]->type_, MSG_NOT_STORED);
     client->destroyMessageResult();
 
     // replace tuiche
     client->replace(keys + 1, key_lens + 1, flags + 1, exptime, NULL, 0,
         vals + 1, val_lens + 1, 1, &m_results, &nResults);
     EXPECT_EQ(nResults, 1);
-    ASSERT_EQ(m_results[0]->type, MSG_STORED);
+    ASSERT_EQ(m_results[0]->type_, MSG_STORED);
     client->destroyMessageResult();
 
     // replace buzai
     client->replace(keys + 2, key_lens + 2, flags + 2, exptime, NULL, 0,
         vals + 2, val_lens + 2, 1, &m_results, &nResults);
     EXPECT_EQ(nResults, 1);
-    ASSERT_EQ(m_results[0]->type, MSG_NOT_STORED);
+    ASSERT_EQ(m_results[0]->type_, MSG_NOT_STORED);
     client->destroyMessageResult();
 
     // prepend foo with value in tuiche
     client->prepend(keys, key_lens, flags, exptime, NULL, 0,
         vals + 1, val_lens + 1, 1, &m_results, &nResults);
     EXPECT_EQ(nResults, 1);
-    ASSERT_EQ(m_results[0]->type, MSG_STORED);
+    ASSERT_EQ(m_results[0]->type_, MSG_STORED);
     client->destroyMessageResult();
 
     client->get(keys, key_lens, 1, &r_results, &nResults);
@@ -156,7 +156,7 @@ TEST(test_client, test_storage) {
     client->append(keys + 1, key_lens + 1, flags + 1, exptime, NULL, 0,
         vals + 2, val_lens + 2, 1, &m_results, &nResults);
     EXPECT_EQ(nResults, 1);
-    ASSERT_EQ(m_results[0]->type, MSG_STORED);
+    ASSERT_EQ(m_results[0]->type_, MSG_STORED);
     client->destroyMessageResult();
 
     client->get(keys + 1, key_lens + 1, 1, &r_results, &nResults);
@@ -171,14 +171,14 @@ TEST(test_client, test_storage) {
     client->prepend(keys + 2, key_lens + 2, flags + 2, exptime, NULL, 0,
         vals + 2, val_lens + 2, 1, &m_results, &nResults);
     EXPECT_EQ(nResults, 1);
-    ASSERT_EQ(m_results[0]->type, MSG_NOT_STORED);
+    ASSERT_EQ(m_results[0]->type_, MSG_NOT_STORED);
     client->destroyMessageResult();
 
     // append buzai
     client->append(keys + 2, key_lens + 2, flags + 2, exptime, NULL, 0,
         vals + 2, val_lens + 2, 1, &m_results, &nResults);
     EXPECT_EQ(nResults, 1);
-    ASSERT_EQ(m_results[0]->type, MSG_NOT_STORED);
+    ASSERT_EQ(m_results[0]->type_, MSG_NOT_STORED);
     client->destroyMessageResult();
 
     delete client;
@@ -267,9 +267,9 @@ TEST(test_client, test_touch) {
     for (size_t i = 0; i < nResults; i++) {
       message_result_t* r = m_results[i];
       if (strncmp(r->key, keys[0], key_lens[0]) == 0) {
-        ASSERT_EQ(r->type, MSG_TOUCHED);
+        ASSERT_EQ(r->type_, MSG_TOUCHED);
       } else {
-        ASSERT_EQ(r->type, MSG_NOT_FOUND);
+        ASSERT_EQ(r->type_, MSG_NOT_FOUND);
       }
     }
     client->destroyMessageResult();
