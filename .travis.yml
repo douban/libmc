@@ -3,9 +3,8 @@ language: python
 cache:
   directories:
     - $HOME/.cache/pip
-
-python:
-  - 2.7
+    - $HOME/.pip-cache/
+    - $HOME/virtualenv/python2.7/lib/python2.7/site-packages
 
 env:
   matrix:
@@ -18,20 +17,18 @@ env:
 addons:
   apt:
     packages:
+      - python-dev
+      - python-numpy
       - valgrind
       - cppcheck
       - memcached
       - libmemcached6
-
-before_install:
-  - pip install --upgrade pip
+      - golang
 
 install:
-  # install python deps
-  - pip install Cython
-  - if [ $TEST_SUITE = "unittest" ]; then pip install pytest greenify gevent numpy; fi
-  - if [ $TEST_SUITE = "benchmark" ]; then pip install git+https://github.com/lericson/pylibmc@master#egg=pylibmc; fi
-  - if [ $TEST_SUITE = "benchmark" ]; then pip install git+https://github.com/linsomniac/python-memcached.git@master#egg=memcache; fi
+  - pip install --upgrade pip
+  - if [ $TEST_SUITE = "unittest" ]; then pip install pytest greenify gevent; fi
+  - if [ $TEST_SUITE = "benchmark" ]; then pip install python-memcached pylibmc; fi
 
 before_script:
   - ./misc/memcached_server start

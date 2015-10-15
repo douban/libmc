@@ -1,4 +1,5 @@
 #!/bin/sh
+set -x
 set -e
 echo $CXX
 cppcheck --enable=all --std=c99 --error-exitcode=1 \
@@ -13,3 +14,5 @@ cd ..
 python setup.py test
 python setup.py install
 ./tests/shabby/run_test.sh
+cd src
+go test
