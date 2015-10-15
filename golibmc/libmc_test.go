@@ -20,7 +20,9 @@ func newSimpleClient() *Client {
 	prefix := ""
 	hash_fn := MC_HASH_CRC_32
 	failover := false
-	return New(servers, noreply, prefix, hash_fn, failover)
+	enableLock := true
+
+	return New(servers, noreply, prefix, hash_fn, failover, enableLock)
 }
 
 func TestInputServer(t *testing.T) {
@@ -29,7 +31,9 @@ func TestInputServer(t *testing.T) {
 	prefix := ""
 	hash_fn := MC_HASH_CRC_32
 	failover := false
-	c := New(servers, noreply, prefix, hash_fn, failover)
+	enableLock := true
+
+	c := New(servers, noreply, prefix, hash_fn, failover, enableLock)
 	if c != nil {
 		t.Error(ERROR_GENERAL)
 	}
@@ -171,11 +175,7 @@ func TestSetMulti(t *testing.T) {
 }
 
 func testCasAndGets(t *testing.T) {
-	servers := []string{LOCAL_MC}
-	noreply := false
-	prefix := ""
-	failover := false
-	client := New(servers, noreply, prefix, MC_HASH_CRC_32, failover)
+	client := newSimpleClient()
 	key := "test_cas_and_gets"
 	val := []byte("o")
 	val2 := []byte("2")

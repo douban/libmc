@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"unsafe"
 )
 
@@ -40,10 +41,12 @@ var hashFunctionMapping = map[int]C.hash_function_options_t{
 const MC_DEFAULT_PORT = 11211
 
 type Client struct {
-	_imp    unsafe.Pointer
-	servers []string
-	prefix  string
-	noreply bool
+	_imp       unsafe.Pointer
+	servers    []string
+	prefix     string
+	noreply    bool
+	enableLock bool
+	lk         sync.Mutex
 }
 
 // credits to bradfitz/gomemcache
@@ -71,7 +74,7 @@ type Item struct {
 	casid uint64
 }
 
-func New(servers []string, noreply bool, prefix string, hash_fn int, failover bool) (self *Client) {
+func New(servers []string, noreply bool, prefix string, hashFunc int, failover bool, enableLock bool) (self *Client) {
 	self = new(Client)
 	self._imp = C.client_create()
 	runtime.SetFinalizer(self, finalizer)
@@ -123,9 +126,10 @@ func New(servers []string, noreply bool, prefix string, hash_fn int, failover bo
 		C.int(failoverInt),
 	)
 
-	self.Config(MC_HASH_FUNCTION, int(hashFunctionMapping[hash_fn]))
+	self.Config(MC_HASH_FUNCTION, int(hashFunctionMapping[hashFunc]))
 	self.prefix = prefix
 	self.noreply = noreply
+	self.enableLock = enableLock
 	return
 }
 
@@ -133,7 +137,22 @@ func finalizer(self *Client) {
 	C.client_destroy(self._imp)
 }
 
+func (self *Client) lock() {
+	if self.enableLock {
+		self.lk.Lock()
+	}
+}
+
+func (self *Client) unlock() {
+	if self.enableLock {
+		self.lk.Unlock()
+	}
+}
+
 func (self *Client) Config(opt C.config_options_t, val int) {
+	self.lock()
+	defer self.unlock()
+
 	C.client_config(self._imp, opt, C.int(val))
 }
 
@@ -170,6 +189,9 @@ func (self *Client) addPrefix(key string) string {
 }
 
 func (self *Client) store(cmd string, item *Item) error {
+	self.lock()
+	defer self.unlock()
+
 	key := self.addPrefix(item.Key)
 
 	c_key := C.CString(key)
@@ -186,6 +208,7 @@ func (self *Client) store(cmd string, item *Item) error {
 	var n C.size_t
 
 	var err_code C.int
+
 	switch cmd {
 	case "set":
 		err_code = C.client_set(
@@ -252,6 +275,9 @@ func (self *Client) Set(item *Item) error {
 }
 
 func (self *Client) SetMulti(items []*Item) ([]string, error) {
+	self.lock()
+	defer self.unlock()
+
 	nItems := len(items)
 	c_keys := make([]*C.char, nItems)
 	c_keyLens := make([]C.size_t, nItems)
@@ -335,6 +361,9 @@ func (self *Client) Cas(item *Item) error {
 }
 
 func (self *Client) Delete(key string) error {
+	self.lock()
+	defer self.unlock()
+
 	rawKey := self.addPrefix(key)
 
 	c_key := C.CString(rawKey)
@@ -362,6 +391,9 @@ func (self *Client) Delete(key string) error {
 }
 
 func (self *Client) DeleteMulti(keys []string) (failedKeys []string, err error) {
+	self.lock()
+	defer self.unlock()
+
 	var rawKeys []string
 	if len(self.prefix) == 0 {
 		rawKeys = keys
@@ -431,6 +463,9 @@ func (self *Client) DeleteMulti(keys []string) (failedKeys []string, err error) 
 }
 
 func (self *Client) getOrGets(cmd string, key string) (item *Item, err error) {
+	self.lock()
+	defer self.unlock()
+
 	rawKey := self.addPrefix(key)
 
 	c_key := C.CString(rawKey)
@@ -479,6 +514,9 @@ func (self *Client) Gets(key string) (*Item, error) {
 }
 
 func (self *Client) GetMulti(keys []string) (rv map[string]*Item, err error) {
+	self.lock()
+	defer self.unlock()
+
 	nKeys := len(keys)
 	var rawKeys []string
 	if len(self.prefix) == 0 {
@@ -532,6 +570,9 @@ func (self *Client) GetMulti(keys []string) (rv map[string]*Item, err error) {
 }
 
 func (self *Client) Touch(key string, expiration int64) error {
+	self.lock()
+	defer self.unlock()
+
 	rawKey := self.addPrefix(key)
 
 	c_key := C.CString(rawKey)
@@ -559,6 +600,9 @@ func (self *Client) Touch(key string, expiration int64) error {
 }
 
 func (self *Client) incrOrDecr(cmd string, key string, delta uint64) (uint64, error) {
+	self.lock()
+	defer self.unlock()
+
 	rawKey := self.addPrefix(key)
 	c_key := C.CString(rawKey)
 	defer C.free(unsafe.Pointer(c_key))
@@ -606,6 +650,9 @@ func (self *Client) Decr(key string, delta uint64) (uint64, error) {
 }
 
 func (self *Client) Version() (map[string]string, error) {
+	self.lock()
+	defer self.unlock()
+
 	var rst *C.broadcast_result_t
 	var n C.size_t
 	rv := make(map[string]string)
@@ -633,6 +680,9 @@ func (self *Client) Version() (map[string]string, error) {
 }
 
 func (self *Client) Stats() (map[string](map[string]string), error) {
+	self.lock()
+	defer self.unlock()
+
 	var rst *C.broadcast_result_t
 	var n C.size_t
 
@@ -676,6 +726,9 @@ func (self *Client) Stats() (map[string](map[string]string), error) {
 }
 
 func (self *Client) Quit() error {
+	self.lock()
+	defer self.unlock()
+
 	err_code := C.client_quit(self._imp)
 	defer C.client_destroy_broadcast_result(self._imp)
 
