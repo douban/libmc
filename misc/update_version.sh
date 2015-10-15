@@ -2,7 +2,7 @@
 # ln -sf ../../misc/update_version.sh .git/hooks/pre-commit
 VERSIONING_SCRIPT="`pwd`/misc/versioning.py"
 
-VERSIONING_FILES="`pwd`/libmc/__init__.py `pwd`/golibmc/version.go"
+VERSIONING_FILES="`pwd`/libmc/__init__.py `pwd`/src/version.go"
 for VERSIONING_FILE in $VERSIONING_FILES
 do
     TMPFILE=$VERSIONING_FILE".2"

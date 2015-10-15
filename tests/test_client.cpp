@@ -16,15 +16,6 @@ void hint() {
 
 TEST(test_client, del_get_set_get_del) {
   DataBlock::setMinCapacity(4);
-  const char* keys[] = {
-    "foo", "tuiche", "buzai"
-  };
-
-  const char* vals[] = {
-    "value of foo", "value of tuiche", "value of buzai"
-  };
-  size_t val_lens[] = {12, 15, 14};
-
   Client* client = newClient(1);
   if (client == NULL) {
     hint();
@@ -35,6 +26,16 @@ TEST(test_client, del_get_set_get_del) {
     flags_t flags[] = {0, 0, 0};
     size_t key_lens[] = {3, 6, 5};
     exptime_t exptime = 0;
+
+    const char* keys[] = {
+      "foo", "tuiche", "buzai"
+    };
+
+    const char* vals[] = {
+      "value of foo", "value of tuiche", "value of buzai"
+    };
+    size_t val_lens[] = {12, 15, 14};
+
 
     client->_delete(keys, key_lens, 0, 3, &m_results, &nResults);
     client->destroyMessageResult();
@@ -77,20 +78,20 @@ TEST(test_client, del_get_set_get_del) {
 
 
 TEST(test_client, test_storage) {
-  const char* keys[] = {
-    "foo", "tuiche", "buzai"
-  };
-
-
-  const char* vals[] = {
-    "value of foo", "value of tuiche", "value of buzai"
-  };
-  size_t val_lens[] = {12, 15, 14};
-
   Client* client = newClient(1);
   if (client == NULL) {
     hint();
   } else {
+    const char* keys[] = {
+      "foo", "tuiche", "buzai"
+    };
+
+
+    const char* vals[] = {
+      "value of foo", "value of tuiche", "value of buzai"
+    };
+    size_t val_lens[] = {12, 15, 14};
+
     retrieval_result_t **r_results = NULL;
     message_result_t **m_results = NULL;
     size_t key_lens[] = {3, 6, 5};
@@ -234,19 +235,6 @@ TEST(test_client, test_stats) {
 
 
 TEST(test_client, test_touch) {
-  const char* keys[] = {
-    "foo", "tuiche", "buzai"
-  };
-
-  size_t key_lens[] = {3, 6, 5};
-
-  flags_t flags[] = {0, 0, 0};
-
-  const char* vals[] = {
-    "value of foo", "value of tuiche", "value of buzai"
-  };
-  size_t val_lens[] = {12, 15, 14};
-
   Client* client = newClient(1);
   if (client == NULL) {
     hint();
@@ -254,6 +242,19 @@ TEST(test_client, test_touch) {
     message_result_t **m_results = NULL;
     size_t nResults = 0;
     exptime_t exptime = 0;
+
+    const char* keys[] = {
+      "foo", "tuiche", "buzai"
+    };
+
+    size_t key_lens[] = {3, 6, 5};
+
+    flags_t flags[] = {0, 0, 0};
+
+    const char* vals[] = {
+      "value of foo", "value of tuiche", "value of buzai"
+    };
+    size_t val_lens[] = {12, 15, 14};
 
     client->_delete(keys, key_lens, 0, 3, &m_results, &nResults);
     client->destroyMessageResult();
@@ -279,26 +280,26 @@ TEST(test_client, test_touch) {
 
 
 TEST(test_client, test_incr_decr) {
-  const char* keys[] = {
-    "foo", "tuiche", "buzai"
-  };
-
-  size_t key_lens[] = {3, 6, 5};
-
-  flags_t flags[] = {0, 0, 0};
-
-  const char* vals[] = {
-    "99", "101", "100"
-  };
-  uint64_t deltas[] = {
-    1, 1, 1
-  };
-  size_t val_lens[] = {2, 3, 3};
-
   Client* client = newClient(1);
   if (client == NULL) {
     hint();
   } else {
+    const char* keys[] = {
+      "foo", "tuiche", "buzai"
+    };
+
+    size_t key_lens[] = {3, 6, 5};
+
+    flags_t flags[] = {0, 0, 0};
+
+    const char* vals[] = {
+      "99", "101", "100"
+    };
+    uint64_t deltas[] = {
+      1, 1, 1
+    };
+    size_t val_lens[] = {2, 3, 3};
+
     message_result_t **m_results = NULL;
     unsigned_result_t *u_results = NULL;
 
@@ -338,16 +339,16 @@ TEST(test_client, test_incr_decr) {
 
 
 TEST(client, noreply) {
-  const char* keys[] = {
-    "foo", "tuiche", "buzai"
-  };
-
-  size_t key_lens[] = {3, 6, 5};
-
   Client* client = newClient(1);
   if (client == NULL) {
     hint();
   } else {
+    const char* keys[] = {
+      "foo", "tuiche", "buzai"
+    };
+
+    size_t key_lens[] = {3, 6, 5};
+
     message_result_t **m_results = NULL;
 
     size_t nResults = 0;
