@@ -33,7 +33,6 @@ FILE(
 FILE(
     GLOB mc_SOURCES
     src/*.cpp
-    src/hashkit/*.cpp
 )
 add_library(mc STATIC ${mc_SOURCES})
 

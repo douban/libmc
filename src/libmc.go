@@ -2,9 +2,8 @@ package libmc
 
 /*
 #cgo CFLAGS: -I ${SRCDIR}/../include
-#cgo LDFLAGS: -L ${SRCDIR}/../build -l mc -l stdc++
+#cgo CXXFLAGS: -I ${SRCDIR}/../include
 #include "c_client.h"
-
 */
 import "C"
 import (

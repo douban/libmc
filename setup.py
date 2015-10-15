@@ -12,7 +12,7 @@ if 'setuptools.extension' in sys.modules:
     m.Extension.__dict__ = m._Extension.__dict__
 
 
-sources = (glob("src/*.cpp") + glob("src/hashkit/*.cpp") +
+sources = (glob("src/*.cpp") +
            ["libmc/_client.pyx"])
 include_dirs = ["include"]
 
