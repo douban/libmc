@@ -5,10 +5,7 @@
 #include <cstring>
 #include "gtest/gtest.h"
 
-using douban::mc::err_code_t;
-using douban::mc::RET_INCOMPLETE_BUFFER_ERR;
 using douban::mc::types::RetrievalResult;
-using douban::mc::types::retrieval_result_t;
 
 using douban::mc::io::BufferReader;
 using douban::mc::io::DataBlock;
@@ -72,8 +69,6 @@ TEST(test_parser, multi_results) {
   }
   RetrievalResult* res = NULL;
   retrieval_result_t* innerRes;
-  size_t len_key = 150;
-  size_t len_val = 0;
   ASSERT_EQ(parser.getRetrievalResults()->size(), 3);
 
   char keys[][4] = {"foo", "baz", "bar"};
@@ -84,9 +79,9 @@ TEST(test_parser, multi_results) {
     res = &((*parser.getRetrievalResults())[i]);
     innerRes = res->inner();
 
-    len_key = 3;
+    size_t len_key = 3;
     ASSERT_N_STREQ(innerRes->key, keys[i], len_key);
-    len_val = innerRes->bytes;
+    size_t len_val = innerRes->bytes;
     ASSERT_EQ(len_val, len_vals[i]);
     if (len_val > 0) {
       ASSERT_N_STREQ(innerRes->data_block, vals[i], len_val);

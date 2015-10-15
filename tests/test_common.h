@@ -74,9 +74,9 @@ mc::Client* newClient(int n) {
     "tango"
   };
   mc::Client* client = new mc::Client();
-  client->config(mc::CFG_HASH_FUNCTION, mc::OPT_HASH_MD5);
+  client->config(CFG_HASH_FUNCTION, OPT_HASH_MD5);
   client->init(hosts, ports, n, aliases);
-  types::broadcast_result_t* results;
+  broadcast_result_t* results;
   size_t nHosts;
   int ret = client->version(&results, &nHosts);
   client->destroyBroadcastResult();

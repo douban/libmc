@@ -6,6 +6,7 @@
 #include <list>
 #include <vector>
 
+#include "Export.h"
 #include "Common.h"
 #include "DataBlock.h"
 

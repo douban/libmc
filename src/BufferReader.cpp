@@ -3,6 +3,7 @@
 #include <stdexcept>
 #include <algorithm>
 
+#include "Export.h"
 #include "BufferReader.h"
 #include "Utility.h"
 

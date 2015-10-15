@@ -11,4 +11,5 @@ _client.cpp
 _client.so
 .clang_complete
 .eggs/
+.tox/
 tests/resources/keys_*.txt
