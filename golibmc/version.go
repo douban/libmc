@@ -1,10 +1,10 @@
 package libmc
 
 const (
-	__version__ = "v0.5.5-25-g825db3a"
+	__version__ = "v0.5.5-26-g3335c83"
 	__author__ = "mckelvin"
 	__email__ = "mckelvin@users.noreply.github.com"
-	__date__ = "Thu Oct 15 11:48:34 2015 +0800"
+	__date__ = "Thu Oct 15 11:50:46 2015 +0800"
 )
 
 const Version = __version__
