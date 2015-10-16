@@ -1,10 +1,10 @@
 package golibmc
 
 const (
-	__version__ = "v0.5.5-32-g93967e2"
-	__author__ = "PAN, Myautsai"
+	__version__ = "v0.5.5-33-g6bd8da8"
+	__author__ = "mckelvin"
 	__email__ = "mckelvin@users.noreply.github.com"
-	__date__ = "Thu Oct 15 18:36:23 2015 +0800"
+	__date__ = "Fri Oct 16 11:30:29 2015 +0800"
 )
 
 const Version = __version__

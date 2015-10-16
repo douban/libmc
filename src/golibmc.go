@@ -40,12 +40,12 @@ var hashFunctionMapping = map[int]C.hash_function_options_t{
 const MC_DEFAULT_PORT = 11211
 
 type Client struct {
-	_imp       unsafe.Pointer
-	servers    []string
-	prefix     string
-	noreply    bool
-	enableLock bool
-	lk         sync.Mutex
+	_imp        unsafe.Pointer
+	servers     []string
+	prefix      string
+	noreply     bool
+	disableLock bool
+	lk          sync.Mutex
 }
 
 // credits to bradfitz/gomemcache
@@ -73,7 +73,7 @@ type Item struct {
 	casid uint64
 }
 
-func New(servers []string, noreply bool, prefix string, hashFunc int, failover bool, enableLock bool) (self *Client) {
+func New(servers []string, noreply bool, prefix string, hashFunc int, failover bool, disableLock bool) (self *Client) {
 	self = new(Client)
 	self._imp = C.client_create()
 	runtime.SetFinalizer(self, finalizer)
@@ -128,8 +128,20 @@ func New(servers []string, noreply bool, prefix string, hashFunc int, failover b
 	self.Config(MC_HASH_FUNCTION, int(hashFunctionMapping[hashFunc]))
 	self.prefix = prefix
 	self.noreply = noreply
-	self.enableLock = enableLock
+	self.disableLock = disableLock
 	return
+}
+
+func SimpleNew(servers []string) (self *Client) {
+	noreply := false
+	prefix := ""
+	hashFunc := MC_HASH_CRC_32
+	failover := false
+	disableLock := false
+	return New(
+		servers, noreply, prefix, hashFunc,
+		failover, disableLock,
+	)
 }
 
 func finalizer(self *Client) {
@@ -137,13 +149,13 @@ func finalizer(self *Client) {
 }
 
 func (self *Client) lock() {
-	if self.enableLock {
+	if !self.disableLock {
 		self.lk.Lock()
 	}
 }
 
 func (self *Client) unlock() {
-	if self.enableLock {
+	if !self.disableLock {
 		self.lk.Unlock()
 	}
 }
