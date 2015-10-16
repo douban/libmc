@@ -1,4 +1,4 @@
-package libmc
+package golibmc
 
 import "fmt"
 import "strings"

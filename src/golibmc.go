@@ -1,4 +1,4 @@
-package libmc
+package golibmc
 
 /*
 #cgo CFLAGS: -I ./../include
