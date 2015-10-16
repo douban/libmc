@@ -1,4 +1,4 @@
-package libmc
+package golibmc
 
 import "fmt"
 import "strings"
@@ -20,9 +20,9 @@ func newSimpleClient() *Client {
 	prefix := ""
 	hash_fn := MC_HASH_CRC_32
 	failover := false
-	enableLock := true
+	disableLock := false
 
-	return New(servers, noreply, prefix, hash_fn, failover, enableLock)
+	return New(servers, noreply, prefix, hash_fn, failover, disableLock)
 }
 
 func TestInputServer(t *testing.T) {
@@ -31,9 +31,9 @@ func TestInputServer(t *testing.T) {
 	prefix := ""
 	hash_fn := MC_HASH_CRC_32
 	failover := false
-	enableLock := true
+	disableLock := false
 
-	c := New(servers, noreply, prefix, hash_fn, failover, enableLock)
+	c := New(servers, noreply, prefix, hash_fn, failover, disableLock)
 	if c != nil {
 		t.Error(ERROR_GENERAL)
 	}
