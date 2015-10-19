@@ -126,6 +126,7 @@ func New(servers []string, noreply bool, prefix string, hashFunc int, failover b
 	)
 
 	self.Config(MC_HASH_FUNCTION, int(hashFunctionMapping[hashFunc]))
+	self.servers = servers
 	self.prefix = prefix
 	self.noreply = noreply
 	self.disableLock = disableLock
@@ -242,13 +243,14 @@ func (self *Client) store(cmd string, item *Item) error {
 			c_noreply, &c_value, &c_valueSize, 1, &rst, &n,
 		)
 	case "append":
-		err_code = C.client_prepend(
+		err_code = C.client_append(
 			self._imp, &c_key, &c_keyLen, &c_flags, c_exptime, nil,
 			c_noreply, &c_value, &c_valueSize, 1, &rst, &n,
 		)
 	case "cas":
+		c_cas_unique := C.cas_unique_t(item.casid)
 		err_code = C.client_cas(
-			self._imp, &c_key, &c_keyLen, &c_flags, c_exptime, nil,
+			self._imp, &c_key, &c_keyLen, &c_flags, c_exptime, &c_cas_unique,
 			c_noreply, &c_value, &c_valueSize, 1, &rst, &n,
 		)
 	}

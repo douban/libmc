@@ -13,7 +13,6 @@ void* client_create() {
 void client_init(void* client, const char* const * hosts, const uint32_t* ports,
                  size_t n, const char* const * aliases, const int failover) {
   douban::mc::Client* c = static_cast<Client*>(client);
-  c->config(CFG_HASH_FUNCTION, OPT_HASH_CRC_32); // TODO
   c->init(hosts, ports, n, aliases);
   if (failover) {
     c->enableConsistentFailover();
