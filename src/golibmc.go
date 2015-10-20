@@ -39,6 +39,19 @@ var hashFunctionMapping = map[int]C.hash_function_options_t{
 	HashCRC32:   C.OPT_HASH_CRC_32,
 }
 
+var errorMessage = map[C.int]string{
+	C.RET_SEND_ERR:              "send_error",
+	C.RET_RECV_ERR:              "recv_error",
+	C.RET_CONN_POLL_ERR:         "conn_poll_error",
+	C.RET_POLL_TIMEOUT_ERR:      "poll_timeout_error",
+	C.RET_POLL_ERR:              "poll_error",
+	C.RET_MC_SERVER_ERR:         "server_error",
+	C.RET_PROGRAMMING_ERR:       "programming_error",
+	C.RET_INVALID_KEY_ERR:       "invalid_key_error",
+	C.RET_INCOMPLETE_BUFFER_ERR: "incomplete_buffer_error",
+	C.RET_OK:                    "ok",
+}
+
 // Default memcached port
 const DefaultPort = 11211
 
@@ -70,14 +83,42 @@ type Item struct {
 
 	// Expiration is the cache expiration time, in seconds: either a relative
 	// time from now (up to 1 month), or an absolute Unix epoch time.
-	// Zero means the Item has no expiration time.
+	// Zero means the Item has no expiration time.,
 	Expiration int64
 
 	// Compare and swap ID.
 	casid uint64
 }
 
-// New to create a memcached client
+/*
+New to create a memcached client:
+
+servers: is a list of memcached server addresses. Each address can be
+in format of hostname[:port] [alias]. port and alias are optional.
+If port is not given, default port 11211 will be used. alias will be
+used to compute server hash if given, otherwise server hash will be
+computed based on host and port (i.e.: If port is not given or it is
+equal to 11211, host will be used to compute server hash.
+If port is not equal to 11211, host:port will be used).
+
+noreply: whether to enable memcached's noreply behaviour.
+default: False
+
+prefix: The key prefix. default: ''
+
+hashFunc: hashing function for keys. possible values:
+HashMD5, HashFNV1_32, HashFNV1a32, HashCRC32
+NOTE: fnv1_32, fnv1a_32, crc_32 implementations
+in libmc are per each spec, but they're not compatible
+with corresponding implementions in libmemcached.
+NOTE: The hashing algorithm for host mapping on continuum is always md5.
+
+failover: Whether to failover to next server when current server is
+not available. default: False
+
+disableLock: Whether to disable a lock of type sync.Mutex which will be
+use in every retrieval/storage command. default False.
+*/
 func New(servers []string, noreply bool, prefix string, hashFunc int, failover bool, disableLock bool) (client *Client) {
 	client = new(Client)
 	client._imp = C.client_create()
@@ -275,7 +316,7 @@ func (client *Client) store(cmd string, item *Item) error {
 		}
 	}
 
-	return errors.New(strconv.Itoa(int(errCode)))
+	return errors.New(errorMessage[errCode])
 }
 
 // Add is a storage command, return without error only when the key is empty
@@ -360,7 +401,7 @@ func (client *Client) SetMulti(items []*Item) ([]string, error) {
 	if errCode == 0 {
 		return []string{}, nil
 	}
-	err := errors.New(strconv.Itoa(int(errCode)))
+	err := errors.New(errorMessage[errCode])
 
 	sr := unsafe.Sizeof(*results)
 	storedKeySet := make(map[string]struct{})
@@ -419,7 +460,7 @@ func (client *Client) Delete(key string) error {
 		}
 	}
 
-	return errors.New(strconv.Itoa(int(errCode)))
+	return errors.New(errorMessage[errCode])
 }
 
 // DeleteMulti will delete multi keys at once
@@ -482,7 +523,7 @@ func (client *Client) DeleteMulti(keys []string) (failedKeys []string, err error
 			unsafe.Pointer(uintptr(unsafe.Pointer(results)) + sr),
 		)
 	}
-	err = errors.New(strconv.Itoa(int(errCode)))
+	err = errors.New(errorMessage[errCode])
 	failedKeys = make([]string, len(rawKeys)-len(deletedKeySet))
 	i := 0
 	for _, key := range rawKeys {
@@ -518,7 +559,7 @@ func (client *Client) getOrGets(cmd string, key string) (item *Item, err error) 
 	defer C.client_destroy_retrieval_result(client._imp)
 
 	if errCode != 0 {
-		err = errors.New(strconv.Itoa(int(errCode)))
+		err = errors.New(errorMessage[errCode])
 		return
 	}
 
@@ -583,7 +624,7 @@ func (client *Client) GetMulti(keys []string) (rv map[string]*Item, err error) {
 	defer C.client_destroy_retrieval_result(client._imp)
 
 	if errCode != 0 {
-		err = errors.New(strconv.Itoa(int(errCode)))
+		err = errors.New(errorMessage[errCode])
 		return
 	}
 
@@ -633,7 +674,7 @@ func (client *Client) Touch(key string, expiration int64) error {
 			return nil
 		}
 	}
-	return errors.New(strconv.Itoa(int(errCode)))
+	return errors.New(errorMessage[errCode])
 }
 
 func (client *Client) incrOrDecr(cmd string, key string, delta uint64) (uint64, error) {
@@ -675,7 +716,7 @@ func (client *Client) incrOrDecr(cmd string, key string, delta uint64) (uint64, 
 			return uint64(rst.value), nil
 		}
 	}
-	return 0, errors.New(strconv.Itoa(int(errCode)))
+	return 0, errors.New(errorMessage[errCode])
 }
 
 // Incr will increase the value in key by delta
@@ -713,7 +754,7 @@ func (client *Client) Version() (map[string]string, error) {
 	}
 
 	if errCode != 0 {
-		return rv, errors.New(strconv.Itoa(int(errCode)))
+		return rv, errors.New(errorMessage[errCode])
 	}
 
 	return rv, nil
@@ -760,7 +801,7 @@ func (client *Client) Stats() (map[string](map[string]string), error) {
 	}
 
 	if errCode != 0 {
-		return rv, errors.New(strconv.Itoa(int(errCode)))
+		return rv, errors.New(errorMessage[errCode])
 	}
 
 	return rv, nil
@@ -777,5 +818,5 @@ func (client *Client) Quit() error {
 	if errCode == 0 {
 		return nil
 	}
-	return errors.New(strconv.Itoa(int(errCode)))
+	return errors.New(errorMessage[errCode])
 }
