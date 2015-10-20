@@ -16,29 +16,33 @@ import (
 	"unsafe"
 )
 
+// Configure options
 const (
-	MC_POLL_TIMEOUT    = C.CFG_POLL_TIMEOUT
-	MC_CONNECT_TIMEOUT = C.CFG_CONNECT_TIMEOUT
-	MC_RETRY_TIMEOUT   = C.CFG_RETRY_TIMEOUT
-	MC_HASH_FUNCTION   = C.CFG_HASH_FUNCTION
+	PollTimeout    = C.CFG_POLL_TIMEOUT
+	ConnectTimeout = C.CFG_CONNECT_TIMEOUT
+	RetryTimeout   = C.CFG_RETRY_TIMEOUT
+	HashFunction   = C.CFG_HASH_FUNCTION
 )
 
+// Hash functions
 const (
-	MC_HASH_MD5 = iota
-	MC_HASH_FNV1_32
-	MC_HASH_FNV1A_32
-	MC_HASH_CRC_32
+	HashMD5 = iota
+	HashFNV1_32
+	HashFNV1a32
+	HashCRC32
 )
 
 var hashFunctionMapping = map[int]C.hash_function_options_t{
-	MC_HASH_MD5:      C.OPT_HASH_MD5,
-	MC_HASH_FNV1_32:  C.OPT_HASH_FNV1_32,
-	MC_HASH_FNV1A_32: C.OPT_HASH_FNV1A_32,
-	MC_HASH_CRC_32:   C.OPT_HASH_CRC_32,
+	HashMD5:     C.OPT_HASH_MD5,
+	HashFNV1_32: C.OPT_HASH_FNV1_32,
+	HashFNV1a32: C.OPT_HASH_FNV1A_32,
+	HashCRC32:   C.OPT_HASH_CRC_32,
 }
 
-const MC_DEFAULT_PORT = 11211
+// Default memcached port
+const DefaultPort = 11211
 
+// Client struct
 type Client struct {
 	_imp        unsafe.Pointer
 	servers     []string
@@ -48,8 +52,8 @@ type Client struct {
 	lk          sync.Mutex
 }
 
-// credits to bradfitz/gomemcache
 // Item is an item to be got or stored in a memcached server.
+// credits to bradfitz/gomemcache
 type Item struct {
 	// Key is the Item's key (250 bytes maximum).
 	Key string
@@ -73,41 +77,42 @@ type Item struct {
 	casid uint64
 }
 
-func New(servers []string, noreply bool, prefix string, hashFunc int, failover bool, disableLock bool) (self *Client) {
-	self = new(Client)
-	self._imp = C.client_create()
-	runtime.SetFinalizer(self, finalizer)
+// New to create a memcached client
+func New(servers []string, noreply bool, prefix string, hashFunc int, failover bool, disableLock bool) (client *Client) {
+	client = new(Client)
+	client._imp = C.client_create()
+	runtime.SetFinalizer(client, finalizer)
 
 	n := len(servers)
-	c_hosts := make([]*C.char, n)
-	c_ports := make([]C.uint32_t, n)
-	c_aliases := make([]*C.char, n)
+	cHosts := make([]*C.char, n)
+	cPorts := make([]C.uint32_t, n)
+	cAliases := make([]*C.char, n)
 
 	for i, srv := range servers {
-		addr_alias := strings.Split(srv, " ")
+		addrAndAlias := strings.Split(srv, " ")
 
-		addr := addr_alias[0]
-		if len(addr_alias) == 2 {
-			c_alias := C.CString(addr_alias[1])
-			defer C.free(unsafe.Pointer(c_alias))
-			c_aliases[i] = c_alias
+		addr := addrAndAlias[0]
+		if len(addrAndAlias) == 2 {
+			cAlias := C.CString(addrAndAlias[1])
+			defer C.free(unsafe.Pointer(cAlias))
+			cAliases[i] = cAlias
 		}
 
-		host_port := strings.Split(addr, ":")
-		host := host_port[0]
-		var c_host *C.char = C.CString(host)
-		defer C.free(unsafe.Pointer(c_host))
-		c_hosts[i] = c_host
+		hostAndPort := strings.Split(addr, ":")
+		host := hostAndPort[0]
+		cHost := C.CString(host)
+		defer C.free(unsafe.Pointer(cHost))
+		cHosts[i] = cHost
 
-		if len(host_port) == 2 {
-			port, err := strconv.Atoi(host_port[1])
+		if len(hostAndPort) == 2 {
+			port, err := strconv.Atoi(hostAndPort[1])
 			if err != nil {
 				fmt.Errorf("[%s]: %s", srv, err)
 				return nil
 			}
-			c_ports[i] = C.uint32_t(port)
+			cPorts[i] = C.uint32_t(port)
 		} else {
-			c_ports[i] = C.uint32_t(MC_DEFAULT_PORT)
+			cPorts[i] = C.uint32_t(DefaultPort)
 		}
 	}
 
@@ -117,26 +122,27 @@ func New(servers []string, noreply bool, prefix string, hashFunc int, failover b
 	}
 
 	C.client_init(
-		self._imp,
-		(**C.char)(unsafe.Pointer(&c_hosts[0])),
-		(*C.uint32_t)(unsafe.Pointer(&c_ports[0])),
+		client._imp,
+		(**C.char)(unsafe.Pointer(&cHosts[0])),
+		(*C.uint32_t)(unsafe.Pointer(&cPorts[0])),
 		C.size_t(n),
-		(**C.char)(unsafe.Pointer(&c_aliases[0])),
+		(**C.char)(unsafe.Pointer(&cAliases[0])),
 		C.int(failoverInt),
 	)
 
-	self.Config(MC_HASH_FUNCTION, int(hashFunctionMapping[hashFunc]))
-	self.servers = servers
-	self.prefix = prefix
-	self.noreply = noreply
-	self.disableLock = disableLock
+	client.Config(HashFunction, int(hashFunctionMapping[hashFunc]))
+	client.servers = servers
+	client.prefix = prefix
+	client.noreply = noreply
+	client.disableLock = disableLock
 	return
 }
 
-func SimpleNew(servers []string) (self *Client) {
+// SimpleNew to create a memcached client with default params
+func SimpleNew(servers []string) (client *Client) {
 	noreply := false
 	prefix := ""
-	hashFunc := MC_HASH_CRC_32
+	hashFunc := HashCRC32
 	failover := false
 	disableLock := false
 	return New(
@@ -145,209 +151,220 @@ func SimpleNew(servers []string) (self *Client) {
 	)
 }
 
-func finalizer(self *Client) {
-	C.client_destroy(self._imp)
+func finalizer(client *Client) {
+	C.client_destroy(client._imp)
 }
 
-func (self *Client) lock() {
-	if !self.disableLock {
-		self.lk.Lock()
+func (client *Client) lock() {
+	if !client.disableLock {
+		client.lk.Lock()
 	}
 }
 
-func (self *Client) unlock() {
-	if !self.disableLock {
-		self.lk.Unlock()
+func (client *Client) unlock() {
+	if !client.disableLock {
+		client.lk.Unlock()
 	}
 }
 
-func (self *Client) Config(opt C.config_options_t, val int) {
-	self.lock()
-	defer self.unlock()
+// Config Options:
+//
+//	PollTimeout
+//	ConnectTimeout
+//	RetryTimeout
+//	HashFunction
+func (client *Client) Config(opt C.config_options_t, val int) {
+	client.lock()
+	defer client.unlock()
 
-	C.client_config(self._imp, opt, C.int(val))
+	C.client_config(client._imp, opt, C.int(val))
 }
 
-func (self *Client) GetServerAddressByKey(key string) string {
-	rawKey := self.addPrefix(key)
+// GetServerAddressByKey to return where a key is stored
+func (client *Client) GetServerAddressByKey(key string) string {
+	rawKey := client.addPrefix(key)
 
-	c_key := C.CString(rawKey)
-	defer C.free(unsafe.Pointer(c_key))
-	c_keyLen := C.size_t(len(rawKey))
-	c_server_addr := C.client_get_server_address_by_key(self._imp, c_key, c_keyLen)
-	return C.GoString(c_server_addr)
+	cKey := C.CString(rawKey)
+	defer C.free(unsafe.Pointer(cKey))
+	cKeyLen := C.size_t(len(rawKey))
+	cServerAddr := C.client_get_server_address_by_key(client._imp, cKey, cKeyLen)
+	return C.GoString(cServerAddr)
 }
 
-func (self *Client) removePrefix(key string) string {
-	if len(self.prefix) == 0 {
+func (client *Client) removePrefix(key string) string {
+	if len(client.prefix) == 0 {
 		return key
 	}
 	if strings.HasPrefix(key, "?") {
-		return strings.Join([]string{"?", strings.Replace(key[1:], self.prefix, "", 1)}, "")
-	} else {
-		return strings.Replace(key, self.prefix, "", 1)
+		return strings.Join([]string{"?", strings.Replace(key[1:], client.prefix, "", 1)}, "")
 	}
+	return strings.Replace(key, client.prefix, "", 1)
 }
 
-func (self *Client) addPrefix(key string) string {
-	if len(self.prefix) == 0 {
+func (client *Client) addPrefix(key string) string {
+	if len(client.prefix) == 0 {
 		return key
 	}
 	if strings.HasPrefix(key, "?") {
-		return strings.Join([]string{"?", self.prefix, key[1:]}, "")
-	} else {
-		return strings.Join([]string{self.prefix, key}, "")
+		return strings.Join([]string{"?", client.prefix, key[1:]}, "")
 	}
+	return strings.Join([]string{client.prefix, key}, "")
 }
 
-func (self *Client) store(cmd string, item *Item) error {
-	self.lock()
-	defer self.unlock()
+func (client *Client) store(cmd string, item *Item) error {
+	client.lock()
+	defer client.unlock()
 
-	key := self.addPrefix(item.Key)
+	key := client.addPrefix(item.Key)
 
-	c_key := C.CString(key)
-	defer C.free(unsafe.Pointer(c_key))
-	c_keyLen := C.size_t(len(key))
-	c_flags := C.flags_t(item.Flags)
-	c_exptime := C.exptime_t(item.Expiration)
-	c_noreply := C.bool(self.noreply)
-	c_value := C.CString(string(item.Value))
-	defer C.free(unsafe.Pointer(c_value))
-	c_valueSize := C.size_t(len(item.Value))
+	cKey := C.CString(key)
+	defer C.free(unsafe.Pointer(cKey))
+	cKeyLen := C.size_t(len(key))
+	cFlags := C.flags_t(item.Flags)
+	cExptime := C.exptime_t(item.Expiration)
+	cNoreply := C.bool(client.noreply)
+	cValue := C.CString(string(item.Value))
+	defer C.free(unsafe.Pointer(cValue))
+	cValueSize := C.size_t(len(item.Value))
 
 	var rst **C.message_result_t
 	var n C.size_t
 
-	var err_code C.int
+	var errCode C.int
 
 	switch cmd {
 	case "set":
-		err_code = C.client_set(
-			self._imp, &c_key, &c_keyLen, &c_flags, c_exptime, nil,
-			c_noreply, &c_value, &c_valueSize, 1, &rst, &n,
+		errCode = C.client_set(
+			client._imp, &cKey, &cKeyLen, &cFlags, cExptime, nil,
+			cNoreply, &cValue, &cValueSize, 1, &rst, &n,
 		)
 	case "add":
-		err_code = C.client_add(
-			self._imp, &c_key, &c_keyLen, &c_flags, c_exptime, nil,
-			c_noreply, &c_value, &c_valueSize, 1, &rst, &n,
+		errCode = C.client_add(
+			client._imp, &cKey, &cKeyLen, &cFlags, cExptime, nil,
+			cNoreply, &cValue, &cValueSize, 1, &rst, &n,
 		)
 	case "replace":
-		err_code = C.client_replace(
-			self._imp, &c_key, &c_keyLen, &c_flags, c_exptime, nil,
-			c_noreply, &c_value, &c_valueSize, 1, &rst, &n,
+		errCode = C.client_replace(
+			client._imp, &cKey, &cKeyLen, &cFlags, cExptime, nil,
+			cNoreply, &cValue, &cValueSize, 1, &rst, &n,
 		)
 	case "prepend":
-		err_code = C.client_prepend(
-			self._imp, &c_key, &c_keyLen, &c_flags, c_exptime, nil,
-			c_noreply, &c_value, &c_valueSize, 1, &rst, &n,
+		errCode = C.client_prepend(
+			client._imp, &cKey, &cKeyLen, &cFlags, cExptime, nil,
+			cNoreply, &cValue, &cValueSize, 1, &rst, &n,
 		)
 	case "append":
-		err_code = C.client_append(
-			self._imp, &c_key, &c_keyLen, &c_flags, c_exptime, nil,
-			c_noreply, &c_value, &c_valueSize, 1, &rst, &n,
+		errCode = C.client_append(
+			client._imp, &cKey, &cKeyLen, &cFlags, cExptime, nil,
+			cNoreply, &cValue, &cValueSize, 1, &rst, &n,
 		)
 	case "cas":
-		c_cas_unique := C.cas_unique_t(item.casid)
-		err_code = C.client_cas(
-			self._imp, &c_key, &c_keyLen, &c_flags, c_exptime, &c_cas_unique,
-			c_noreply, &c_value, &c_valueSize, 1, &rst, &n,
+		cCasUnique := C.cas_unique_t(item.casid)
+		errCode = C.client_cas(
+			client._imp, &cKey, &cKeyLen, &cFlags, cExptime, &cCasUnique,
+			cNoreply, &cValue, &cValueSize, 1, &rst, &n,
 		)
 	}
-	defer C.client_destroy_message_result(self._imp)
+	defer C.client_destroy_message_result(client._imp)
 
-	if err_code == 0 {
-		if self.noreply {
+	if errCode == 0 {
+		if client.noreply {
 			return nil
 		} else if int(n) == 1 && (*rst).type_ == C.MSG_STORED {
 			return nil
 		}
 	}
 
-	return errors.New(strconv.Itoa(int(err_code)))
+	return errors.New(strconv.Itoa(int(errCode)))
 }
 
-func (self *Client) Add(item *Item) error {
-	return self.store("add", item)
+// Add is a storage command, return without error only when the key is empty
+func (client *Client) Add(item *Item) error {
+	return client.store("add", item)
 }
 
-func (self *Client) Replace(item *Item) error {
-	return self.store("replace", item)
+// Replace is a storage command, return without error only when the key is not empty
+func (client *Client) Replace(item *Item) error {
+	return client.store("replace", item)
 }
 
-func (self *Client) Prepend(item *Item) error {
-	return self.store("prepend", item)
+// Prepend value to an existed key
+func (client *Client) Prepend(item *Item) error {
+	return client.store("prepend", item)
 }
 
-func (self *Client) Append(item *Item) error {
-	return self.store("append", item)
+// Append value to an existed key
+func (client *Client) Append(item *Item) error {
+	return client.store("append", item)
 }
 
-func (self *Client) Set(item *Item) error {
-	return self.store("set", item)
+// Set value to a key
+func (client *Client) Set(item *Item) error {
+	return client.store("set", item)
 }
 
-func (self *Client) SetMulti(items []*Item) ([]string, error) {
-	self.lock()
-	defer self.unlock()
+// SetMulti will set multi values at once
+func (client *Client) SetMulti(items []*Item) ([]string, error) {
+	client.lock()
+	defer client.unlock()
 
 	nItems := len(items)
-	c_keys := make([]*C.char, nItems)
-	c_keyLens := make([]C.size_t, nItems)
-	c_values := make([]*C.char, nItems)
-	c_valueSizes := make([]C.size_t, nItems)
-	c_flagsList := make([]C.flags_t, nItems)
+	cKeys := make([]*C.char, nItems)
+	cKeyLens := make([]C.size_t, nItems)
+	cValues := make([]*C.char, nItems)
+	cValueSizes := make([]C.size_t, nItems)
+	cFlagsList := make([]C.flags_t, nItems)
 
 	for i, item := range items {
-		rawKey := self.addPrefix(item.Key)
+		rawKey := client.addPrefix(item.Key)
 
-		c_key := C.CString(rawKey)
-		defer C.free(unsafe.Pointer(c_key))
-		c_keys[i] = c_key
+		cKey := C.CString(rawKey)
+		defer C.free(unsafe.Pointer(cKey))
+		cKeys[i] = cKey
 
-		c_keyLen := C.size_t(len(rawKey))
-		c_keyLens[i] = c_keyLen
+		cKeyLen := C.size_t(len(rawKey))
+		cKeyLens[i] = cKeyLen
 
-		c_val := C.CString(string(item.Value))
-		defer C.free(unsafe.Pointer(c_val))
-		c_values[i] = c_val
+		cVal := C.CString(string(item.Value))
+		defer C.free(unsafe.Pointer(cVal))
+		cValues[i] = cVal
 
-		c_valueSize := C.size_t(len(item.Value))
-		c_valueSizes[i] = c_valueSize
+		cValueSize := C.size_t(len(item.Value))
+		cValueSizes[i] = cValueSize
 
-		c_flags := C.flags_t(item.Flags)
-		c_flagsList[i] = c_flags
+		cFlags := C.flags_t(item.Flags)
+		cFlagsList[i] = cFlags
 	}
 
-	c_exptime := C.exptime_t(items[0].Expiration)
-	c_noreply := C.bool(self.noreply)
-	c_nItems := C.size_t(nItems)
+	cExptime := C.exptime_t(items[0].Expiration)
+	cNoreply := C.bool(client.noreply)
+	cNItems := C.size_t(nItems)
 
 	var results **C.message_result_t
 	var n C.size_t
 
-	err_code := C.client_set(
-		self._imp,
-		(**C.char)(&c_keys[0]),
-		(*C.size_t)(&c_keyLens[0]),
-		(*C.flags_t)(&c_flagsList[0]),
-		c_exptime,
+	errCode := C.client_set(
+		client._imp,
+		(**C.char)(&cKeys[0]),
+		(*C.size_t)(&cKeyLens[0]),
+		(*C.flags_t)(&cFlagsList[0]),
+		cExptime,
 		nil,
-		c_noreply,
-		(**C.char)(&c_values[0]),
-		(*C.size_t)(&c_valueSizes[0]),
-		c_nItems,
+		cNoreply,
+		(**C.char)(&cValues[0]),
+		(*C.size_t)(&cValueSizes[0]),
+		cNItems,
 		&results, &n,
 	)
-	defer C.client_destroy_message_result(self._imp)
-	if err_code == 0 {
+	defer C.client_destroy_message_result(client._imp)
+	if errCode == 0 {
 		return []string{}, nil
 	}
-	err := errors.New(strconv.Itoa(int(err_code)))
+	err := errors.New(strconv.Itoa(int(errCode)))
 
 	sr := unsafe.Sizeof(*results)
 	storedKeySet := make(map[string]struct{})
-	for i := 0; i <= int(n); i += 1 {
+	for i := 0; i <= int(n); i++ {
 		if (*results).type_ == C.MSG_STORED {
 			storedKey := C.GoStringN((*results).key, C.int((*results).key_len))
 			storedKeySet[storedKey] = struct{}{}
@@ -363,52 +380,55 @@ func (self *Client) SetMulti(items []*Item) ([]string, error) {
 		if _, contains := storedKeySet[item.Key]; contains {
 			continue
 		}
-		failedKeys[i] = self.removePrefix(item.Key)
-		i += 1
+		failedKeys[i] = client.removePrefix(item.Key)
+		i++
 	}
 	return failedKeys, err
 }
 
-func (self *Client) Cas(item *Item) error {
-	return self.store("cas", item)
+// Cas is short for Compare And Swap
+func (client *Client) Cas(item *Item) error {
+	return client.store("cas", item)
 }
 
-func (self *Client) Delete(key string) error {
-	self.lock()
-	defer self.unlock()
+// Delete a key
+func (client *Client) Delete(key string) error {
+	client.lock()
+	defer client.unlock()
 
-	rawKey := self.addPrefix(key)
+	rawKey := client.addPrefix(key)
 
-	c_key := C.CString(rawKey)
-	defer C.free(unsafe.Pointer(c_key))
-	c_keyLen := C.size_t(len(rawKey))
-	c_noreply := C.bool(self.noreply)
+	cKey := C.CString(rawKey)
+	defer C.free(unsafe.Pointer(cKey))
+	cKeyLen := C.size_t(len(rawKey))
+	cNoreply := C.bool(client.noreply)
 
 	var rst **C.message_result_t
 	var n C.size_t
 
-	err_code := C.client_delete(
-		self._imp, &c_key, &c_keyLen, c_noreply, 1, &rst, &n,
+	errCode := C.client_delete(
+		client._imp, &cKey, &cKeyLen, cNoreply, 1, &rst, &n,
 	)
-	defer C.client_destroy_message_result(self._imp)
+	defer C.client_destroy_message_result(client._imp)
 
-	if err_code == 0 {
-		if self.noreply {
+	if errCode == 0 {
+		if client.noreply {
 			return nil
 		} else if int(n) == 1 && ((*rst).type_ == C.MSG_DELETED || (*rst).type_ == C.MSG_NOT_FOUND) {
 			return nil
 		}
 	}
 
-	return errors.New(strconv.Itoa(int(err_code)))
+	return errors.New(strconv.Itoa(int(errCode)))
 }
 
-func (self *Client) DeleteMulti(keys []string) (failedKeys []string, err error) {
-	self.lock()
-	defer self.unlock()
+// DeleteMulti will delete multi keys at once
+func (client *Client) DeleteMulti(keys []string) (failedKeys []string, err error) {
+	client.lock()
+	defer client.unlock()
 
 	var rawKeys []string
-	if len(self.prefix) == 0 {
+	if len(client.prefix) == 0 {
 		rawKeys = keys
 	} else {
 		rawKeys = make([]string, len(keys))
@@ -418,41 +438,41 @@ func (self *Client) DeleteMulti(keys []string) (failedKeys []string, err error) 
 	}
 
 	nKeys := len(rawKeys)
-	c_nKeys := C.size_t(nKeys)
-	c_keys := make([]*C.char, nKeys)
-	c_keyLens := make([]C.size_t, nKeys)
-	c_noreply := C.bool(self.noreply)
+	cNKeys := C.size_t(nKeys)
+	cKeys := make([]*C.char, nKeys)
+	cKeyLens := make([]C.size_t, nKeys)
+	cNoreply := C.bool(client.noreply)
 
 	var results **C.message_result_t
 	var n C.size_t
 
 	for i, key := range rawKeys {
-		c_key := C.CString(key)
-		defer C.free(unsafe.Pointer(c_key))
-		c_keys[i] = c_key
+		cKey := C.CString(key)
+		defer C.free(unsafe.Pointer(cKey))
+		cKeys[i] = cKey
 
-		c_keyLen := C.size_t(len(key))
-		c_keyLens[i] = c_keyLen
+		cKeyLen := C.size_t(len(key))
+		cKeyLens[i] = cKeyLen
 	}
-	err_code := C.client_delete(
-		self._imp, (**C.char)(&c_keys[0]), (*C.size_t)(&c_keyLens[0]), c_noreply, c_nKeys,
+	errCode := C.client_delete(
+		client._imp, (**C.char)(&cKeys[0]), (*C.size_t)(&cKeyLens[0]), cNoreply, cNKeys,
 		&results,
 		&n,
 	)
-	defer C.client_destroy_message_result(self._imp)
+	defer C.client_destroy_message_result(client._imp)
 
-	if err_code == 0 {
+	if errCode == 0 {
 		return
 	}
 
-	if self.noreply {
+	if client.noreply {
 		failedKeys = keys
 		return
 	}
 
 	deletedKeySet := make(map[string]struct{})
 	sr := unsafe.Sizeof(*results)
-	for i := 0; i <= int(n); i += 1 {
+	for i := 0; i <= int(n); i++ {
 		if (*results).type_ == C.MSG_DELETED {
 			deletedKey := C.GoStringN((*results).key, C.int((*results).key_len))
 			deletedKeySet[deletedKey] = struct{}{}
@@ -462,43 +482,43 @@ func (self *Client) DeleteMulti(keys []string) (failedKeys []string, err error) 
 			unsafe.Pointer(uintptr(unsafe.Pointer(results)) + sr),
 		)
 	}
-	err = errors.New(strconv.Itoa(int(err_code)))
+	err = errors.New(strconv.Itoa(int(errCode)))
 	failedKeys = make([]string, len(rawKeys)-len(deletedKeySet))
 	i := 0
 	for _, key := range rawKeys {
 		if _, contains := deletedKeySet[key]; contains {
 			continue
 		}
-		failedKeys[i] = self.removePrefix(key)
-		i += 1
+		failedKeys[i] = client.removePrefix(key)
+		i++
 	}
 	return
 }
 
-func (self *Client) getOrGets(cmd string, key string) (item *Item, err error) {
-	self.lock()
-	defer self.unlock()
+func (client *Client) getOrGets(cmd string, key string) (item *Item, err error) {
+	client.lock()
+	defer client.unlock()
 
-	rawKey := self.addPrefix(key)
+	rawKey := client.addPrefix(key)
 
-	c_key := C.CString(rawKey)
-	defer C.free(unsafe.Pointer(c_key))
-	c_keyLen := C.size_t(len(rawKey))
+	cKey := C.CString(rawKey)
+	defer C.free(unsafe.Pointer(cKey))
+	cKeyLen := C.size_t(len(rawKey))
 	var rst **C.retrieval_result_t
 	var n C.size_t
 
-	var err_code C.int
+	var errCode C.int
 	switch cmd {
 	case "get":
-		err_code = C.client_get(self._imp, &c_key, &c_keyLen, 1, &rst, &n)
+		errCode = C.client_get(client._imp, &cKey, &cKeyLen, 1, &rst, &n)
 	case "gets":
-		err_code = C.client_gets(self._imp, &c_key, &c_keyLen, 1, &rst, &n)
+		errCode = C.client_gets(client._imp, &cKey, &cKeyLen, 1, &rst, &n)
 	}
 
-	defer C.client_destroy_retrieval_result(self._imp)
+	defer C.client_destroy_retrieval_result(client._imp)
 
-	if err_code != 0 {
-		err = errors.New(strconv.Itoa(int(err_code)))
+	if errCode != 0 {
+		err = errors.New(strconv.Itoa(int(errCode)))
 		return
 	}
 
@@ -506,61 +526,64 @@ func (self *Client) getOrGets(cmd string, key string) (item *Item, err error) {
 		return
 	}
 
-	data_block := C.GoBytes(unsafe.Pointer((*rst).data_block), C.int((*rst).bytes))
+	dataBlock := C.GoBytes(unsafe.Pointer((*rst).data_block), C.int((*rst).bytes))
 	flags := uint32((*rst).flags)
 	if cmd == "get" {
-		item = &Item{Key: key, Value: data_block, Flags: flags}
+		item = &Item{Key: key, Value: dataBlock, Flags: flags}
 		return
 	}
 
 	casid := uint64((*rst).cas_unique)
-	item = &Item{Key: key, Value: data_block, Flags: flags, casid: casid}
+	item = &Item{Key: key, Value: dataBlock, Flags: flags, casid: casid}
 	return
 }
 
-func (self *Client) Get(key string) (*Item, error) {
-	return self.getOrGets("get", key)
+// Get is a retrieval command. It will return Item or nil
+func (client *Client) Get(key string) (*Item, error) {
+	return client.getOrGets("get", key)
 }
 
-func (self *Client) Gets(key string) (*Item, error) {
-	return self.getOrGets("gets", key)
+// Gets is a retrieval command. It will return Item(with casid) or nil
+func (client *Client) Gets(key string) (*Item, error) {
+	return client.getOrGets("gets", key)
 }
 
-func (self *Client) GetMulti(keys []string) (rv map[string]*Item, err error) {
-	self.lock()
-	defer self.unlock()
+// GetMulti will return a map of multi values
+func (client *Client) GetMulti(keys []string) (rv map[string]*Item, err error) {
+	client.lock()
+	defer client.unlock()
 
 	nKeys := len(keys)
 	var rawKeys []string
-	if len(self.prefix) == 0 {
+	if len(client.prefix) == 0 {
 		rawKeys = keys
 	} else {
 		rawKeys = make([]string, len(keys))
 		for i, key := range keys {
-			rawKeys[i] = self.addPrefix(key)
+			rawKeys[i] = client.addPrefix(key)
 		}
 	}
 
-	c_keys := make([]*C.char, nKeys)
-	c_keyLens := make([]C.size_t, nKeys)
-	c_nKeys := C.size_t(nKeys)
+	cKeys := make([]*C.char, nKeys)
+	cKeyLens := make([]C.size_t, nKeys)
+	cNKeys := C.size_t(nKeys)
 
-	for i, raw_key := range rawKeys {
-		c_key := C.CString(raw_key)
-		defer C.free(unsafe.Pointer(c_key))
-		c_keyLen := C.size_t(len(raw_key))
-		c_keys[i] = c_key
-		c_keyLens[i] = c_keyLen
+	for i, rawKey := range rawKeys {
+		cKey := C.CString(rawKey)
+		defer C.free(unsafe.Pointer(cKey))
+		cKeyLen := C.size_t(len(rawKey))
+		cKeys[i] = cKey
+		cKeyLens[i] = cKeyLen
 	}
 
 	var rst **C.retrieval_result_t
 	var n C.size_t
 
-	err_code := C.client_get(self._imp, &c_keys[0], &c_keyLens[0], c_nKeys, &rst, &n)
-	defer C.client_destroy_retrieval_result(self._imp)
+	errCode := C.client_get(client._imp, &cKeys[0], &cKeyLens[0], cNKeys, &rst, &n)
+	defer C.client_destroy_retrieval_result(client._imp)
 
-	if err_code != 0 {
-		err = errors.New(strconv.Itoa(int(err_code)))
+	if errCode != 0 {
+		err = errors.New(strconv.Itoa(int(errCode)))
 		return
 	}
 
@@ -570,111 +593,115 @@ func (self *Client) GetMulti(keys []string) (rv map[string]*Item, err error) {
 
 	sr := unsafe.Sizeof(*rst)
 	rv = make(map[string]*Item, int(n))
-	for i := 0; i < int(n); i += 1 {
-		raw_key := C.GoStringN((*rst).key, C.int((*rst).key_len))
-		data_block := C.GoBytes(unsafe.Pointer((*rst).data_block), C.int((*rst).bytes))
+	for i := 0; i < int(n); i++ {
+		rawKey := C.GoStringN((*rst).key, C.int((*rst).key_len))
+		dataBlock := C.GoBytes(unsafe.Pointer((*rst).data_block), C.int((*rst).bytes))
 		flags := uint32((*rst).flags)
-		key := self.removePrefix(raw_key)
-		rv[key] = &Item{Key: key, Value: data_block, Flags: flags}
+		key := client.removePrefix(rawKey)
+		rv[key] = &Item{Key: key, Value: dataBlock, Flags: flags}
 		rst = (**C.retrieval_result_t)(unsafe.Pointer(uintptr(unsafe.Pointer(rst)) + sr))
 	}
 
 	return
 }
 
-func (self *Client) Touch(key string, expiration int64) error {
-	self.lock()
-	defer self.unlock()
+// Touch command
+func (client *Client) Touch(key string, expiration int64) error {
+	client.lock()
+	defer client.unlock()
 
-	rawKey := self.addPrefix(key)
+	rawKey := client.addPrefix(key)
 
-	c_key := C.CString(rawKey)
-	defer C.free(unsafe.Pointer(c_key))
-	c_keyLen := C.size_t(len(rawKey))
-	c_exptime := C.exptime_t(expiration)
-	c_noreply := C.bool(self.noreply)
+	cKey := C.CString(rawKey)
+	defer C.free(unsafe.Pointer(cKey))
+	cKeyLen := C.size_t(len(rawKey))
+	cExptime := C.exptime_t(expiration)
+	cNoreply := C.bool(client.noreply)
 
 	var rst **C.message_result_t
 	var n C.size_t
 
-	err_code := C.client_touch(
-		self._imp, &c_key, &c_keyLen, c_exptime, c_noreply, 1, &rst, &n,
+	errCode := C.client_touch(
+		client._imp, &cKey, &cKeyLen, cExptime, cNoreply, 1, &rst, &n,
 	)
-	defer C.client_destroy_message_result(self._imp)
+	defer C.client_destroy_message_result(client._imp)
 
-	if err_code == 0 {
-		if self.noreply {
+	if errCode == 0 {
+		if client.noreply {
 			return nil
 		} else if int(n) == 1 && (*rst).type_ == C.MSG_TOUCHED {
 			return nil
 		}
 	}
-	return errors.New(strconv.Itoa(int(err_code)))
+	return errors.New(strconv.Itoa(int(errCode)))
 }
 
-func (self *Client) incrOrDecr(cmd string, key string, delta uint64) (uint64, error) {
-	self.lock()
-	defer self.unlock()
+func (client *Client) incrOrDecr(cmd string, key string, delta uint64) (uint64, error) {
+	client.lock()
+	defer client.unlock()
 
-	rawKey := self.addPrefix(key)
-	c_key := C.CString(rawKey)
-	defer C.free(unsafe.Pointer(c_key))
-	c_keyLen := C.size_t(len(rawKey))
-	c_delta := C.uint64_t(delta)
-	c_noreply := C.bool(self.noreply)
+	rawKey := client.addPrefix(key)
+	cKey := C.CString(rawKey)
+	defer C.free(unsafe.Pointer(cKey))
+	cKeyLen := C.size_t(len(rawKey))
+	cDelta := C.uint64_t(delta)
+	cNoreply := C.bool(client.noreply)
 
 	var rst *C.unsigned_result_t
 	var n C.size_t
 
-	var err_code C.int
+	var errCode C.int
 
 	switch cmd {
 	case "incr":
-		err_code = C.client_incr(
-			self._imp, c_key, c_keyLen, c_delta, c_noreply,
+		errCode = C.client_incr(
+			client._imp, cKey, cKeyLen, cDelta, cNoreply,
 			&rst, &n,
 		)
 	case "decr":
-		err_code = C.client_decr(
-			self._imp, c_key, c_keyLen, c_delta, c_noreply,
+		errCode = C.client_decr(
+			client._imp, cKey, cKeyLen, cDelta, cNoreply,
 			&rst, &n,
 		)
 
 	}
 
-	defer C.client_destroy_unsigned_result(self._imp)
+	defer C.client_destroy_unsigned_result(client._imp)
 
-	if err_code == 0 {
-		if self.noreply {
+	if errCode == 0 {
+		if client.noreply {
 			return 0, nil
 		} else if int(n) == 1 && rst != nil {
 			return uint64(rst.value), nil
 		}
 	}
-	return 0, errors.New(strconv.Itoa(int(err_code)))
+	return 0, errors.New(strconv.Itoa(int(errCode)))
 }
 
-func (self *Client) Incr(key string, delta uint64) (uint64, error) {
-	return self.incrOrDecr("incr", key, delta)
+// Incr will increase the value in key by delta
+func (client *Client) Incr(key string, delta uint64) (uint64, error) {
+	return client.incrOrDecr("incr", key, delta)
 }
 
-func (self *Client) Decr(key string, delta uint64) (uint64, error) {
-	return self.incrOrDecr("decr", key, delta)
+// Decr will decrease the value in key by delta
+func (client *Client) Decr(key string, delta uint64) (uint64, error) {
+	return client.incrOrDecr("decr", key, delta)
 }
 
-func (self *Client) Version() (map[string]string, error) {
-	self.lock()
-	defer self.unlock()
+// Version will return a map reflecting versions of each memcached server
+func (client *Client) Version() (map[string]string, error) {
+	client.lock()
+	defer client.unlock()
 
 	var rst *C.broadcast_result_t
 	var n C.size_t
 	rv := make(map[string]string)
 
-	err_code := C.client_version(self._imp, &rst, &n)
-	defer C.client_destroy_broadcast_result(self._imp)
+	errCode := C.client_version(client._imp, &rst, &n)
+	defer C.client_destroy_broadcast_result(client._imp)
 	sr := unsafe.Sizeof(*rst)
 
-	for i := 0; i < int(n); i += 1 {
+	for i := 0; i < int(n); i++ {
 		if rst.lines == nil || rst.line_lens == nil {
 			continue
 		}
@@ -685,28 +712,29 @@ func (self *Client) Version() (map[string]string, error) {
 		rst = (*C.broadcast_result_t)(unsafe.Pointer(uintptr(unsafe.Pointer(rst)) + sr))
 	}
 
-	if err_code != 0 {
-		return rv, errors.New(strconv.Itoa(int(err_code)))
+	if errCode != 0 {
+		return rv, errors.New(strconv.Itoa(int(errCode)))
 	}
 
 	return rv, nil
 }
 
-func (self *Client) Stats() (map[string](map[string]string), error) {
-	self.lock()
-	defer self.unlock()
+// Stats will return a map reflecting stats map of each memcached server
+func (client *Client) Stats() (map[string](map[string]string), error) {
+	client.lock()
+	defer client.unlock()
 
 	var rst *C.broadcast_result_t
 	var n C.size_t
 
-	err_code := C.client_stats(self._imp, &rst, &n)
-	defer C.client_destroy_broadcast_result(self._imp)
+	errCode := C.client_stats(client._imp, &rst, &n)
+	defer C.client_destroy_broadcast_result(client._imp)
 
 	rv := make(map[string](map[string]string))
 
 	sr := unsafe.Sizeof(*rst)
 
-	for i := 0; i < int(n); i += 1 {
+	for i := 0; i < int(n); i++ {
 		if rst.lines == nil || rst.line_lens == nil {
 			continue
 		}
@@ -715,38 +743,39 @@ func (self *Client) Stats() (map[string](map[string]string), error) {
 
 		rv[host] = make(map[string]string)
 
-		var c_lines **C.char = rst.lines
-		var c_lineLens *C.size_t = rst.line_lens
+		cLines := rst.lines
+		cLineLens := rst.line_lens
 
-		sLine := unsafe.Sizeof(*c_lines)
-		sLineLen := unsafe.Sizeof(*c_lineLens)
-		for j := 0; j < nMetrics; j += 1 {
-			metricLine := C.GoStringN(*c_lines, C.int(*c_lineLens))
+		sLine := unsafe.Sizeof(*cLines)
+		sLineLen := unsafe.Sizeof(*cLineLens)
+		for j := 0; j < nMetrics; j++ {
+			metricLine := C.GoStringN(*cLines, C.int(*cLineLens))
 			kv := strings.SplitN(metricLine, " ", 2)
 			rv[host][kv[0]] = kv[1]
-			c_lines = (**C.char)(unsafe.Pointer(uintptr(unsafe.Pointer(c_lines)) + sLine))
-			c_lineLens = (*C.size_t)(unsafe.Pointer(uintptr(unsafe.Pointer(c_lineLens)) + sLineLen))
+			cLines = (**C.char)(unsafe.Pointer(uintptr(unsafe.Pointer(cLines)) + sLine))
+			cLineLens = (*C.size_t)(unsafe.Pointer(uintptr(unsafe.Pointer(cLineLens)) + sLineLen))
 		}
 
 		rst = (*C.broadcast_result_t)(unsafe.Pointer(uintptr(unsafe.Pointer(rst)) + sr))
 	}
 
-	if err_code != 0 {
-		return rv, errors.New(strconv.Itoa(int(err_code)))
+	if errCode != 0 {
+		return rv, errors.New(strconv.Itoa(int(errCode)))
 	}
 
 	return rv, nil
 }
 
-func (self *Client) Quit() error {
-	self.lock()
-	defer self.unlock()
+// Quit will close the sockets to each memcached server
+func (client *Client) Quit() error {
+	client.lock()
+	defer client.unlock()
 
-	err_code := C.client_quit(self._imp)
-	defer C.client_destroy_broadcast_result(self._imp)
+	errCode := C.client_quit(client._imp)
+	defer C.client_destroy_broadcast_result(client._imp)
 
-	if err_code == 0 {
+	if errCode == 0 {
 		return nil
 	}
-	return errors.New(strconv.Itoa(int(err_code)))
+	return errors.New(strconv.Itoa(int(errCode)))
 }

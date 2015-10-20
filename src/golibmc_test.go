@@ -17,7 +17,7 @@ func newSimpleClient(n int) *Client {
 	}
 	noreply := false
 	prefix := ""
-	hashFunc := MC_HASH_CRC_32
+	hashFunc := HashCRC32
 	failover := false
 	disableLock := false
 
@@ -31,7 +31,7 @@ func newSimpleNoreplyClient(n int) *Client {
 	}
 	noreply := true
 	prefix := ""
-	hashFunc := MC_HASH_CRC_32
+	hashFunc := HashCRC32
 	failover := false
 	disableLock := false
 
@@ -42,7 +42,7 @@ func TestInputServer(t *testing.T) {
 	servers := []string{"localhost:invalid_port"}
 	noreply := false
 	prefix := ""
-	hashFunc := MC_HASH_CRC_32
+	hashFunc := HashCRC32
 	failover := false
 	disableLock := false
 
@@ -171,7 +171,7 @@ func TestGetServerAddress(t *testing.T) {
 
 func testRouter(t *testing.T, servers []string, rs map[string]string, prefix string) {
 	noreply := false
-	hashFunc := MC_HASH_MD5
+	hashFunc := HashMD5
 	failover := false
 	disableLock := false
 
