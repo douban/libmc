@@ -1,13 +1,18 @@
 package golibmc
 
-const (
-	__version__ = "v0.5.5-33-g6bd8da8"
-	__author__ = "mckelvin"
-	__email__ = "mckelvin@users.noreply.github.com"
-	__date__ = "Fri Oct 16 11:30:29 2015 +0800"
-)
+const _Version = "v0.5.5-38-gab79219"
+const _Author = "mckelvin"
+const _Email = "mckelvin@users.noreply.github.com"
+const _Date = "Tue Oct 20 16:36:07 2015 +0800"
 
-const Version = __version__
-const Author = __author__
-const Email = __email__
-const Date = __email__
+// Version of the package
+const Version = _Version
+
+// Author of the package
+const Author = _Author
+
+// Email of the author
+const Email = _Email
+
+// Date of the package
+const Date = _Date
