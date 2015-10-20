@@ -824,9 +824,9 @@ func (client *Client) Quit() error {
 	defer client.unlock()
 
 	errCode := C.client_quit(client._imp)
-	defer C.client_destroy_broadcast_result(client._imp)
+	C.client_destroy_broadcast_result(client._imp)
 
-	if errCode == 0 {
+	if errCode == C.RET_CONN_POLL_ERR || errCode == C.RET_RECV_ERR {
 		return nil
 	}
 	return errors.New(errorMessage[errCode])

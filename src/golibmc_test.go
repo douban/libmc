@@ -814,7 +814,10 @@ func testQuit(mc, mc2 *Client, t *testing.T) {
 		t.Errorf("nc1: %d, nc2: %d", nc1, nc2)
 	}
 
-	mc.Quit()
+	if err := mc.Quit(); err != nil {
+		t.Errorf("Error in Quit: %s", err)
+	}
+
 	st2, err := mc2.Stats()
 	nc2, err = strconv.Atoi(st2[LocalMC]["curr_connections"])
 
