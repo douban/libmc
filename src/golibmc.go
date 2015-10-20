@@ -8,11 +8,11 @@ package golibmc
 import "C"
 import (
 	"errors"
-	"fmt"
 	"runtime"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 	"unsafe"
 )
 
@@ -21,7 +21,6 @@ const (
 	PollTimeout    = C.CFG_POLL_TIMEOUT
 	ConnectTimeout = C.CFG_CONNECT_TIMEOUT
 	RetryTimeout   = C.CFG_RETRY_TIMEOUT
-	HashFunction   = C.CFG_HASH_FUNCTION
 )
 
 // Hash functions
@@ -148,7 +147,6 @@ func New(servers []string, noreply bool, prefix string, hashFunc int, failover b
 		if len(hostAndPort) == 2 {
 			port, err := strconv.Atoi(hostAndPort[1])
 			if err != nil {
-				fmt.Errorf("[%s]: %s", srv, err)
 				return nil
 			}
 			cPorts[i] = C.uint32_t(port)
@@ -171,7 +169,7 @@ func New(servers []string, noreply bool, prefix string, hashFunc int, failover b
 		C.int(failoverInt),
 	)
 
-	client.Config(HashFunction, int(hashFunctionMapping[hashFunc]))
+	client.configHashFunction(int(hashFunctionMapping[hashFunc]))
 	client.servers = servers
 	client.prefix = prefix
 	client.noreply = noreply
@@ -208,20 +206,33 @@ func (client *Client) unlock() {
 	}
 }
 
-// Config Options:
-//
-//	PollTimeout
-//	ConnectTimeout
-//	RetryTimeout
-//	HashFunction
-func (client *Client) Config(opt C.config_options_t, val int) {
+func (client *Client) configHashFunction(val int) {
 	client.lock()
 	defer client.unlock()
 
-	C.client_config(client._imp, opt, C.int(val))
+	C.client_config(client._imp, C.CFG_HASH_FUNCTION, C.int(val))
 }
 
-// GetServerAddressByKey to return where a key is stored
+// ConfigTimeout Keys:
+//	PollTimeout
+//	ConnectTimeout
+//	RetryTimeout
+//
+// timeout should of type time.Duration
+func (client *Client) ConfigTimeout(cCfgKey C.config_options_t, timeout time.Duration) {
+	client.lock()
+	defer client.unlock()
+	var cTimeout C.int
+	if cCfgKey == C.CFG_RETRY_TIMEOUT {
+		cTimeout = C.int(timeout / time.Second)
+	} else {
+		cTimeout = C.int(timeout / time.Microsecond)
+	}
+	C.client_config(client._imp, cCfgKey, cTimeout)
+}
+
+// GetServerAddressByKey will return the address of the memcached
+// server where a key is stored
 func (client *Client) GetServerAddressByKey(key string) string {
 	rawKey := client.addPrefix(key)
 
