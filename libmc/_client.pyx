@@ -36,6 +36,8 @@ cdef extern from "Common.h" namespace "douban::mc":
         VERSION_OP
         QUIT_OP
 
+
+cdef extern from "Export.h":
     ctypedef enum config_options_t:
         CFG_POLL_TIMEOUT
         CFG_CONNECT_TIMEOUT
@@ -48,23 +50,10 @@ cdef extern from "Common.h" namespace "douban::mc":
         OPT_HASH_FNV1A_32
         OPT_HASH_CRC_32
 
-    ctypedef enum err_code_t:
-        RET_SEND_ERR
-        RET_RECV_ERR
-        RET_CONN_POLL_ERR
-        RET_POLL_TIMEOUT_ERR
-        RET_POLL_ERR
-        RET_MC_SERVER_ERR
-        RET_PROGRAMMING_ERR
-        RET_INVALID_KEY_ERR
-        RET_INCOMPLETE_BUFFER_ERR
-        RET_OK
-
-
-cdef extern from "Result.h" namespace "douban::mc::types":
     ctypedef int64_t exptime_t
     ctypedef uint32_t flags_t
     ctypedef uint64_t cas_unique_t
+
     ctypedef struct retrieval_result_t:
         retrieval_result_t()
         char* key
@@ -73,6 +62,12 @@ cdef extern from "Result.h" namespace "douban::mc::types":
         char* data_block
         uint32_t bytes
         cas_unique_t cas_unique
+
+    ctypedef struct broadcast_result_t:
+        char* host
+        char** lines
+        size_t* line_lens
+        size_t len
 
     ctypedef enum message_result_type:
         MSG_EXISTS
@@ -84,15 +79,21 @@ cdef extern from "Result.h" namespace "douban::mc::types":
         MSG_TOUCHED
 
     ctypedef struct message_result_t:
-        message_result_type type
+        message_result_type type_
         char* key
         size_t key_len
 
-    ctypedef struct broadcast_result_t:
-        char* host
-        char** lines
-        size_t* line_lens
-        size_t len
+    ctypedef enum err_code_t:
+        RET_SEND_ERR
+        RET_RECV_ERR
+        RET_CONN_POLL_ERR
+        RET_POLL_TIMEOUT_ERR
+        RET_POLL_ERR
+        RET_MC_SERVER_ERR
+        RET_PROGRAMMING_ERR
+        RET_INVALID_KEY_ERR
+        RET_INCOMPLETE_BUFFER_ERR
+        RET_OK
 
     ctypedef struct unsigned_result_t:
         char* key
@@ -180,12 +181,12 @@ cdef extern from "Client.h" namespace "douban::mc":
 
         err_code_t incr(
             const char* key, const size_t keyLen, const uint64_t delta,
-            const bool_t noreply, unsigned_result_t*** results,
+            const bool_t noreply, unsigned_result_t** results,
             size_t* nResults
         ) nogil
         err_code_t decr(
             const char* key, const size_t keyLen, const uint64_t delta,
-            const bool_t noreply, unsigned_result_t*** results,
+            const bool_t noreply, unsigned_result_t** results,
             size_t* nResults
         ) nogil
         void destroyUnsignedResult() nogil
@@ -593,7 +594,7 @@ cdef class PyClient:
             else:
                 pass
 
-        rv = self.last_error == 0 and (self.noreply or (n_res == 1 and results[0][0].type == MSG_STORED))
+        rv = self.last_error == 0 and (self.noreply or (n_res == 1 and results[0][0].type_ == MSG_STORED))
 
         with nogil:
             self._imp.destroyMessageResult()
@@ -742,7 +743,7 @@ cdef class PyClient:
         is_succeed = self.last_error == 0 and (self.noreply or n_rst == n)
         cdef list failed_keys = []
         if not is_succeed and return_failure:
-            succeed_keys = [results[i][0].key[:results[i][0].key_len] for i in range(n_rst) if results[i][0].type == MSG_STORED]
+            succeed_keys = [results[i][0].key[:results[i][0].key_len] for i in range(n_rst) if results[i][0].type_ == MSG_STORED]
             failed_keys = list(set(keys) - set(succeed_keys))
 
         with nogil:
@@ -821,7 +822,7 @@ cdef class PyClient:
         with nogil:
             self.last_error = self._imp._delete(&c_key, &c_key_len, self.noreply, n, &results, &n_res)
 
-        rv = self.last_error == 0 and (self.noreply or (n_res == 1 and (results[0][0].type == MSG_DELETED or results[0][0].type == MSG_NOT_FOUND)))
+        rv = self.last_error == 0 and (self.noreply or (n_res == 1 and (results[0][0].type_ == MSG_DELETED or results[0][0].type_ == MSG_NOT_FOUND)))
 
         with nogil:
             self._imp.destroyMessageResult()
@@ -854,7 +855,7 @@ cdef class PyClient:
         if not is_succeed and return_failure:
             succeed_keys = [results[i][0].key[:results[i][0].key_len]
                             for i in range(n_res)
-                            if results[i][0].type == MSG_DELETED or results[i][0].type == MSG_NOT_FOUND]
+                            if results[i][0].type_ == MSG_DELETED or results[i][0].type_ == MSG_NOT_FOUND]
             failed_keys = list(set(keys) - set(succeed_keys))
 
         with nogil:
@@ -883,7 +884,7 @@ cdef class PyClient:
         with nogil:
             self.last_error = self._imp.touch(&c_key, &c_key_len, exptime, self.noreply, n, &results, &n_res)
 
-        rv = self.last_error == 0 and (self.noreply or (n_res == 1 and results[0][0].type == MSG_TOUCHED))
+        rv = self.last_error == 0 and (self.noreply or (n_res == 1 and results[0][0].type_ == MSG_TOUCHED))
         with nogil:
             self._imp.destroyMessageResult()
         Py_DECREF(key)
@@ -957,19 +958,19 @@ cdef class PyClient:
         Py_INCREF(key)
         PyString_AsStringAndSize(key, &c_key, <Py_ssize_t*>&c_key_len)
 
-        cdef unsigned_result_t** results = NULL
+        cdef unsigned_result_t* result = NULL
         cdef size_t n_res = 0
         with nogil:
             if op == INCR_OP:
-                self.last_error = self._imp.incr(c_key, c_key_len, delta, self.noreply, &results, &n_res)
+                self.last_error = self._imp.incr(c_key, c_key_len, delta, self.noreply, &result, &n_res)
             elif op == DECR_OP:
-                self.last_error = self._imp.decr(c_key, c_key_len, delta, self.noreply, &results, &n_res)
+                self.last_error = self._imp.decr(c_key, c_key_len, delta, self.noreply, &result, &n_res)
             else:
                 pass
 
         rv = None
-        if n_res == 1 and results[0] != NULL:
-            rv = results[0].value
+        if n_res == 1 and result != NULL:
+            rv = result.value
         with nogil:
             self._imp.destroyUnsignedResult()
         Py_DECREF(key)

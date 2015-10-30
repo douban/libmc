@@ -39,7 +39,7 @@ class PacketParser {
  protected:
   int start_state(err_code_t& err);
   bool canEndParse();
-  void processMessageResult(types::message_result_type tp);
+  void processMessageResult(message_result_type tp);
   void processLineResult(err_code_t& err);
 
 

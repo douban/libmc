@@ -98,7 +98,7 @@ class MemcachedProvider(object):
         return response
 
     def process_version(self, request):
-        return 'VERSION 1.0.24 \r\n'
+        return 'VERSION 1.0.24-shabby\r\n'
 
     def process_rest(self, request):
         print 'unexpected request: %s' % request
@@ -139,8 +139,8 @@ class Handler(SocketServer.BaseRequestHandler):
             if res is None:
                 memcached.shutdown()
                 return
-
-            time.sleep(BLOCKING_SECONDS)
+            if meth != 'version':
+                time.sleep(BLOCKING_SECONDS)
 
             n_sent = 0
             while n_sent != len(res):

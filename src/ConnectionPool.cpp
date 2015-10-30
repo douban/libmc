@@ -20,7 +20,6 @@ using douban::mc::keywords::k_NOREPLY;
 using douban::mc::hashkit::KetamaSelector;
 
 using douban::mc::types::RetrievalResult;
-using douban::mc::types::retrieval_result_t;
 
 namespace douban {
 namespace mc {
@@ -94,8 +93,8 @@ void ConnectionPool::disableConsistentFailover() {
 
 void ConnectionPool::dispatchStorage(op_code_t op,
                                       const char* const* keys, const size_t* keyLens,
-                                      const types::flags_t* flags, const types::exptime_t exptime,
-                                      const types::cas_unique_t* cas_uniques, const bool noreply,
+                                      const flags_t* flags, const exptime_t exptime,
+                                      const cas_unique_t* cas_uniques, const bool noreply,
                                       const char* const* vals, const size_t* val_lens,
                                       size_t nItems) {
 
@@ -260,7 +259,7 @@ void ConnectionPool::dispatchDeletion(const char* const* keys, const size_t* key
 
 void ConnectionPool::dispatchTouch(
     const char* const* keys, const size_t* keyLens,
-    const types::exptime_t exptime, const bool noreply, size_t nItems) {
+    const exptime_t exptime, const bool noreply, size_t nItems) {
 
   size_t i = 0, idx = 0;
   for (; i < nItems; ++i) {
@@ -484,7 +483,7 @@ next_fd: {}
 }
 
 
-void ConnectionPool::collectRetrievalResult(std::vector<types::retrieval_result_t*>& results) {
+void ConnectionPool::collectRetrievalResult(std::vector<retrieval_result_t*>& results) {
   for (std::vector<Connection*>::iterator it = m_activeConns.begin();
        it != m_activeConns.end(); ++it) {
     types::RetrievalResultList* rst = (*it)->getRetrievalResults();
@@ -502,7 +501,7 @@ void ConnectionPool::collectRetrievalResult(std::vector<types::retrieval_result_
 }
 
 
-void ConnectionPool::collectMessageResult(std::vector<types::message_result_t*>& results) {
+void ConnectionPool::collectMessageResult(std::vector<message_result_t*>& results) {
   for (std::vector<Connection*>::iterator it = m_activeConns.begin();
        it != m_activeConns.end(); ++it) {
     types::MessageResultList* rst = (*it)->getMessageResults();
@@ -514,11 +513,11 @@ void ConnectionPool::collectMessageResult(std::vector<types::message_result_t*>&
 }
 
 
-void ConnectionPool::collectBroadcastResult(std::vector<types::broadcast_result_t>& results) {
+void ConnectionPool::collectBroadcastResult(std::vector<broadcast_result_t>& results) {
   results.resize(m_nConns);
   for (size_t i = 0; i < m_nConns; ++i) {
     Connection* conn = m_conns + i;
-    types::broadcast_result_t* conn_result = &results[i];
+    broadcast_result_t* conn_result = &results[i];
     conn_result->host = const_cast<char*>(conn->name());
     types::LineResultList* rst = conn->getLineResults();
     conn_result->len = rst->size();
@@ -540,7 +539,7 @@ void ConnectionPool::collectBroadcastResult(std::vector<types::broadcast_result_
 }
 
 
-void ConnectionPool::collectUnsignedResult(std::vector<types::unsigned_result_t*>& results) {
+void ConnectionPool::collectUnsignedResult(std::vector<unsigned_result_t*>& results) {
   if (m_activeConns.size() == 1) {
     types::UnsignedResultList* numericRst =  m_activeConns.front()->getUnsignedResults();
     types::MessageResultList* msgRst = m_activeConns.front()->getMessageResults();
@@ -548,7 +547,7 @@ void ConnectionPool::collectUnsignedResult(std::vector<types::unsigned_result_t*
     if (numericRst->size() == 1) {
       results.push_back(&numericRst->front());
     } else if (msgRst->size() == 1) {
-      ASSERT(msgRst->front().type == types::MSG_NOT_FOUND);
+      ASSERT(msgRst->front().type_ == MSG_NOT_FOUND);
       results.push_back(NULL);
     }
   }

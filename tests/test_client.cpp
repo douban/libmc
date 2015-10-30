@@ -6,11 +6,6 @@
 #include "gtest/gtest.h"
 
 using douban::mc::Client;
-using douban::mc::types::flags_t;
-using douban::mc::types::exptime_t;
-using douban::mc::types::retrieval_result_t;
-using douban::mc::types::message_result_t;
-using douban::mc::types::unsigned_result_t;
 using douban::mc::io::DataBlock;
 using douban::mc::tests::newClient;
 
@@ -21,15 +16,6 @@ void hint() {
 
 TEST(test_client, del_get_set_get_del) {
   DataBlock::setMinCapacity(4);
-  const char* keys[] = {
-    "foo", "tuiche", "buzai"
-  };
-
-  const char* vals[] = {
-    "value of foo", "value of tuiche", "value of buzai"
-  };
-  size_t val_lens[] = {12, 15, 14};
-
   Client* client = newClient(1);
   if (client == NULL) {
     hint();
@@ -40,6 +26,16 @@ TEST(test_client, del_get_set_get_del) {
     flags_t flags[] = {0, 0, 0};
     size_t key_lens[] = {3, 6, 5};
     exptime_t exptime = 0;
+
+    const char* keys[] = {
+      "foo", "tuiche", "buzai"
+    };
+
+    const char* vals[] = {
+      "value of foo", "value of tuiche", "value of buzai"
+    };
+    size_t val_lens[] = {12, 15, 14};
+
 
     client->_delete(keys, key_lens, 0, 3, &m_results, &nResults);
     client->destroyMessageResult();
@@ -54,7 +50,7 @@ TEST(test_client, del_get_set_get_del) {
       ASSERT_TRUE(strncmp(r->key, keys[0], key_lens[0]) == 0 ||
           strncmp(r->key, keys[1], key_lens[1]) == 0 ||
           strncmp(r->key, keys[2], key_lens[2]) == 0);
-      ASSERT_EQ(r->type, douban::mc::types::MSG_STORED);
+      ASSERT_EQ(r->type_, MSG_STORED);
     }
     client->destroyMessageResult();
 
@@ -72,7 +68,7 @@ TEST(test_client, del_get_set_get_del) {
       ASSERT_TRUE(strncmp(r->key, keys[0], key_lens[0]) == 0 ||
           strncmp(r->key, keys[1], key_lens[1]) == 0 ||
           strncmp(r->key, keys[2], key_lens[2]) == 0);
-      ASSERT_EQ(r->type, douban::mc::types::MSG_DELETED);
+      ASSERT_EQ(r->type_, MSG_DELETED);
     }
     ASSERT_EQ(nResults, 3);
     client->destroyMessageResult();
@@ -82,20 +78,20 @@ TEST(test_client, del_get_set_get_del) {
 
 
 TEST(test_client, test_storage) {
-  const char* keys[] = {
-    "foo", "tuiche", "buzai"
-  };
-
-
-  const char* vals[] = {
-    "value of foo", "value of tuiche", "value of buzai"
-  };
-  size_t val_lens[] = {12, 15, 14};
-
   Client* client = newClient(1);
   if (client == NULL) {
     hint();
   } else {
+    const char* keys[] = {
+      "foo", "tuiche", "buzai"
+    };
+
+
+    const char* vals[] = {
+      "value of foo", "value of tuiche", "value of buzai"
+    };
+    size_t val_lens[] = {12, 15, 14};
+
     retrieval_result_t **r_results = NULL;
     message_result_t **m_results = NULL;
     size_t key_lens[] = {3, 6, 5};
@@ -110,42 +106,42 @@ TEST(test_client, test_storage) {
     // set foo
     client->set(keys, key_lens, flags, exptime, NULL, 0, vals, val_lens, 1, &m_results, &nResults);
     EXPECT_EQ(nResults, 1);
-    ASSERT_EQ(m_results[0]->type, douban::mc::types::MSG_STORED);
+    ASSERT_EQ(m_results[0]->type_, MSG_STORED);
     client->destroyMessageResult();
 
     // add tuiche
     client->add(keys + 1, key_lens + 1, flags + 1, exptime, NULL, 0,
         vals + 1, val_lens + 1, 1, &m_results, &nResults);
     EXPECT_EQ(nResults, 1);
-    ASSERT_EQ(m_results[0]->type, douban::mc::types::MSG_STORED);
+    ASSERT_EQ(m_results[0]->type_, MSG_STORED);
     client->destroyMessageResult();
 
     // add tuiche
     client->add(keys + 1, key_lens + 1, flags + 1, exptime, NULL, 0,
         vals + 1, val_lens + 1, 1, &m_results, &nResults);
     EXPECT_EQ(nResults, 1);
-    ASSERT_EQ(m_results[0]->type, douban::mc::types::MSG_NOT_STORED);
+    ASSERT_EQ(m_results[0]->type_, MSG_NOT_STORED);
     client->destroyMessageResult();
 
     // replace tuiche
     client->replace(keys + 1, key_lens + 1, flags + 1, exptime, NULL, 0,
         vals + 1, val_lens + 1, 1, &m_results, &nResults);
     EXPECT_EQ(nResults, 1);
-    ASSERT_EQ(m_results[0]->type, douban::mc::types::MSG_STORED);
+    ASSERT_EQ(m_results[0]->type_, MSG_STORED);
     client->destroyMessageResult();
 
     // replace buzai
     client->replace(keys + 2, key_lens + 2, flags + 2, exptime, NULL, 0,
         vals + 2, val_lens + 2, 1, &m_results, &nResults);
     EXPECT_EQ(nResults, 1);
-    ASSERT_EQ(m_results[0]->type, douban::mc::types::MSG_NOT_STORED);
+    ASSERT_EQ(m_results[0]->type_, MSG_NOT_STORED);
     client->destroyMessageResult();
 
     // prepend foo with value in tuiche
     client->prepend(keys, key_lens, flags, exptime, NULL, 0,
         vals + 1, val_lens + 1, 1, &m_results, &nResults);
     EXPECT_EQ(nResults, 1);
-    ASSERT_EQ(m_results[0]->type, douban::mc::types::MSG_STORED);
+    ASSERT_EQ(m_results[0]->type_, MSG_STORED);
     client->destroyMessageResult();
 
     client->get(keys, key_lens, 1, &r_results, &nResults);
@@ -160,7 +156,7 @@ TEST(test_client, test_storage) {
     client->append(keys + 1, key_lens + 1, flags + 1, exptime, NULL, 0,
         vals + 2, val_lens + 2, 1, &m_results, &nResults);
     EXPECT_EQ(nResults, 1);
-    ASSERT_EQ(m_results[0]->type, douban::mc::types::MSG_STORED);
+    ASSERT_EQ(m_results[0]->type_, MSG_STORED);
     client->destroyMessageResult();
 
     client->get(keys + 1, key_lens + 1, 1, &r_results, &nResults);
@@ -175,14 +171,14 @@ TEST(test_client, test_storage) {
     client->prepend(keys + 2, key_lens + 2, flags + 2, exptime, NULL, 0,
         vals + 2, val_lens + 2, 1, &m_results, &nResults);
     EXPECT_EQ(nResults, 1);
-    ASSERT_EQ(m_results[0]->type, douban::mc::types::MSG_NOT_STORED);
+    ASSERT_EQ(m_results[0]->type_, MSG_NOT_STORED);
     client->destroyMessageResult();
 
     // append buzai
     client->append(keys + 2, key_lens + 2, flags + 2, exptime, NULL, 0,
         vals + 2, val_lens + 2, 1, &m_results, &nResults);
     EXPECT_EQ(nResults, 1);
-    ASSERT_EQ(m_results[0]->type, douban::mc::types::MSG_NOT_STORED);
+    ASSERT_EQ(m_results[0]->type_, MSG_NOT_STORED);
     client->destroyMessageResult();
 
     delete client;
@@ -194,11 +190,11 @@ TEST(test_client, test_version) {
   if (client == NULL) {
     hint();
   } else {
-    douban::mc::types::broadcast_result_t* results = NULL;
+    broadcast_result_t* results = NULL;
     size_t nHosts = 0;
     client->version(&results, &nHosts);
     for (size_t i = 0; i < nHosts; i++) {
-      douban::mc::types::broadcast_result_t* r = results + i;
+      broadcast_result_t* r = results + i;
       ASSERT_TRUE(r->len == 1);
       ASSERT_TRUE(r->line_lens[0]);
       char c = r->lines[0][r->line_lens[0] - 1];
@@ -219,11 +215,11 @@ TEST(test_client, test_stats) {
   if (client == NULL) {
     hint();
   } else {
-    douban::mc::types::broadcast_result_t* results = NULL;
+    broadcast_result_t* results = NULL;
     size_t nHosts = 0;
     client->stats(&results, &nHosts);
     for (size_t i = 0; i < nHosts; i++) {
-      douban::mc::types::broadcast_result_t* r = results + i;
+      broadcast_result_t* r = results + i;
       ASSERT_TRUE(strlen(r->host) > 0);
       // printf("host: %s\n", r->host);
       ASSERT_TRUE(r->len > 10);
@@ -239,19 +235,6 @@ TEST(test_client, test_stats) {
 
 
 TEST(test_client, test_touch) {
-  const char* keys[] = {
-    "foo", "tuiche", "buzai"
-  };
-
-  size_t key_lens[] = {3, 6, 5};
-
-  flags_t flags[] = {0, 0, 0};
-
-  const char* vals[] = {
-    "value of foo", "value of tuiche", "value of buzai"
-  };
-  size_t val_lens[] = {12, 15, 14};
-
   Client* client = newClient(1);
   if (client == NULL) {
     hint();
@@ -259,6 +242,19 @@ TEST(test_client, test_touch) {
     message_result_t **m_results = NULL;
     size_t nResults = 0;
     exptime_t exptime = 0;
+
+    const char* keys[] = {
+      "foo", "tuiche", "buzai"
+    };
+
+    size_t key_lens[] = {3, 6, 5};
+
+    flags_t flags[] = {0, 0, 0};
+
+    const char* vals[] = {
+      "value of foo", "value of tuiche", "value of buzai"
+    };
+    size_t val_lens[] = {12, 15, 14};
 
     client->_delete(keys, key_lens, 0, 3, &m_results, &nResults);
     client->destroyMessageResult();
@@ -271,9 +267,9 @@ TEST(test_client, test_touch) {
     for (size_t i = 0; i < nResults; i++) {
       message_result_t* r = m_results[i];
       if (strncmp(r->key, keys[0], key_lens[0]) == 0) {
-        ASSERT_EQ(r->type, douban::mc::types::MSG_TOUCHED);
+        ASSERT_EQ(r->type_, MSG_TOUCHED);
       } else {
-        ASSERT_EQ(r->type, douban::mc::types::MSG_NOT_FOUND);
+        ASSERT_EQ(r->type_, MSG_NOT_FOUND);
       }
     }
     client->destroyMessageResult();
@@ -284,28 +280,28 @@ TEST(test_client, test_touch) {
 
 
 TEST(test_client, test_incr_decr) {
-  const char* keys[] = {
-    "foo", "tuiche", "buzai"
-  };
-
-  size_t key_lens[] = {3, 6, 5};
-
-  flags_t flags[] = {0, 0, 0};
-
-  const char* vals[] = {
-    "99", "101", "100"
-  };
-  uint64_t deltas[] = {
-    1, 1, 1
-  };
-  size_t val_lens[] = {2, 3, 3};
-
   Client* client = newClient(1);
   if (client == NULL) {
     hint();
   } else {
+    const char* keys[] = {
+      "foo", "tuiche", "buzai"
+    };
+
+    size_t key_lens[] = {3, 6, 5};
+
+    flags_t flags[] = {0, 0, 0};
+
+    const char* vals[] = {
+      "99", "101", "100"
+    };
+    uint64_t deltas[] = {
+      1, 1, 1
+    };
+    size_t val_lens[] = {2, 3, 3};
+
     message_result_t **m_results = NULL;
-    unsigned_result_t **u_results = NULL;
+    unsigned_result_t *u_results = NULL;
 
     size_t nResults = 0;
     exptime_t exptime = 0;
@@ -343,16 +339,16 @@ TEST(test_client, test_incr_decr) {
 
 
 TEST(client, noreply) {
-  const char* keys[] = {
-    "foo", "tuiche", "buzai"
-  };
-
-  size_t key_lens[] = {3, 6, 5};
-
   Client* client = newClient(1);
   if (client == NULL) {
     hint();
   } else {
+    const char* keys[] = {
+      "foo", "tuiche", "buzai"
+    };
+
+    size_t key_lens[] = {3, 6, 5};
+
     message_result_t **m_results = NULL;
 
     size_t nResults = 0;

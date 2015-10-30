@@ -20,11 +20,7 @@ stack = []
 def mc_sleep():
     print 'begin mc sleep'
     stack.append('mc_sleep_begin')
-    for i in range(3):
-        if mc.set('foo', 'bar'):
-            break
-    else:
-        raise Exception("Run `python slow_memcached_server.py` first")
+    assert mc.set('foo', 'bar')
     stack.append('mc_sleep_end')
     print 'end mc sleep'
 
@@ -39,6 +35,7 @@ def singer():
 
 
 def main():
+    assert len(mc.version()) == 1, "Run `python slow_memcached_server.py` first"
     mc_sleeper = gevent.spawn(mc_sleep)
     xmas_singer = gevent.spawn(singer)
     gevent.joinall([xmas_singer, mc_sleeper])

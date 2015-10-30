@@ -26,6 +26,12 @@ Setup:
  __email__ = ""
  __date__ = ""
 
+or
+
+ _Version = ""
+ _Author = ""
+ _Email = ""
+ _Date = ""
 """
 
 import sys
@@ -50,7 +56,8 @@ def main():
     for line in sys.stdin:
         if not clean:
             subst_list = {
-                # '--dirty' could be added to the following, too, but is not supported everywhere
+                # '--dirty' could be added to the following, too,
+                # but is not supported everywhere
                 "version": subprocess.check_output([
                     'git', 'describe', '--always', '--tags'
                 ]),
@@ -68,11 +75,17 @@ def main():
                 v = re.sub(r'[\n\r\t"\']', "", v)
                 rexp = "__%s__\s*=[\s'\"]+" % k
                 line = re.sub(rexp, "__%s__ = \"%s\"\n" % (k, v), line)
+                rexp = "_%s\s*=[\s'\"]+" % k.capitalize()
+                line = re.sub(
+                    rexp, "_%s = \"%s\"\n" % (k.capitalize(), v), line
+                )
             sys.stdout.write(line)
         else:
             for k in subst_list:
                 rexp = "__%s__\s*=.*" % k
                 line = re.sub(rexp, "__%s__ = \"\"" % k, line)
+                rexp = "_%s\s*=.*" % k.capitalize()
+                line = re.sub(rexp, "_%s = \"\"" % k.capitalize(), line)
             sys.stdout.write(line)
 
 

@@ -39,12 +39,12 @@ def test_hard_server_error():
     normal_port = 21211
     mc = libmc.Client(["127.0.0.1:%d" % normal_port])
 
-    RETRY_TIMEOUT = 10
+    RETRY_TIMEOUT = 20
     mc.config(libmc.MC_RETRY_TIMEOUT, RETRY_TIMEOUT)
 
     assert mc.set('foo', 1)
     memcached_server_ctl('stop', normal_port)
-    assert not mc.set('foo', 1)  # still fail
+    assert not mc.set('foo', 1)  # fail
     memcached_server_ctl('start', normal_port)
     assert not mc.set('foo', 1)  # still fail
     time.sleep(RETRY_TIMEOUT + 1)
