@@ -35,16 +35,14 @@
 #define MC_NI_MAXSERV 32
 #endif
 
-#ifndef MSG_MORE
-#define MC_MSG_MORE 0
-#else
+#ifdef MSG_MORE
 #define MC_MSG_MORE MSG_MORE
+#else
+#define MC_MSG_MORE 0
 #endif
 
 
 #define MIN_DATABLOCK_CAPACITY 8192
-#define MC_BUFFER_SIZE 8192
-#define RECV_BUFFER_SIZE 8192
 #define MIN(A, B) (((A) > (B)) ? (B) : (A))
 #define MAX(A, B) (((A) < (B)) ? (B) : (A))
 #define CSTR(STR) (const_cast<char*>(STR))
