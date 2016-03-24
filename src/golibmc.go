@@ -39,16 +39,44 @@ var hashFunctionMapping = map[int]C.hash_function_options_t{
 }
 
 var errorMessage = map[C.int]string{
-	C.RET_SEND_ERR:              "send_error",
-	C.RET_RECV_ERR:              "recv_error",
-	C.RET_CONN_POLL_ERR:         "conn_poll_error",
-	C.RET_POLL_TIMEOUT_ERR:      "poll_timeout_error",
-	C.RET_POLL_ERR:              "poll_error",
-	C.RET_MC_SERVER_ERR:         "server_error",
+	C.RET_SEND_ERR:         "send_error",
+	C.RET_RECV_ERR:         "recv_error",
+	C.RET_CONN_POLL_ERR:    "conn_poll_error",
+	C.RET_POLL_TIMEOUT_ERR: "poll_timeout_error",
+	C.RET_POLL_ERR:         "poll_error",
+	C.RET_MC_SERVER_ERR:    "server_error",
+
 	C.RET_PROGRAMMING_ERR:       "programming_error",
 	C.RET_INVALID_KEY_ERR:       "invalid_key_error",
 	C.RET_INCOMPLETE_BUFFER_ERR: "incomplete_buffer_error",
 	C.RET_OK:                    "ok",
+}
+
+// Credits to:
+// https://github.com/bradfitz/gomemcache/blob/master/memcache/memcache.go
+
+var (
+	// ErrCacheMiss means that a Get failed because the item wasn't present.
+	ErrCacheMiss = errors.New("libmc: cache miss")
+
+	// ErrCASConflict means that a CompareAndSwap call failed due to the
+	// cached value being modified between the Get and the CompareAndSwap.
+	// If the cached value was simply evicted rather than replaced,
+	// ErrNotStored will be returned instead.
+	ErrCASConflict = errors.New("libmc: compare-and-swap conflict")
+
+	// ErrNotStored means that a conditional write operation (i.e. Add or
+	// CompareAndSwap) failed because the condition was not satisfied.
+	ErrNotStored = errors.New("libmc: item not stored")
+
+	// ErrMalformedKey is returned when an invalid key is used.
+	// Keys must be at maximum 250 bytes long, ASCII, and not
+	// contain whitespace or control characters.
+	ErrMalformedKey = errors.New("malformed: key is too long or contains invalid characters")
+)
+
+func networkError(msg string) error {
+	return errors.New("libmc: network error(" + msg + ")")
 }
 
 // Default memcached port
@@ -322,12 +350,23 @@ func (client *Client) store(cmd string, item *Item) error {
 	if errCode == 0 {
 		if client.noreply {
 			return nil
-		} else if int(n) == 1 && (*rst).type_ == C.MSG_STORED {
-			return nil
+		} else if int(n) == 1 {
+			switch (*rst).type_ {
+			case C.MSG_STORED:
+				return nil
+			case C.MSG_NOT_STORED:
+				return ErrNotStored
+			case C.MSG_EXISTS:
+				return ErrCASConflict
+			case C.MSG_NOT_FOUND:
+				return ErrCacheMiss
+			}
 		}
+	} else if errCode == C.RET_INVALID_KEY_ERR {
+		return ErrMalformedKey
 	}
 
-	return errors.New(errorMessage[errCode])
+	return networkError(errorMessage[errCode])
 }
 
 // Add is a storage command, return without error only when the key is empty
@@ -356,7 +395,7 @@ func (client *Client) Set(item *Item) error {
 }
 
 // SetMulti will set multi values at once
-func (client *Client) SetMulti(items []*Item) ([]string, error) {
+func (client *Client) SetMulti(items []*Item) (failedKeys []string, err error) {
 	client.lock()
 	defer client.unlock()
 
@@ -412,7 +451,12 @@ func (client *Client) SetMulti(items []*Item) ([]string, error) {
 	if errCode == 0 {
 		return []string{}, nil
 	}
-	err := errors.New(errorMessage[errCode])
+
+	if errCode == C.RET_INVALID_KEY_ERR {
+		err = ErrMalformedKey
+	} else {
+		err = networkError(errorMessage[errCode])
+	}
 
 	sr := unsafe.Sizeof(*results)
 	storedKeySet := make(map[string]struct{})
@@ -426,7 +470,7 @@ func (client *Client) SetMulti(items []*Item) ([]string, error) {
 			unsafe.Pointer(uintptr(unsafe.Pointer(results)) + sr),
 		)
 	}
-	failedKeys := make([]string, len(items)-len(storedKeySet))
+	failedKeys = make([]string, len(items)-len(storedKeySet))
 	i := 0
 	for _, item := range items {
 		if _, contains := storedKeySet[item.Key]; contains {
@@ -466,12 +510,18 @@ func (client *Client) Delete(key string) error {
 	if errCode == 0 {
 		if client.noreply {
 			return nil
-		} else if int(n) == 1 && ((*rst).type_ == C.MSG_DELETED || (*rst).type_ == C.MSG_NOT_FOUND) {
-			return nil
+		} else if int(n) == 1 {
+			if (*rst).type_ == C.MSG_DELETED {
+				return nil
+			} else if (*rst).type_ == C.MSG_NOT_FOUND {
+				return ErrCacheMiss
+			}
 		}
+	} else if errCode == C.RET_INVALID_KEY_ERR {
+		return ErrMalformedKey
 	}
 
-	return errors.New(errorMessage[errCode])
+	return networkError(errorMessage[errCode])
 }
 
 // DeleteMulti will delete multi keys at once
@@ -513,8 +563,14 @@ func (client *Client) DeleteMulti(keys []string) (failedKeys []string, err error
 	)
 	defer C.client_destroy_message_result(client._imp)
 
-	if errCode == 0 {
+	switch errCode {
+	case 0:
+		err = nil
 		return
+	case C.RET_INVALID_KEY_ERR:
+		err = ErrMalformedKey
+	default:
+		err = networkError(errorMessage[errCode])
 	}
 
 	if client.noreply {
@@ -534,8 +590,9 @@ func (client *Client) DeleteMulti(keys []string) (failedKeys []string, err error
 			unsafe.Pointer(uintptr(unsafe.Pointer(results)) + sr),
 		)
 	}
-	err = errors.New(errorMessage[errCode])
+	err = networkError(errorMessage[errCode])
 	failedKeys = make([]string, len(rawKeys)-len(deletedKeySet))
+
 	i := 0
 	for _, key := range rawKeys {
 		if _, contains := deletedKeySet[key]; contains {
@@ -570,11 +627,16 @@ func (client *Client) getOrGets(cmd string, key string) (item *Item, err error) 
 	defer C.client_destroy_retrieval_result(client._imp)
 
 	if errCode != 0 {
-		err = errors.New(errorMessage[errCode])
+		if errCode == C.RET_INVALID_KEY_ERR {
+			err = ErrMalformedKey
+		} else {
+			err = networkError(errorMessage[errCode])
+		}
 		return
 	}
 
 	if int(n) == 0 {
+		err = ErrCacheMiss
 		return
 	}
 
@@ -634,9 +696,17 @@ func (client *Client) GetMulti(keys []string) (rv map[string]*Item, err error) {
 	errCode := C.client_get(client._imp, &cKeys[0], &cKeyLens[0], cNKeys, &rst, &n)
 	defer C.client_destroy_retrieval_result(client._imp)
 
-	if errCode != 0 {
-		err = errors.New(errorMessage[errCode])
-		return
+	switch errCode {
+	case 0:
+		err = nil
+	case C.RET_INVALID_KEY_ERR:
+		err = ErrMalformedKey
+	default:
+		err = networkError(errorMessage[errCode])
+	}
+
+	if err == nil && len(keys) != int(n) {
+		err = ErrCacheMiss
 	}
 
 	if int(n) == 0 {
@@ -678,14 +748,21 @@ func (client *Client) Touch(key string, expiration int64) error {
 	)
 	defer C.client_destroy_message_result(client._imp)
 
-	if errCode == 0 {
+	switch errCode {
+	case 0:
 		if client.noreply {
 			return nil
-		} else if int(n) == 1 && (*rst).type_ == C.MSG_TOUCHED {
-			return nil
+		} else if int(n) == 1 {
+			if (*rst).type_ == C.MSG_TOUCHED {
+				return nil
+			} else if (*rst).type_ == C.MSG_NOT_FOUND {
+				return ErrCacheMiss
+			}
 		}
+	case C.RET_INVALID_KEY_ERR:
+		return ErrMalformedKey
 	}
-	return errors.New(errorMessage[errCode])
+	return networkError(errorMessage[errCode])
 }
 
 func (client *Client) incrOrDecr(cmd string, key string, delta uint64) (uint64, error) {
@@ -723,11 +800,17 @@ func (client *Client) incrOrDecr(cmd string, key string, delta uint64) (uint64, 
 	if errCode == 0 {
 		if client.noreply {
 			return 0, nil
-		} else if int(n) == 1 && rst != nil {
+		} else if int(n) == 1 {
+			if rst == nil {
+				return 0, ErrCacheMiss
+			}
 			return uint64(rst.value), nil
 		}
+	} else if errCode == C.RET_INVALID_KEY_ERR {
+		return 0, ErrMalformedKey
 	}
-	return 0, errors.New(errorMessage[errCode])
+
+	return 0, networkError(errorMessage[errCode])
 }
 
 // Incr will increase the value in key by delta
@@ -765,7 +848,7 @@ func (client *Client) Version() (map[string]string, error) {
 	}
 
 	if errCode != 0 {
-		return rv, errors.New(errorMessage[errCode])
+		return rv, networkError(errorMessage[errCode])
 	}
 
 	return rv, nil
@@ -812,7 +895,7 @@ func (client *Client) Stats() (map[string](map[string]string), error) {
 	}
 
 	if errCode != 0 {
-		return rv, errors.New(errorMessage[errCode])
+		return rv, networkError(errorMessage[errCode])
 	}
 
 	return rv, nil
@@ -829,5 +912,5 @@ func (client *Client) Quit() error {
 	if errCode == C.RET_CONN_POLL_ERR || errCode == C.RET_RECV_ERR {
 		return nil
 	}
-	return errors.New(errorMessage[errCode])
+	return networkError(errorMessage[errCode])
 }

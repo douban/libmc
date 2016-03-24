@@ -48,7 +48,7 @@ func TestInputServer(t *testing.T) {
 
 	mc := New(servers, noreply, prefix, hashFunc, failover, disableLock)
 	if mc != nil {
-		t.Error()
+		t.Error(mc)
 	}
 }
 
@@ -66,7 +66,7 @@ func testStats(mc *Client, t *testing.T) {
 	}
 
 	if m, _ := statsDict[LocalMC]["version"]; len(m) == 0 {
-		t.Error()
+		t.Error(err)
 	}
 }
 
@@ -76,22 +76,22 @@ func TestPrefix(t *testing.T) {
 	c2 := Client{prefix: testPrefix}
 	key := "foo"
 
-	if c1.addPrefix(key) != key {
-		t.Error()
+	if x := c1.addPrefix(key); x != key {
+		t.Error(x)
 	}
-	if c1.removePrefix(key) != key {
-		t.Error()
+	if x := c1.removePrefix(key); x != key {
+		t.Error(x)
 	}
 
 	key2 := strings.Join([]string{key, c2.prefix}, "")
 	for _, key := range []string{key, key2} {
 
 		prefixedKey := c2.addPrefix(key)
-		if prefixedKey != strings.Join([]string{c2.prefix, key}, "") {
-			t.Error()
+		if x := strings.Join([]string{c2.prefix, key}, ""); x != prefixedKey {
+			t.Error(x)
 		}
-		if c2.removePrefix(prefixedKey) != key {
-			t.Error()
+		if x := c2.removePrefix(prefixedKey); x != key {
+			t.Error(x)
 		}
 	}
 
@@ -103,16 +103,16 @@ func TestPrefix(t *testing.T) {
 
 	for _, keyTmpl := range keyTmpls {
 		key := fmt.Sprintf(keyTmpl, c2.prefix)
-		if key != c2.removePrefix(c2.addPrefix(key)) {
-			t.Error()
+		if x := c2.removePrefix(c2.addPrefix(key)); key != x {
+			t.Error(x)
 		}
 	}
 }
 
 func TestGetServerAddress(t *testing.T) {
 	mc := newSimpleClient(1)
-	if mc.GetServerAddressByKey("key") != LocalMC {
-		t.Error()
+	if addr := mc.GetServerAddressByKey("key"); addr != LocalMC {
+		t.Error(addr)
 	}
 
 	// test basic ketama
@@ -238,12 +238,12 @@ func testSetNGet(mc *Client, t *testing.T) {
 	}
 
 	val, err = mc.Get(key)
-	if !(val == nil && err == nil) {
+	if !(val == nil && err == ErrCacheMiss) {
 		t.Error(ErrorGetAfterSet)
 	}
 
 	dct, err = mc.GetMulti([]string{key})
-	if !(len(dct) == 0 && err == nil) {
+	if !(len(dct) == 0 && err == ErrCacheMiss) {
 		t.Error(ErrorGetAfterSet)
 	}
 }
@@ -300,15 +300,15 @@ func testSetMultiNGetMulti(mc *Client, t *testing.T) {
 			t.Error(ErrorGetAfterSet)
 		}
 
-		if !strings.HasPrefix(string(itemGot.Value), "V") {
-			t.Error()
+		if x := string(itemGot.Value); !strings.HasPrefix(x, "V") {
+			t.Error(x)
 		}
 	}
 	// Delete Values and Check Again
 	mc.DeleteMulti(keys)
 	itemsMap, err := mc.GetMulti(keys)
-	if !(len(itemsMap) == 0 && err == nil) {
-		t.Error()
+	if !(len(itemsMap) == 0 && err == ErrCacheMiss) {
+		t.Error(err)
 	}
 }
 
@@ -329,21 +329,21 @@ func testIncrNDecr(mc *Client, t *testing.T) {
 	}
 	mc.Set(item)
 	if val, err := mc.Incr(key, 1); !(val == 100 && err == nil) {
-		t.Error()
+		t.Error(err)
 	}
 
 	if val, err := mc.Decr(key, 1); !(val == 99 && err == nil) {
-		t.Error()
+		t.Error(err)
 	}
 
 	mc.Delete(key)
 
 	if val, err := mc.Incr(key, 1); !(val == 0 && err != nil) {
-		t.Error()
+		t.Error(err)
 	}
 
 	if val, err := mc.Decr(key, 1); !(val == 0 && err != nil) {
-		t.Error()
+		t.Error(err)
 	}
 }
 
@@ -363,7 +363,7 @@ func testLargeValue(mc *Client, t *testing.T) {
 		Expiration: 0,
 	}
 	if err := mc.Set(item); err == nil {
-		t.Error()
+		t.Error(err)
 	}
 }
 
@@ -381,24 +381,37 @@ func testCasAndGets(mc *Client, t *testing.T) {
 	item := &Item{Key: key, Value: val}
 	err := mc.Set(item)
 	if err != nil {
-		t.Error()
+		t.Error(err)
 	}
 	item2, err := mc.Gets(key)
 	if item2 == nil || err != nil {
-		t.Error()
+		t.Error(err)
 	}
 	(*item).Value = val2
 	mc.Set(item)
 	item3, err := mc.Gets(key)
 	if item3 == nil || err != nil {
-		t.Error()
+		t.Error(err)
 	}
 	if string((*item2).Value) != string(val) ||
 		string((*item3).Value) != string(val2) {
-		t.Error()
+		t.Error(err)
 	}
 	if (*item2).casid == (*item3).casid {
-		t.Error()
+		t.Error(err)
+	}
+
+	item3.Value = []byte("VVV")
+	err = mc.Cas(item3)
+	if err != nil {
+		t.Error(err)
+	}
+
+	item3.Key = "not_existed_key"
+	mc.Delete(item3.Key)
+	err = mc.Cas(item3)
+	if err != ErrCacheMiss {
+		t.Error(err)
 	}
 }
 
@@ -419,12 +432,12 @@ func testNoreploy(mc *Client, t *testing.T) {
 		Expiration: 0,
 	}
 	if err := mc.Set(item); err != nil {
-		t.Error()
+		t.Error(err)
 	}
 
 	itemGot, err := mc.Gets(key)
 	if err != nil || string(itemGot.Value) != value {
-		t.Error()
+		t.Error(err)
 	}
 	(*item).casid = itemGot.casid
 	value2 := "22"
@@ -437,7 +450,7 @@ func testNoreploy(mc *Client, t *testing.T) {
 
 	itemGot, err = mc.Get(key)
 	if err != nil || string(itemGot.Value) != value2 {
-		t.Error()
+		t.Error(err)
 	}
 
 	val3, err := mc.Incr(key, 10)
@@ -447,22 +460,22 @@ func testNoreploy(mc *Client, t *testing.T) {
 
 	itemGot, err = mc.Gets(key)
 	if err != nil || string(itemGot.Value) != "32" {
-		t.Error()
+		t.Error(err)
 	}
 
 	val4, err := mc.Decr(key, 12)
 	if err != nil || val4 != 0 {
-		t.Error()
+		t.Error(err)
 	}
 
 	itemGot, err = mc.Gets(key)
 	if err != nil || string(itemGot.Value) != "20" {
-		t.Error()
+		t.Error(err)
 	}
 
 	err = mc.Delete(key)
 	if err != nil {
-		t.Error()
+		t.Error(err)
 	}
 }
 
@@ -484,31 +497,31 @@ func testTouch(mc *Client, t *testing.T) {
 	// Touch -1
 	mc.Set(item)
 	if itemGot, err := mc.Get(key); err != nil || string(itemGot.Value) != value {
-		t.Error()
+		t.Error(err)
 	}
 
 	if err := mc.Touch(key, -1); err != nil {
-		t.Error()
+		t.Error(err)
 	}
 
-	if itemGot, err := mc.Get(key); err != nil || itemGot != nil {
-		t.Error()
+	if itemGot, err := mc.Get(key); err != ErrCacheMiss || itemGot != nil {
+		t.Error(err)
 	}
 
 	// Touch
 	mc.Set(item)
 	if itemGot, err := mc.Get(key); err != nil || string(itemGot.Value) != value {
-		t.Error()
+		t.Error(err)
 	}
 	if err := mc.Touch(key, 1); err != nil {
-		t.Error()
+		t.Error(err)
 	}
 	if itemGot, err := mc.Get(key); err != nil || string(itemGot.Value) != value {
-		t.Error()
+		t.Error(err)
 	}
 	time.Sleep(1000 * time.Millisecond)
-	if itemGot, err := mc.Get(key); err != nil || itemGot != nil {
-		t.Error()
+	if itemGot, err := mc.Get(key); err != ErrCacheMiss || itemGot != nil {
+		t.Error(err)
 	}
 }
 
@@ -527,19 +540,19 @@ func testAdd(mc *Client, t *testing.T) {
 	}
 	mc.Delete(key)
 	if err := mc.Add(item); err != nil {
-		t.Error()
+		t.Error(err)
 	}
 	if itemGot, err := mc.Get(key); err != nil || string(itemGot.Value) != valueToAdd {
-		t.Error()
+		t.Error(err)
 	}
-	if err := mc.Add(item); err == nil {
-		t.Error()
+	if err := mc.Add(item); err != ErrNotStored {
+		t.Error(err)
 	}
 	key2 := "test_add2"
 	item.Key = key2
 	mc.Delete(key2)
 	if err := mc.Add(item); err != nil {
-		t.Error()
+		t.Error(err)
 	}
 }
 
@@ -558,21 +571,21 @@ func testReplace(mc *Client, t *testing.T) {
 	}
 	mc.Delete(key)
 
-	if err := mc.Replace(item); err == nil {
-		t.Error()
+	if err := mc.Replace(item); err != ErrNotStored {
+		t.Error(err)
 	}
 	item.Value = []byte("b")
 	if err := mc.Set(item); err != nil {
-		t.Error()
+		t.Error(err)
 	}
 	item.Value = []byte("a")
 
 	if err := mc.Replace(item); err != nil {
-		t.Error()
+		t.Error(err)
 	}
 
 	if itemGot, err := mc.Get(key); err != nil || string(itemGot.Value) != "a" {
-		t.Error()
+		t.Error(err)
 	}
 }
 
@@ -594,27 +607,27 @@ func testPrepend(mc *Client, t *testing.T) {
 		Value: []byte(value),
 	}
 	if err := mc.Prepend(item); err == nil {
-		t.Error()
+		t.Error(err)
 	}
 
 	item.Value = []byte(value2)
 	if err := mc.Set(item); err != nil {
-		t.Error()
+		t.Error(err)
 	}
 
 	item.Value = []byte(value)
 	if err := mc.Prepend(item); err != nil {
-		t.Error()
+		t.Error(err)
 	}
 
 	item.Value = []byte(value3)
 	if err := mc.Prepend(item); err != nil {
-		t.Error()
+		t.Error(err)
 	}
 
 	itemGot, err := mc.Get(key)
 	if !(err == nil && string(itemGot.Value) == value3+value) {
-		t.Error()
+		t.Error(err)
 	}
 }
 
@@ -636,22 +649,22 @@ func testAppend(mc *Client, t *testing.T) {
 		Value: []byte(value),
 	}
 	if err := mc.Append(item); err == nil {
-		t.Error()
+		t.Error(err)
 	}
 
 	item.Value = []byte(value2)
 	if err := mc.Set(item); err != nil {
-		t.Error()
+		t.Error(err)
 	}
 
 	item.Value = []byte(value)
 	if err := mc.Append(item); err != nil {
-		t.Error()
+		t.Error(err)
 	}
 
 	item.Value = []byte(value3)
 	if err := mc.Append(item); err != nil {
-		t.Error()
+		t.Error(err)
 	}
 
 	itemGot, err := mc.Get(key)
@@ -671,7 +684,7 @@ func TestSpecialItems(t *testing.T) {
 func testSpecialItems(mc *Client, t *testing.T) {
 	key := "a\r\nb"
 	if err := mc.Delete(key); err == nil {
-		t.Error()
+		t.Error(err)
 	}
 	value := ""
 	item := &Item{
@@ -679,7 +692,7 @@ func testSpecialItems(mc *Client, t *testing.T) {
 		Value: []byte(value),
 	}
 	if err := mc.Set(item); err == nil {
-		t.Error()
+		t.Error(err)
 	}
 }
 
@@ -702,41 +715,41 @@ func testInjection(mc *Client, t *testing.T) {
 		Expiration: 0,
 	}
 	if err := mc.Set(item); err != nil {
-		t.Error()
+		t.Error(err)
 	}
 
 	item.Key = invalidKey
 	if err := mc.Set(item); err == nil {
-		t.Error()
+		t.Error(err)
 	}
 
 	item.Value = []byte("set injected 0 3600 10\r\n1234567890")
 	if err := mc.Set(item); err == nil {
-		t.Error()
+		t.Error(err)
 	}
 
 	it, err := mc.Get("injected")
-	if it != nil || err != nil {
-		t.Error()
+	if it != nil || err != ErrCacheMiss {
+		t.Error(err)
 	}
 
 	item.Key = "key1"
 	item.Value = []byte("1234567890")
 
 	if err := mc.Set(item); err != nil {
-		t.Error()
+		t.Error(err)
 	}
 
 	item.Key = "key1 0"
 	item.Value = []byte("123456789012345678901234567890\r\nset injected 0 3600 3\r\nINJ\r\n")
 
 	if err := mc.Set(item); err == nil {
-		t.Error()
+		t.Error(err)
 	}
 
 	item, err = mc.Get("injected")
-	if item != nil || err != nil {
-		t.Error()
+	if item != nil || err != ErrCacheMiss {
+		t.Error(err)
 	}
 }
 
@@ -758,8 +771,8 @@ func testMaxiov(mc *Client, t *testing.T) {
 
 	mc.DeleteMulti(keys)
 	itemsGot, err := mc.GetMulti(keys)
-	if len(itemsGot) != 0 || err != nil {
-		t.Error()
+	if len(itemsGot) != 0 || err != ErrCacheMiss {
+		t.Error(err)
 	}
 }
 
@@ -780,35 +793,35 @@ func testQuit(mc, mc2 *Client, t *testing.T) {
 		Flags:      0,
 		Expiration: 0,
 	}
-	if err := mc.Delete(key); err != nil {
-		t.Error()
+	if err := mc.Delete(key); err != nil && err != ErrCacheMiss {
+		t.Error(err)
 	}
 	if err := mc.Set(item); err != nil {
-		t.Error()
+		t.Error(err)
 	}
 	if err := mc2.Delete(key); err != nil {
-		t.Error()
+		t.Error(err)
 	}
 	if err := mc2.Set(item); err != nil {
-		t.Error()
+		t.Error(err)
 	}
 	if versions, err := mc.Version(); err != nil || len(versions) == 0 {
-		t.Error()
+		t.Error(err)
 	}
 	if versions, err := mc2.Version(); err != nil || len(versions) == 0 {
-		t.Error()
+		t.Error(err)
 	}
 
 	st1, err1 := mc.Stats()
 	st2, err2 := mc2.Stats()
 	if err1 != nil || err2 != nil {
-		t.Error()
+		t.Error(err1, err2)
 	}
 
 	nc1, err1 := strconv.Atoi(st1[LocalMC]["curr_connections"])
 	nc2, err2 := strconv.Atoi(st2[LocalMC]["curr_connections"])
 	if err1 != nil || err2 != nil {
-		t.Error()
+		t.Error(err1, err2)
 	}
 	if nc1 != nc2 {
 		t.Errorf("nc1: %d, nc2: %d", nc1, nc2)
@@ -828,7 +841,7 @@ func testQuit(mc, mc2 *Client, t *testing.T) {
 	// back to life immediately
 	itemGot, err := mc.Get(key)
 	if err != nil || string(itemGot.Value) != value {
-		t.Error()
+		t.Error(err)
 	}
 }
 

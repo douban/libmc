@@ -256,7 +256,7 @@ int PacketParser::start_state(err_code_t& err) {
   }
   // log_info("start_state with %c", c1);
 
-
+#ifndef NDEBUG
 #define EXPECT_BYTES(S, N) \
   do { \
     m_buffer_reader->expectBytes(err, (S), (N)); \
@@ -264,6 +264,15 @@ int PacketParser::start_state(err_code_t& err) {
       return 0; \
     } \
   } while (0)
+#else
+#define EXPECT_BYTES(S, N) \
+  do { \
+    m_buffer_reader->skipBytes(err, (N)); \
+    if (err != RET_OK) { \
+      return 0; \
+    } \
+  } while (0)
+#endif
 
   switch (c1) {
     case 'V':
@@ -433,6 +442,8 @@ int PacketParser::start_state(err_code_t& err) {
       break;
   }
   return 0;
+
+#undef EXPECT_BYTES
 }
 
 

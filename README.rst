@@ -200,6 +200,11 @@ Contributors
 -  `@lembacon <https://github.com/lembacon>`__
 -  `@seansay <https://github.com/seansay>`__
 
+Documentation
+-------------
+
+https://github.com/douban/libmc/wiki
+
 LICENSE
 -------
 
