@@ -199,6 +199,7 @@ Contributors
 -  `@windreamer <https://github.com/windreamer>`__
 -  `@lembacon <https://github.com/lembacon>`__
 -  `@seansay <https://github.com/seansay>`__
+-  `@mosasiru <https://github.com/mosasiru>`__
 
 Documentation
 -------------
