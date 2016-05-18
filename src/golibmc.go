@@ -535,7 +535,7 @@ func (client *Client) DeleteMulti(keys []string) (failedKeys []string, err error
 	} else {
 		rawKeys = make([]string, len(keys))
 		for i, key := range keys {
-			rawKeys[i] = key
+			rawKeys[i] = client.addPrefix(key)
 		}
 	}
 

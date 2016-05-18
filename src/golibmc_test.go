@@ -38,6 +38,20 @@ func newSimpleNoreplyClient(n int) *Client {
 	return New(servers, noreply, prefix, hashFunc, failover, disableLock)
 }
 
+func newSimplePrefixClient(n int) *Client {
+	servers := make([]string, n)
+	for i := 0; i < n; i++ {
+		servers[i] = fmt.Sprintf("localhost:%d", 21211+i)
+	}
+	noreply := false
+	prefix := "prefix"
+	hashFunc := HashCRC32
+	failover := false
+	disableLock := false
+
+	return New(servers, noreply, prefix, hashFunc, failover, disableLock)
+}
+
 func TestInputServer(t *testing.T) {
 	servers := []string{"localhost:invalid_port"}
 	noreply := false
@@ -250,7 +264,7 @@ func testSetNGet(mc *Client, t *testing.T) {
 
 func TestSetMultiNGetMulti(t *testing.T) {
 	for _, nServers := range []int{1, 2, 10} {
-		mc := newSimpleClient(nServers)
+		mc := newSimplePrefixClient(nServers)
 		testSetMultiNGetMulti(mc, t)
 	}
 }
