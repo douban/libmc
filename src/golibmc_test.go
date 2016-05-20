@@ -10,18 +10,21 @@ const LocalMC = "localhost:21211"
 const ErrorSet = "Error on Set"
 const ErrorGetAfterSet = "Error on Get after set"
 
-func newSimpleClient(n int) *Client {
-	servers := make([]string, n)
-	for i := 0; i < n; i++ {
-		servers[i] = fmt.Sprintf("localhost:%d", 21211+i)
-	}
-	noreply := false
-	prefix := ""
-	hashFunc := HashCRC32
-	failover := false
-	disableLock := false
+var Prefixes = []string{"", "prefix"}
 
-	return New(servers, noreply, prefix, hashFunc, failover, disableLock)
+type TestFunc func(*Client, *testing.T)
+
+func testNormalCommand(t *testing.T, fn TestFunc) {
+	for _, nServers := range []int{1, 2, 10} {
+		for _, prefix := range Prefixes {
+			mc := newSimplePrefixClient(nServers, prefix)
+			fn(mc, t)
+		}
+	}
+}
+
+func newSimpleClient(n int) *Client {
+	return newSimplePrefixClient(n, "")
 }
 
 func newSimpleNoreplyClient(n int) *Client {
@@ -38,13 +41,12 @@ func newSimpleNoreplyClient(n int) *Client {
 	return New(servers, noreply, prefix, hashFunc, failover, disableLock)
 }
 
-func newSimplePrefixClient(n int) *Client {
+func newSimplePrefixClient(n int, prefix string) *Client {
 	servers := make([]string, n)
 	for i := 0; i < n; i++ {
 		servers[i] = fmt.Sprintf("localhost:%d", 21211+i)
 	}
 	noreply := false
-	prefix := "prefix"
 	hashFunc := HashCRC32
 	failover := false
 	disableLock := false
@@ -68,7 +70,7 @@ func TestInputServer(t *testing.T) {
 
 func TestStats(t *testing.T) {
 	for _, nServers := range []int{1, 2, 10} {
-		mc := newSimpleClient(nServers)
+		mc := newSimplePrefixClient(nServers, "")
 		testStats(mc, t)
 	}
 }
@@ -124,7 +126,7 @@ func TestPrefix(t *testing.T) {
 }
 
 func TestGetServerAddress(t *testing.T) {
-	mc := newSimpleClient(1)
+	mc := newSimplePrefixClient(1, "")
 	if addr := mc.GetServerAddressByKey("key"); addr != LocalMC {
 		t.Error(addr)
 	}
@@ -203,10 +205,7 @@ func testRouter(t *testing.T, servers []string, rs map[string]string, prefix str
 }
 
 func TestSetNGet(t *testing.T) {
-	for _, nServers := range []int{1, 2, 10} {
-		mc := newSimpleClient(nServers)
-		testSetNGet(mc, t)
-	}
+	testNormalCommand(t, testSetNGet)
 }
 
 func testSetNGet(mc *Client, t *testing.T) {
@@ -263,10 +262,7 @@ func testSetNGet(mc *Client, t *testing.T) {
 }
 
 func TestSetMultiNGetMulti(t *testing.T) {
-	for _, nServers := range []int{1, 2, 10} {
-		mc := newSimplePrefixClient(nServers)
-		testSetMultiNGetMulti(mc, t)
-	}
+	testNormalCommand(t, testSetMultiNGetMulti)
 }
 
 func testSetMultiNGetMulti(mc *Client, t *testing.T) {
@@ -327,10 +323,7 @@ func testSetMultiNGetMulti(mc *Client, t *testing.T) {
 }
 
 func TestIncrNDecr(t *testing.T) {
-	for _, nServers := range []int{1, 2, 10} {
-		mc := newSimpleClient(nServers)
-		testIncrNDecr(mc, t)
-	}
+	testNormalCommand(t, testIncrNDecr)
 }
 
 func testIncrNDecr(mc *Client, t *testing.T) {
@@ -362,10 +355,7 @@ func testIncrNDecr(mc *Client, t *testing.T) {
 }
 
 func TestLargeValue(t *testing.T) {
-	for _, nServers := range []int{1, 2, 10} {
-		mc := newSimpleClient(nServers)
-		testLargeValue(mc, t)
-	}
+	testNormalCommand(t, testLargeValue)
 }
 
 func testLargeValue(mc *Client, t *testing.T) {
@@ -382,10 +372,7 @@ func testLargeValue(mc *Client, t *testing.T) {
 }
 
 func TestCasAndGets(t *testing.T) {
-	for _, nServers := range []int{1, 2, 10} {
-		mc := newSimpleClient(nServers)
-		testCasAndGets(mc, t)
-	}
+	testNormalCommand(t, testCasAndGets)
 }
 
 func testCasAndGets(mc *Client, t *testing.T) {
@@ -494,10 +481,7 @@ func testNoreploy(mc *Client, t *testing.T) {
 }
 
 func TestTouch(t *testing.T) {
-	for _, nServers := range []int{1, 2, 10} {
-		mc := newSimpleClient(nServers)
-		testTouch(mc, t)
-	}
+	testNormalCommand(t, testTouch)
 }
 
 func testTouch(mc *Client, t *testing.T) {
@@ -540,11 +524,9 @@ func testTouch(mc *Client, t *testing.T) {
 }
 
 func TestAdd(t *testing.T) {
-	for _, nServers := range []int{1, 2, 10} {
-		mc := newSimpleClient(nServers)
-		testAdd(mc, t)
-	}
+	testNormalCommand(t, testAdd)
 }
+
 func testAdd(mc *Client, t *testing.T) {
 	key := "test_add"
 	valueToAdd := "tt"
@@ -571,10 +553,7 @@ func testAdd(mc *Client, t *testing.T) {
 }
 
 func TestReplace(t *testing.T) {
-	for _, nServers := range []int{1, 2, 10} {
-		mc := newSimpleClient(nServers)
-		testReplace(mc, t)
-	}
+	testNormalCommand(t, testReplace)
 }
 
 func testReplace(mc *Client, t *testing.T) {
@@ -604,10 +583,7 @@ func testReplace(mc *Client, t *testing.T) {
 }
 
 func TestPrepend(t *testing.T) {
-	for _, nServers := range []int{1, 2, 10} {
-		mc := newSimpleClient(nServers)
-		testPrepend(mc, t)
-	}
+	testNormalCommand(t, testPrepend)
 }
 
 func testPrepend(mc *Client, t *testing.T) {
@@ -646,10 +622,7 @@ func testPrepend(mc *Client, t *testing.T) {
 }
 
 func TestAppend(t *testing.T) {
-	for _, nServers := range []int{1, 2, 10} {
-		mc := newSimpleClient(nServers)
-		testAppend(mc, t)
-	}
+	testNormalCommand(t, testAppend)
 }
 
 func testAppend(mc *Client, t *testing.T) {
@@ -689,10 +662,7 @@ func testAppend(mc *Client, t *testing.T) {
 }
 
 func TestSpecialItems(t *testing.T) {
-	for _, nServers := range []int{1, 2, 10} {
-		mc := newSimpleClient(nServers)
-		testSpecialItems(mc, t)
-	}
+	testNormalCommand(t, testSpecialItems)
 }
 
 func testSpecialItems(mc *Client, t *testing.T) {
@@ -712,7 +682,7 @@ func testSpecialItems(mc *Client, t *testing.T) {
 
 func TestInjection(t *testing.T) {
 	for _, nServers := range []int{1, 2, 10} {
-		mc := newSimpleClient(nServers)
+		mc := newSimplePrefixClient(nServers, "")
 		testInjection(mc, t)
 	}
 }
@@ -768,10 +738,7 @@ func testInjection(mc *Client, t *testing.T) {
 }
 
 func TestMaxiov(t *testing.T) {
-	for _, nServers := range []int{1, 2, 10} {
-		mc := newSimpleClient(nServers)
-		testMaxiov(mc, t)
-	}
+	testNormalCommand(t, testMaxiov)
 }
 
 func testMaxiov(mc *Client, t *testing.T) {
@@ -792,31 +759,42 @@ func testMaxiov(mc *Client, t *testing.T) {
 
 func TestQuit(t *testing.T) {
 	for _, nServers := range []int{1, 2, 10} {
-		mc := newSimpleClient(nServers)
-		mc2 := newSimpleClient(nServers)
+		mc := newSimplePrefixClient(nServers, "")
+		mc2 := newSimplePrefixClient(nServers, "")
 		testQuit(mc, mc2, t)
 	}
 }
 
 func testQuit(mc, mc2 *Client, t *testing.T) {
-	key := "all_is_well"
-	value := "yes"
-	item := &Item{
-		Key:        key,
-		Value:      []byte(value),
-		Flags:      0,
-		Expiration: 0,
+	// Init and SetMuti Values
+	nItems := 1000
+	items := make([]*Item, nItems)
+	keys := make([]string, nItems)
+
+	for i := 0; i < nItems; i++ {
+		key := fmt.Sprintf("test_quit_key_%d", i)
+		value := fmt.Sprintf("v%d", i)
+		items[i] = &Item{
+			Key:        key,
+			Value:      []byte(value),
+			Flags:      0,
+			Expiration: 0,
+		}
+		keys[i] = key
 	}
-	if err := mc.Delete(key); err != nil && err != ErrCacheMiss {
+
+	mc.SetMulti(items)
+
+	if _, err := mc.DeleteMulti(keys); err != nil && err != ErrCacheMiss {
 		t.Error(err)
 	}
-	if err := mc.Set(item); err != nil {
+	if _, err := mc.SetMulti(items); err != nil {
 		t.Error(err)
 	}
-	if err := mc2.Delete(key); err != nil {
+	if _, err := mc2.DeleteMulti(keys); err != nil {
 		t.Error(err)
 	}
-	if err := mc2.Set(item); err != nil {
+	if _, err := mc2.SetMulti(items); err != nil {
 		t.Error(err)
 	}
 	if versions, err := mc.Version(); err != nil || len(versions) == 0 {
@@ -853,14 +831,14 @@ func testQuit(mc, mc2 *Client, t *testing.T) {
 	}
 
 	// back to life immediately
-	itemGot, err := mc.Get(key)
-	if err != nil || string(itemGot.Value) != value {
+	itemsGot, err := mc.GetMulti(keys)
+	if err != nil || len(itemsGot) != nItems {
 		t.Error(err)
 	}
 }
 
 func BenchmarkSetAndGet(b *testing.B) {
-	mc := newSimpleClient(1)
+	mc := newSimplePrefixClient(1, "")
 	key := "google"
 	value := "Google"
 	item := Item{
