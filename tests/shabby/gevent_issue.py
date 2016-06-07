@@ -18,18 +18,18 @@ stack = []
 
 
 def mc_sleep():
-    print 'begin mc sleep'
+    print('begin mc sleep')
     stack.append('mc_sleep_begin')
     assert mc.set('foo', 'bar')
     stack.append('mc_sleep_end')
-    print 'end mc sleep'
+    print('end mc sleep')
 
 
 def singer():
     i = 0
     for i in range(6):
         i += 1
-        print '[%d] Oh, jingle bells, jingle bells, Jingle all the way.' % i
+        print('[%d] Oh, jingle bells, jingle bells, Jingle all the way.' % i)
         stack.append('sing')
         time.sleep(0.5)
 

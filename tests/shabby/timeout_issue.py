@@ -3,7 +3,7 @@ import libmc
 import slow_memcached_server
 
 def main():
-    print 'libmc path: %s' % libmc.__file__
+    print('libmc path: %s' % libmc.__file__)
     mc = libmc.Client(['localhost:%s' % slow_memcached_server.PORT])
     mc.config(libmc.MC_POLL_TIMEOUT, 3000)
     assert mc.version(), "start slow_memcached_server first"

@@ -6,10 +6,11 @@ from setuptools import setup, Extension
 from setuptools.command.test import test as TestCommand
 
 
-# setuptools DWIM monkey-patch madness: http://dou.bz/37m3XL
-if 'setuptools.extension' in sys.modules:
-    m = sys.modules['setuptools.extension']
-    m.Extension.__dict__ = m._Extension.__dict__
+if sys.version[0] == '2':
+    # setuptools DWIM monkey-patch madness: http://dou.bz/37m3XL
+    if 'setuptools.extension' in sys.modules:
+        m = sys.modules['setuptools.extension']
+        m.Extension.__dict__ = m._Extension.__dict__
 
 
 sources = (glob("src/*.cpp") +
@@ -78,5 +79,6 @@ setup(
     ],
     tests_require=[
         "pytest",
+        "future",
     ]
 )

@@ -23,20 +23,20 @@ def singer():
     i = 0
     while i < 6:
         i += 1
-        print '[%d] Oh, jingle bells, jingle bells, Jingle all the way.' % i
+        print('[%d] Oh, jingle bells, jingle bells, Jingle all the way.' % i)
         stack.append('sing')
         time.sleep(0.5)
 
 
 def mc_sleeper():
     s = 2
-    print 'sleep in C++ for %ds, you can sing infinitely now, singer.' % s
+    print('sleep in C++ for %ds, you can sing infinitely now, singer.' % s)
     mc = Client(["127.0.0.1:21211"])
     release_gil = True  # toggle here
     stack.append('mc_sleep_begin')
     mc._sleep(s, release_gil)
     stack.append('mc_sleep_end')
-    print 'exit sleep'
+    print('exit sleep')
 
 
 def main():
