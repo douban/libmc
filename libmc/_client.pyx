@@ -492,7 +492,7 @@ cdef class PyClient:
         cdef bytes py_value = self._get_raw(GET_OP, key2, &flags, &cas_unique)
 
         if py_value is not None and self.do_split and (flags & _FLAG_DOUBAN_CHUNKED):
-            n_splits = int(py_value.decode('ascii'))
+            n_splits = int(py_value.decode('ascii').strip('\0'))
             py_value, flags = self._get_large_raw(key2, n_splits, flags)
 
         return py_value, flags
