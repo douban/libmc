@@ -92,6 +92,7 @@ class Stopwatch(object):
         d = self.stddev()
         fmt = u"%.3gs, σ=%.3g, n=%d, snr=%.3g:%.3g".__mod__
         return fmt((m, d, len(self.laps)) + ratio(m, d))
+    __str__ = __unicode__
 
     def mean(self):
         return sum(self.laps) / len(self.laps)
