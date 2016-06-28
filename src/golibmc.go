@@ -460,7 +460,7 @@ func (client *Client) SetMulti(items []*Item) (failedKeys []string, err error) {
 
 	sr := unsafe.Sizeof(*results)
 	storedKeySet := make(map[string]struct{})
-	for i := 0; i <= int(n); i++ {
+	for i := 0; i < int(n); i++ {
 		if (*results).type_ == C.MSG_STORED {
 			storedKey := C.GoStringN((*results).key, C.int((*results).key_len))
 			storedKeySet[storedKey] = struct{}{}
@@ -580,7 +580,7 @@ func (client *Client) DeleteMulti(keys []string) (failedKeys []string, err error
 
 	deletedKeySet := make(map[string]struct{})
 	sr := unsafe.Sizeof(*results)
-	for i := 0; i <= int(n); i++ {
+	for i := 0; i < int(n); i++ {
 		if (*results).type_ == C.MSG_DELETED {
 			deletedKey := C.GoStringN((*results).key, C.int((*results).key_len))
 			deletedKeySet[deletedKey] = struct{}{}
