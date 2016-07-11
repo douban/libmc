@@ -3,16 +3,17 @@
 import sys
 import time
 import socket
-import SocketServer
+
+import socketserver as SocketServer
 
 PORT = 0x2305
 BLOCKING_SECONDS = 0.5  # seconds
 
 
 DAYS30 = 3600 * 24 * 30
-KEY_GET_SERVER_ERROR = 'gimme_get_server_error'
-KEY_SET_SERVER_ERROR = 'gimme_set_server_error'
-KEY_SERVER_DOWN = 'biubiubiu'
+KEY_GET_SERVER_ERROR = b'gimme_get_server_error'
+KEY_SET_SERVER_ERROR = b'gimme_set_server_error'
+KEY_SERVER_DOWN = b'biubiubiu'
 
 memcached = None
 
@@ -24,7 +25,7 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 def is_valid_key(key):
     if len(key) > 250:
         return False
-    if any(c in key for c in (' ', '\0', '\r', '\n')):
+    if any(c in key for c in (b' ', b'\0', b'\r', b'\n')):
         return False
     return True
 
@@ -37,14 +38,14 @@ class MemcachedProvider(object):
         }
 
     def process_get(self, request):
-        assert request.startswith('get ')
+        assert request.startswith(b'get ')
         request = request.rstrip()
-        response = ''
-        for key in request.split(' ')[1:]:
+        response = b''
+        for key in request.split(b' ')[1:]:
             if key == KEY_GET_SERVER_ERROR:
-                return 'SERVER_ERROR\r\n'
+                return b'SERVER_ERROR\r\n'
             if not is_valid_key(key):
-                return 'CLIENT_ERROR invalid key\r\n'
+                return b'CLIENT_ERROR invalid key\r\n'
             if key not in self._store:
                 continue
             flags, exptime, bytes_, data_block = self._store[key]
@@ -52,33 +53,33 @@ class MemcachedProvider(object):
                 del self._store[key]
                 continue
             response += (
-                'VALUE %s %d %d\r\n%s\r\n' % (
+                b'VALUE %s %d %d\r\n%s\r\n' % (
                     key, flags, bytes_, data_block
                 )
             )
-        response += 'END\r\n'
+        response += b'END\r\n'
 
         return response
 
     def process_set(self, request):
         t0 = time.time()
-        response = ''
+        response = b''
         while request:
-            assert request.startswith('set ')
-            pos = request.find('\r\n')
+            assert request.startswith(b'set ')
+            pos = request.find(b'\r\n')
             assert pos > 0
             set_meta = request[:pos]
             request = request[pos + 2:]
 
-            key, flags, exptime, bytes_ = set_meta.split(' ')[1:]
+            key, flags, exptime, bytes_ = set_meta.split(b' ')[1:]
             if key == KEY_SERVER_DOWN:
-                print "I'm shot. Dying."
+                print("I'm shot. Dying.")
                 return None
 
             if key == KEY_SET_SERVER_ERROR:
-                return 'SERVER_ERROR\r\n'
+                return b'SERVER_ERROR\r\n'
             if not is_valid_key(key):
-                response += 'CLIENT_ERROR invalid key\r\n'
+                response += b'CLIENT_ERROR invalid key\r\n'
                 continue
             flags = int(flags)
             exptime = int(exptime)
@@ -93,16 +94,16 @@ class MemcachedProvider(object):
             data_block = request[:bytes_]
             request = request[bytes_ + 2:]
             self._store[key] = flags, exptime, bytes_, data_block
-            response += 'STORED\r\n'
+            response += b'STORED\r\n'
 
         return response
 
     def process_version(self, request):
-        return 'VERSION 1.0.24-shabby\r\n'
+        return b'VERSION 1.0.24-shabby\r\n'
 
     def process_rest(self, request):
-        print 'unexpected request: %s' % request
-        return 'ERROR\r\n'
+        print('unexpected request: %s' % request)
+        return b'ERROR\r\n'
 
     def __getattr__(self, name):
         if name.startswith('process_'):
@@ -116,8 +117,8 @@ class Handler(SocketServer.BaseRequestHandler):
 
     def handle(self):
         while True:
-            req = ''
-            while req[-2:] != '\r\n':
+            req = b''
+            while req[-2:] != b'\r\n':
                 try:
                     req += self.request.recv(8192)
                 except socket.error as ex:
@@ -126,16 +127,16 @@ class Handler(SocketServer.BaseRequestHandler):
                     else:
                         raise ex
 
-            print '> %s' % req[:-2]
-            if not req.strip() or req.strip() == 'quit':
+            print('> %s' % req[:-2])
+            if not req.strip() or req.strip() == b'quit':
                 break
-            pos_space = req.find(' ')
+            pos_space = req.find(b' ')
             if pos_space > 0:
                 meth = req[:pos_space]
             else:
                 meth = req.rstrip()
 
-            res = getattr(self.mcp, 'process_%s' % meth, )(req)
+            res = getattr(self.mcp, 'process_%s' % meth.decode('ascii'), )(req)
             if res is None:
                 memcached.shutdown()
                 return
@@ -146,10 +147,10 @@ class Handler(SocketServer.BaseRequestHandler):
             while n_sent != len(res):
                 n_sent += self.request.send(res[n_sent:n_sent+100])
                 if n_sent != len(res):
-                    print 'sleep and send more'
+                    print('sleep and send more')
                     time.sleep(BLOCKING_SECONDS * 2)
 
-            print '< %s' % res[:-2]
+            print('< %s' % res[:-2])
 
 
 def main(argv):
@@ -159,7 +160,7 @@ def main(argv):
         port = int(argv[1])
 
     memcached = Server(("", port), Handler)
-    print 'serve at tcp://%s:%s' % ('0.0.0.0', port)
+    print('serve at tcp://%s:%s' % ('0.0.0.0', port))
     try:
         memcached.serve_forever()
     except KeyboardInterrupt:

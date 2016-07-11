@@ -37,7 +37,7 @@ class Prefix(object):
     def __prepare_prefix_keys(self, keys):
         if isinstance(keys, dict):
             prepared_keys = {}
-            for key, value in keys.iteritems():
+            for key, value in keys.items():
                 prepared_keys[self.prefix+key] = value
             return prepared_keys
         elif isinstance(keys, (list, tuple)):
@@ -47,7 +47,7 @@ class Prefix(object):
 
     def get_multi(self, keys):
         r = {}
-        for key, value in self.mc.get_multi(self.__prepare_prefix_keys(keys)).iteritems():
+        for key, value in self.mc.get_multi(self.__prepare_prefix_keys(keys)).items():
             r[key.replace(self.prefix, '', 1)] = value
         return r
 
@@ -92,6 +92,7 @@ class Stopwatch(object):
         d = self.stddev()
         fmt = u"%.3gs, σ=%.3g, n=%d, snr=%.3g:%.3g".__mod__
         return fmt((m, d, len(self.laps)) + ratio(m, d))
+    __str__ = __unicode__
 
     def mean(self):
         return sum(self.laps) / len(self.laps)
@@ -156,8 +157,8 @@ def bench_set_multi(mc, keys, pairs):
 
 
 def multi_pairs(n, val_len):
-    d = {('multi_key_%d' % i): ('i' * val_len) for i in xrange(n)}
-    return (d.keys(), d)
+    d = {('multi_key_%d' % i): ('i' * val_len) for i in range(n)}
+    return (list(d.keys()), d)
 
 
 complex_data_type = ([], {}, __import__('fractions').Fraction(3, 4))
@@ -309,10 +310,10 @@ def main(args=sys.argv[1:]):
 
     means, stddevs = bench(participants=ps, benchmarks=bs)
 
-    print 'labels =',     [p.name for p in ps]
-    print 'benchmarks =', [b.name for b in bs]
-    print 'means =',      means
-    print 'stddevs =',    stddevs
+    print('labels =',     [p.name for p in ps])
+    print('benchmarks =', [b.name for b in bs])
+    print('means =',      means)
+    print('stddevs =',    stddevs)
 
 
 if __name__ == "__main__":

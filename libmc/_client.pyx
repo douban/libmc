@@ -1,20 +1,27 @@
 # distutils: language = c++
 # distutils: include_dirs = ["include", "include/hashkit"]
-# cython: profile=False
+# cython: profile=False, c_string_type=unicode, c_string_encoding=utf8
 
 from libc.stdint cimport uint8_t, uint32_t, uint64_t, int64_t
 from libcpp cimport bool as bool_t
 from libcpp.string cimport string
 from libcpp.vector cimport vector
-from cpython cimport PyString_FromStringAndSize, PyString_AsStringAndSize, PyString_AsString, Py_INCREF, Py_DECREF, PyInt_AsLong, PyInt_FromLong
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
+from cpython.version cimport PY_MAJOR_VERSION
+from cpython cimport Py_INCREF, Py_DECREF, PyInt_AsLong, PyInt_FromLong
+
+if PY_MAJOR_VERSION < 3:
+    from cpython cimport PyString_AsStringAndSize, PyString_AsString
+    import cPickle as pickle
+else:
+    from cpython cimport PyBytes_AsStringAndSize as PyString_AsStringAndSize, PyBytes_AsString as PyString_AsString, PyUnicode_AsUTF8String
+    import pickle
 
 import os
 import traceback
 import threading
 import zlib
 import marshal
-import cPickle as pickle
 
 
 cdef extern from "Common.h" namespace "douban::mc":
@@ -256,10 +263,10 @@ cdef bytes _encode_value(object val, int comp_threshold, flags_t *flags):
         enc_val = b'1' if val else b'0'
     elif type_ is int:
         flags[0] = _FLAG_INTEGER
-        enc_val = bytes(val)
+        enc_val = str(val).encode('ascii')
     elif type_ is long:
         flags[0] = _FLAG_LONG
-        enc_val = bytes(val)
+        enc_val = str(val).encode('ascii')
     elif type_.__module__ == 'numpy':
         enc_val = pickle.dumps(val, -1)
         flags[0] = _FLAG_PICKLE
@@ -300,9 +307,9 @@ cpdef object decode_value(bytes val, flags_t flags):
     if flags & _FLAG_BOOL:
         dec_val = bool(int(dec_val))
     elif flags & _FLAG_INTEGER:
-        dec_val = int(dec_val)
+        dec_val = int(dec_val.decode('ascii'))
     elif flags & _FLAG_LONG:
-        dec_val = long(dec_val)
+        dec_val = long(dec_val.decode('ascii'))
     elif flags & _FLAG_MARSHAL:
         try:
             dec_val = marshal.loads(dec_val)
@@ -327,12 +334,16 @@ cdef class PyClient:
     cdef bool_t do_split
     cdef bool_t noreply
     cdef bytes prefix
+    cdef hash_function_options_t hash_fn
+    cdef bool_t failover
+    cdef basestring encoding
     cdef int last_error
     cdef object _thread_ident
     cdef object _created_stack
 
     def __cinit__(self, list servers, bool_t do_split=True, int comp_threshold=0, noreply=False,
-                  bytes prefix=None, hash_function_options_t hash_fn=OPT_HASH_MD5, failover=False):
+                  basestring prefix=None, hash_function_options_t hash_fn=OPT_HASH_MD5, failover=False,
+                  encoding='utf8'):
         self.servers = servers
         cdef size_t n = len(servers)
         cdef char** c_hosts = <char**>PyMem_Malloc(n * sizeof(char*))
@@ -353,6 +364,9 @@ cdef class PyClient:
                 port = MC_DEFAULT_PORT
             else:
                 port = int(host_port[1])
+            if PY_MAJOR_VERSION > 2:
+                host = PyUnicode_AsUTF8String(host)
+                alias = PyUnicode_AsUTF8String(alias) if alias else None
             servers_.append((host, port, alias))
 
         Py_INCREF(servers_)
@@ -380,7 +394,13 @@ cdef class PyClient:
         self.do_split = do_split
         self.comp_threshold = comp_threshold
         self.noreply = noreply
-        self.prefix = prefix
+        self.hash_fn = hash_fn
+        self.failover = failover
+        self.encoding = encoding
+        if prefix:
+            self.prefix = bytes(prefix) if isinstance(prefix, bytes) else prefix.encode(self.encoding)
+        else:
+            self.prefix = None
         Py_DECREF(servers_)
 
         self.last_error = 0
@@ -391,7 +411,7 @@ cdef class PyClient:
         del self._imp
 
     def __reduce__(self):
-        return (PyClient, (self.servers, self.do_split, self.comp_threshold, self.noreply, self.prefix))
+        return (PyClient, (self.servers, self.do_split, self.comp_threshold, self.noreply, self.prefix, self.hash_fn, self.failover, self.encoding))
 
     def config(self, int opt, int val):
         self._imp.config(<config_options_t>opt, val)
@@ -405,24 +425,24 @@ cdef class PyClient:
         PyString_AsStringAndSize(key2, &c_key, <Py_ssize_t*>&c_key_len)
         with nogil:
             c_addr = self._imp.getServerAddressByKey(c_key, c_key_len)
-        cdef bytes c_server_addr = c_addr
+        cdef basestring c_server_addr = c_addr
         Py_DECREF(key2)
         return c_server_addr
 
 
-    cdef normalize_key(self, basestring raw_key, encoding='utf-8'):
-        if self.prefix:
-            if raw_key[0] == '?':
-                raw_key = '?' + self.prefix + raw_key[1:]
-            else:
-                raw_key = self.prefix + raw_key
+    cdef normalize_key(self, basestring raw_key):
+        cdef bytes key
+        if isinstance(raw_key, unicode):
+            key = raw_key.encode(self.encoding)
+        else:
+            key = bytes(raw_key)
 
-        type_ = type(raw_key)
-        if type_ is unicode:
-            return raw_key.encode(encoding)
-        elif type_ is bytes:
-            return raw_key
-        return bytes(raw_key)
+        if self.prefix:
+            if key[0] == b'?'[0]:
+                key = b'?' + self.prefix + key[1:]
+            else:
+                key = self.prefix + key
+        return key
 
     cdef _get_raw(self, op_code_t op, bytes key, flags_t* flags_ptr, cas_unique_t* cas_unique_ptr):
         cdef char* c_key = NULL
@@ -456,7 +476,7 @@ cdef class PyClient:
         if n_splits > 10 or len_key > 200:
             return (None, 0)
 
-        cdef list keys = ['~%d%s/%d' % (len_key, key, i) for i in range(n_splits)]
+        cdef list keys = [b'~%d%s/%d' % (len_key, key, i) for i in range(n_splits)]
 
         cdef dict dct = self._get_multi_raw(n_splits, keys)
         if len(dct) != n_splits:
@@ -472,7 +492,7 @@ cdef class PyClient:
         cdef bytes py_value = self._get_raw(GET_OP, key2, &flags, &cas_unique)
 
         if py_value is not None and self.do_split and (flags & _FLAG_DOUBAN_CHUNKED):
-            n_splits = int(py_value.strip('\0'))
+            n_splits = int(py_value.decode('ascii').strip('\0'))
             py_value, flags = self._get_large_raw(key2, n_splits, flags)
 
         return py_value, flags
@@ -534,25 +554,23 @@ cdef class PyClient:
 
     def get_multi(self, keys):
         self._record_thread_ident()
-        keys = [self.normalize_key(key) for key in keys]
-        cdef size_t n_keys = len(keys)
-        cdef dict multi_raw = self._get_multi_raw(n_keys, keys)
+        cdef list normalized_keys = [self.normalize_key(key) for key in keys]
+        cdef size_t n_keys = len(normalized_keys)
+        cdef dict multi_raw = self._get_multi_raw(n_keys, normalized_keys)
         cdef dict dct = dict()
-        cdef bytes out_key = None
         cdef int n_splits = 0
         for i in range(n_keys):
-            if keys[i] not in multi_raw:
+            if normalized_keys[i] not in multi_raw:
                 continue
 
-            raw_bytes, flags = multi_raw[keys[i]]
-            out_key = keys[i].replace(self.prefix, '', 1) if self.prefix else keys[i]
+            raw_bytes, flags = multi_raw[normalized_keys[i]]
 
             if raw_bytes is not None and self.do_split and (flags & _FLAG_DOUBAN_CHUNKED):
-                n_splits = int(raw_bytes.strip('\0'))
-                raw_bytes, flags  = self._get_large_raw(keys[i], n_splits, flags)
+                n_splits = int(raw_bytes.decode('ascii'))
+                raw_bytes, flags  = self._get_large_raw(normalized_keys[i], n_splits, flags)
             if raw_bytes is None:
                 continue
-            dct[out_key] = decode_value(raw_bytes, flags)
+            dct[keys[i]] = decode_value(raw_bytes, flags)
 
         return dct
 
@@ -616,7 +634,7 @@ cdef class PyClient:
 
         a, b = divmod(c_val_len, _DOUBAN_CHUNK_SIZE)
         cdef int n_splits = a + (0 if b == 0 else 1)
-        keys = ['~%d%s/%d' % (len_key, key, i) for i in range(n_splits)]
+        keys = [b'~%d%s/%d' % (len_key, key, i) for i in range(n_splits)]
         vals = [val[i:i+_DOUBAN_CHUNK_SIZE] for i in range(0, c_val_len, _DOUBAN_CHUNK_SIZE)]
         cdef flags_t* splits_flags = <flags_t*>PyMem_Malloc(n_splits * sizeof(flags_t))
         for i in range(n_splits):
@@ -625,9 +643,9 @@ cdef class PyClient:
         PyMem_Free(splits_flags)
         if rv is False:
             return False
-        return self._store_raw(SET_OP, key, flags | _FLAG_DOUBAN_CHUNKED, exptime, bytes(n_splits), DEFAULT_CAS_UNIQUE)
+        return self._store_raw(SET_OP, key, flags | _FLAG_DOUBAN_CHUNKED, exptime, str(n_splits).encode('ascii'), DEFAULT_CAS_UNIQUE)
 
-    def set_raw(self, basestring key, object val, exptime_t time, flags_t flags):
+    def set_raw(self, basestring key, bytes val, exptime_t time, flags_t flags):
         self._record_thread_ident()
         self._check_thread_ident()
         cdef bytes key2 = self.normalize_key(key)
@@ -658,50 +676,45 @@ cdef class PyClient:
         cdef bytes enc_val = _encode_value(val, self.comp_threshold, &flags)
         return self._store_raw(REPLACE_OP, key2, flags, time, enc_val, DEFAULT_CAS_UNIQUE)
 
-    def prepend(self, basestring key, object val, compress=False):
+    def prepend(self, basestring key, bytes val, compress=False):
         self._record_thread_ident()
         self._check_thread_ident()
         cdef bytes key2 = self.normalize_key(key)
-        cdef flags_t flags
-        comp_threshold = self.comp_threshold if compress else 0
-        cdef bytes enc_val = _encode_value(val, comp_threshold, &flags)
-        return self._store_raw(PREPEND_OP, key2, flags, DEFAULT_EXPTIME, enc_val, DEFAULT_CAS_UNIQUE)
+        return self._store_raw(PREPEND_OP, key2, _FLAG_EMPTY, DEFAULT_EXPTIME, val, DEFAULT_CAS_UNIQUE)
 
-    def append(self, basestring key, object val, compress=False):
+    def append(self, basestring key, bytes val, compress=False):
         self._record_thread_ident()
         self._check_thread_ident()
         cdef bytes key2 = self.normalize_key(key)
-        cdef flags_t flags
-        comp_threshold = self.comp_threshold if compress else 0
-        cdef bytes enc_val = _encode_value(val, comp_threshold, &flags)
-        return self._store_raw(APPEND_OP, key2, flags, DEFAULT_EXPTIME, enc_val, DEFAULT_CAS_UNIQUE)
+        return self._store_raw(APPEND_OP, key2, _FLAG_EMPTY, DEFAULT_EXPTIME, val, DEFAULT_CAS_UNIQUE)
 
     cdef _prepend_or_append_multi(self, op_code_t op, list keys, object val, exptime_t exptime, bool_t compress):
+        cdef list normalized_keys = [self.normalize_key(key) for key in keys]
         cdef size_t n = len(keys)
         cdef flags_t* c_flags = <flags_t*>PyMem_Malloc(n * sizeof(flags_t))
         comp_threshold = self.comp_threshold if compress else 0
-        cdef bytes enc_val = _encode_value(val, comp_threshold, &(c_flags[0]))
+        #cdef bytes enc_val = _encode_value(val, comp_threshold, &(c_flags[0]))
 
-        if enc_val is None:  # val is(are) not pickable
+        if val is None:  # val is(are) not pickable
             return None
 
         # cannot append large val
-        if self.do_split and len(enc_val) > _DOUBAN_CHUNK_SIZE:
+        if self.do_split and len(val) > _DOUBAN_CHUNK_SIZE:
             return None
-        cdef list vals = [enc_val for i in range(n)]
-        for i in range(1, n):
-            c_flags[i] = c_flags[0]
+        cdef list vals = [val for i in range(n)]
+        for i in range(n):
+            c_flags[i] = _FLAG_EMPTY
 
-        rv = self._store_multi_raw(op, n, keys, vals, c_flags, exptime, return_failure=False)
+        rv = self._store_multi_raw(op, n, normalized_keys, vals, c_flags, exptime, return_failure=False)
         PyMem_Free(c_flags)
         return rv
 
-    def prepend_multi(self, keys, object val, exptime_t exptime=DEFAULT_EXPTIME, bool_t compress=False):
+    def prepend_multi(self, keys, bytes val, exptime_t exptime=DEFAULT_EXPTIME, bool_t compress=False):
         self._record_thread_ident()
         self._check_thread_ident()
         return self._prepend_or_append_multi(PREPEND_OP, keys, val, exptime, compress)
 
-    def append_multi(self, keys, object val, exptime_t exptime=DEFAULT_EXPTIME, bool_t compress=False):
+    def append_multi(self, keys, bytes val, exptime_t exptime=DEFAULT_EXPTIME, bool_t compress=False):
         self._record_thread_ident()
         self._check_thread_ident()
         return self._prepend_or_append_multi(APPEND_OP, keys, val, exptime, compress)
@@ -810,7 +823,7 @@ cdef class PyClient:
         return (is_succeed, failed_keys) if return_failure else is_succeed
 
 
-    cdef _delete_raw(self, basestring key):
+    cdef _delete_raw(self, bytes key):
         cdef char* c_key = NULL
         cdef size_t c_key_len = 0
         cdef size_t n = 1, n_res = 0
@@ -832,10 +845,9 @@ cdef class PyClient:
     def delete(self, basestring key):
         self._record_thread_ident()
         self._check_thread_ident()
-        key = self.normalize_key(key)
-        return self._delete_raw(key)
+        return self._delete_raw(self.normalize_key(key))
 
-    cdef _delete_multi_raw(self, keys, return_failure):
+    cdef _delete_multi_raw(self, list keys, return_failure):
         cdef size_t n = len(keys), n_res = 0
         cdef char** c_keys = <char**>PyMem_Malloc(n * sizeof(char*))
         cdef size_t* c_key_lens = <size_t*>PyMem_Malloc(n * sizeof(size_t))
@@ -868,10 +880,9 @@ cdef class PyClient:
     def delete_multi(self, keys, return_failure=False):
         self._record_thread_ident()
         self._check_thread_ident()
-        keys = [self.normalize_key(key) for key in keys]
-        return self._delete_multi_raw(keys, return_failure)
+        return self._delete_multi_raw([self.normalize_key(key) for key in keys], return_failure)
 
-    cdef _touch_raw(self, basestring key, exptime_t exptime):
+    cdef _touch_raw(self, bytes key, exptime_t exptime):
         cdef char* c_key = NULL
         cdef size_t c_key_len = 0
         cdef size_t n = 1, n_res = 0
@@ -893,8 +904,7 @@ cdef class PyClient:
     def touch(self, basestring key, exptime_t exptime):
         self._record_thread_ident()
         self._check_thread_ident()
-        key = self.normalize_key(key)
-        return self._touch_raw(key, exptime)
+        return self._touch_raw(self.normalize_key(key), exptime)
 
     def version(self):
         self._record_thread_ident()
@@ -938,6 +948,8 @@ cdef class PyClient:
                 if r.lines == NULL or r.line_lens == NULL:
                     continue
                 line = r.lines[j][:r.line_lens[j]]
+                if isinstance(line, bytes):
+                    line = line.decode('ascii')
                 k, v = line.split(' ', 1)
                 for dt in (int, float):
                     try:
@@ -979,14 +991,12 @@ cdef class PyClient:
     def incr(self, basestring key, delta=1):
         self._record_thread_ident()
         self._check_thread_ident()
-        key = self.normalize_key(key)
-        return self._incr_decr_raw(INCR_OP, key, delta)
+        return self._incr_decr_raw(INCR_OP, self.normalize_key(key), delta)
 
     def decr(self, basestring key, delta=1):
         self._record_thread_ident()
         self._check_thread_ident()
-        key = self.normalize_key(key)
-        return self._incr_decr_raw(DECR_OP, key, delta)
+        return self._incr_decr_raw(DECR_OP, self.normalize_key(key), delta)
 
     def _sleep(self, uint32_t seconds, release_gil=False):
         if release_gil:

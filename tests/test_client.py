@@ -8,6 +8,9 @@ from libmc import (
     MC_RETURN_MC_SERVER_ERR
 )
 
+from builtins import int
+from past.builtins import basestring
+
 
 # defined in _client.pyx
 _FLAG_DOUBAN_CHUNKED = 1 << 12
@@ -26,22 +29,25 @@ class DiveMaster(object):
 class MiscCase(unittest.TestCase):
 
     def test_encode_value(self):
-        expect = ('(\x02\x00\x00\x00s\x06\x00\x00\x00doubani\x00\x00\x00\x00',
+        expect = (b'(\x02\x00\x00\x00s\x06\x00\x00\x00doubani\x00\x00\x00\x00',
                   32)
+        data = (b'douban', 0)
         # FIXME
         vi = sys.version_info
         if vi.major == 2 and vi.micro == 7 and vi.minor < 9:
-            assert encode_value(('douban', 0), 0) == expect
+            assert encode_value(data, 0) == expect
 
     def test_decode_value(self):
         dataset = [
             True,
             0,
             100,
-            1000L,
+            int(1000),
             10.24,
             DiveMaster(1024),
             "scubadiving",
+            b'haha',
+            ('douban', 0),
         ]
         for d in dataset:
             new_d = decode_value(*encode_value(d, 0))
@@ -132,7 +138,7 @@ class SingleServerCase(unittest.TestCase):
         mc.delete(key_1mb)
         dct = {key_500kb: BUF_500KB, key_1mb: BUF_1MB}
         mc.set_multi(dct)
-        assert mc.get_multi(dct.keys()) == dct
+        assert mc.get_multi(list(dct.keys())) == dct
 
     def test_extra_large(self):
         threshold = 1000000
@@ -187,14 +193,14 @@ class SingleServerCase(unittest.TestCase):
 
     def test_get_set_raw(self):
         self.mc.set('foo', 233)
-        assert self.mc.get_raw('foo') == ('233', 2)
-        self.mc.set_raw('foo', '2335', 0, 2)
+        assert self.mc.get_raw('foo') == (b'233', 2)
+        self.mc.set_raw('foo', b'2335', 0, 2)
         assert self.mc.get('foo') == 2335
 
     def test_stats(self):
         stats = self.mc.stats()
-        for addr, dct in stats.iteritems():
-            assert isinstance(dct['version'], str)
+        for addr, dct in stats.items():
+            assert isinstance(dct['version'], basestring)
             assert (isinstance(dct['rusage_system'], float) or
                     isinstance(dct['rusage_user'], float))
             assert isinstance(dct['curr_connections'], int)
@@ -212,17 +218,17 @@ class SingleServerCase(unittest.TestCase):
 
     def test_patch_no_compress(self):
         key = 'no_compress'
-        val = '1024'
+        val = b'1024'
         self.mc.set(key, val, compress=False)
-        large_patch = 'hahahaha' * 512
+        large_patch = b'hahahaha' * 512
         self.mc.prepend(key, large_patch)
-        assert self.mc.get(key) == large_patch + val
+        assert self.mc.get_raw(key)[0] == large_patch + val
         self.mc.delete(key)
 
         self.mc.set(key, val, compress=False)
-        large_patch = 'hahahaha' * 512
+        large_patch = b'hahahaha' * 512
         self.mc.append(key, large_patch)
-        assert self.mc.get(key) == val + large_patch
+        assert self.mc.get_raw(key)[0] == val + large_patch
         self.mc.delete(key)
 
     def test_quit(self):

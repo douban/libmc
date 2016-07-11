@@ -14,7 +14,7 @@ def memcached_server_ctl(cmd, port):
         ))),
         'misc', 'memcached_server'
     )
-    print ctl_path
+    print(ctl_path)
     subprocess.check_call([ctl_path, cmd, str(port)])
 
 
@@ -27,7 +27,7 @@ def test_soft_server_error():
     mc.config(libmc.MC_RETRY_TIMEOUT, RETRY_TIMEOUT)
 
     assert mc.set('foo', 1)
-    assert not mc.set(slow_memcached_server.KEY_SET_SERVER_ERROR, 1)
+    assert not mc.set(slow_memcached_server.KEY_SET_SERVER_ERROR.decode('utf8'), 1)
     assert mc.set('foo', 1)  # back to live
     time.sleep(RETRY_TIMEOUT / 2)
     assert mc.set('foo', 1)  # alive
