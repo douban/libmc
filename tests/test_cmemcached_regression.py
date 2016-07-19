@@ -5,6 +5,7 @@ from libmc import Client, ThreadUnsafe
 import unittest
 import pytest
 
+from builtins import int
 
 # defined in _client.pyx
 _FLAG_DOUBAN_CHUNKED = 1 << 12
@@ -55,8 +56,8 @@ class CmemcachedRegressionCase(unittest.TestCase):
         self.mc.set("key_int", 1)
         self.assertEqual(self.mc.get("key_int"), True)
 
-        self.mc.set("key_long", 1234567890L)
-        self.assertEqual(self.mc.get("key_long"), 1234567890L)
+        self.mc.set("key_long", int(1234567890))
+        self.assertEqual(self.mc.get("key_long"), int(1234567890))
 
         self.mc.set("key_object", BigObject())
         self.assertEqual(self.mc.get("key_object"), BigObject())
@@ -137,14 +138,14 @@ class CmemcachedRegressionCase(unittest.TestCase):
 
     def test_append(self):
         key = "test_append"
-        value = "append\n"
+        value = b"append\n"
         self.mc.delete(key)
         self.assertEqual(self.mc.append(key, value), 0)
-        self.mc.set(key, "")
+        self.mc.set(key, b"")
         self.assertEqual(self.mc.append(key, value), True)
         self.assertEqual(self.mc.append(key, value), True)
-        self.assertEqual(self.mc.prepend(key, 'before\n'), True)
-        self.assertEqual(self.mc.get(key), 'before\n' + value * 2)
+        self.assertEqual(self.mc.prepend(key, b'before\n'), True)
+        self.assertEqual(self.mc.get(key), b'before\n' + value * 2)
 
     def test_set_multi(self):
         values = dict(('key%s' % k, ('value%s' % k) * 100)
@@ -152,16 +153,16 @@ class CmemcachedRegressionCase(unittest.TestCase):
         values.update({' ': ''})
         self.assertEqual(self.mc.set_multi(values), False)
         del values[' ']
-        self.assertEqual(self.mc.get_multi(values.keys()), values)
+        self.assertEqual(self.mc.get_multi(list(values.keys())), values)
 
     def test_append_large(self):
         k = 'test_append_large'
-        self.mc.set(k, 'a' * 2048)
-        self.mc.append(k, 'bbbb')
-        assert 'bbbb' not in self.mc.get(k)
-        self.mc.set(k, 'a' * 2048, compress=False)
-        self.mc.append(k, 'bbbb')
-        assert 'bbbb' in self.mc.get(k)
+        self.mc.set(k, b'a' * 2048)
+        self.mc.append(k, b'bbbb')
+        assert b'bbbb' not in self.mc.get(k)
+        self.mc.set(k, b'a' * 2048, compress=False)
+        self.mc.append(k, b'bbbb')
+        assert b'bbbb' in self.mc.get(k)
 
     def test_incr(self):
         key = "Not_Exist"
@@ -186,35 +187,35 @@ class CmemcachedRegressionCase(unittest.TestCase):
     def test_get_multi(self):
         keys = ["hello1", "hello2", "hello3"]
         values = ["vhello1", "vhello2", "vhello3"]
-        for x in xrange(3):
+        for x in range(3):
             self.mc.set(keys[x], values[x])
             self.assertEqual(self.mc.get(keys[x]), values[x])
         result = self.mc.get_multi(keys)
-        for x in xrange(3):
+        for x in range(3):
             self.assertEqual(result[keys[x]], values[x])
 
     def test_get_multi_invalid(self):
         keys = ["hello1", "hello2", "hello3"]
         values = ["vhello1", "vhello2", "vhello3"]
-        for x in xrange(3):
+        for x in range(3):
             self.mc.set(keys[x], values[x])
             self.assertEqual(self.mc.get(keys[x]), values[x])
         invalid_keys = keys + ['hoho\r\n']
         result = self.mc.get_multi(invalid_keys)
-        for x in xrange(3):
+        for x in range(3):
             self.assertEqual(result[keys[x]], values[x])
         result_new = self.mc.get_multi(keys)
-        for x in xrange(3):
+        for x in range(3):
             self.assertEqual(result_new[keys[x]], values[x])
 
     def test_get_multi_big(self):
         keys = ["hello1", "hello2", "hello3"]
-        values = [BigObject(str(i), 1000001) for i in xrange(3)]
-        for x in xrange(3):
+        values = [BigObject(str(i), 1000001) for i in range(3)]
+        for x in range(3):
             self.mc.set(keys[x], values[x])
             self.assertEqual(self.mc.get(keys[x]), values[x])
         result = self.mc.get_multi(keys)
-        for x in xrange(3):
+        for x in range(3):
             self.assertEqual(result[keys[x]], values[x])
 
     def test_get_multi_with_empty_string(self):
@@ -324,18 +325,18 @@ class CmemcachedRegressionCase(unittest.TestCase):
     def test_append_multi(self):
         N = 10
         K = "test_append_multi_%d"
-        data = "after\n"
+        data = b"after\n"
         for i in range(N):
-            self.assertEqual(self.mc.set(K % i, "before\n"), True)
+            self.assertEqual(self.mc.set(K % i, b"before\n"), True)
         keys = [K % i for i in range(N)]
         # append
         self.assertEqual(self.mc.append_multi(keys, data), True)
         self.assertEqual(self.mc.get_multi(keys),
-                         dict(zip(keys, ["before\n" + data] * N)))
+                         dict(zip(keys, [b"before\n" + data] * N)))
         # prepend
         self.assertEqual(self.mc.prepend_multi(keys, data), True)
         self.assertEqual(self.mc.get_multi(keys),
-                         dict(zip(keys, [data + "before\n" + data] * N)))
+                         dict(zip(keys, [data + b"before\n" + data] * N)))
         # delete
         self.assertEqual(self.mc.delete_multi(keys), True)
         self.assertEqual(self.mc.get_multi(keys), {})
@@ -343,7 +344,7 @@ class CmemcachedRegressionCase(unittest.TestCase):
     def test_append_multi_performance(self):
         N = 70000
         K = "test_append_multi_%d"
-        data = "after\n"
+        data = b"after\n"
         keys = [K % i for i in range(N)]
         t = time.time()
         self.mc.append_multi(keys, data)
@@ -367,7 +368,7 @@ class CmemcachedRegressionCase(unittest.TestCase):
     def test_general_get_set_regression(self):
         key = 'anykey'
         key_dup = '%s_dup' % key
-        for val in ('x', np.uint32(1), np.int32(2), 0, 0L, False, True):
+        for val in ('x', np.uint32(1), np.int32(2), 0, int(0), False, True):
             self.old_mc.set(key, val)
             val2 = self.mc.get(key)
             assert val2 == val
@@ -451,7 +452,7 @@ class CmemcachedRegressionPrefixCase(unittest.TestCase):
         prefixed_mc.set_multi({'?bar': 'foo'})
         assert prefixed_mc.get('?bar') == 'foo'
         assert raw_mc.get('?%sbar' % self.prefix) == 'foo'
-        assert raw_mc.get_multi(['?%sbar' % self.prefix]).values() == ['foo']
+        assert raw_mc.get_list(['?%sbar' % self.prefix]) == ['foo']
 
     def test_ketama(self):
         mc = Client(

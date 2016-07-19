@@ -1,4 +1,7 @@
 language: python
+python:
+  - "2.7"
+  - "3.5"
 
 cache:
   directories:
@@ -27,6 +30,8 @@ addons:
 
 install:
   - pip install --upgrade pip
+  - pip install future
+  - pip install --upgrade setuptools
   - if [ $TEST_SUITE = "unittest" ]; then pip install pytest greenify gevent; fi
   - if [ $TEST_SUITE = "benchmark" ]; then pip install python-memcached pylibmc; fi
 
