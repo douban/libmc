@@ -40,6 +40,13 @@ const char* client_get_server_address_by_key(void* client, const char* key, size
 }
 
 
+const char* client_get_realtime_server_address_by_key(void* client, const char* key,
+                                                      size_t key_len) {
+  douban::mc::Client* c = static_cast<Client*>(client);
+  return c->getRealtimeServerAddressByKey(key, key_len);
+}
+
+
 int client_version(void* client, broadcast_result_t** results, size_t* n_hosts) {
   douban::mc::Client* c = static_cast<Client*>(client);
   return c->version(results, n_hosts);

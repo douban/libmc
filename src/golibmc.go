@@ -260,7 +260,8 @@ func (client *Client) ConfigTimeout(cCfgKey C.config_options_t, timeout time.Dur
 }
 
 // GetServerAddressByKey will return the address of the memcached
-// server where a key is stored
+// server where a key is stored (assume all memcached servers are
+// accessiable and wonot establish any connections. )
 func (client *Client) GetServerAddressByKey(key string) string {
 	rawKey := client.addPrefix(key)
 
@@ -269,6 +270,23 @@ func (client *Client) GetServerAddressByKey(key string) string {
 	cKeyLen := C.size_t(len(rawKey))
 	cServerAddr := C.client_get_server_address_by_key(client._imp, cKey, cKeyLen)
 	return C.GoString(cServerAddr)
+}
+
+// GetRealtimeServerAddressByKey will return the address of the memcached
+// server where a key is stored. (Will try to connect to
+// corresponding memcached server and may failover accordingly. )
+// if no server is avaiable, an empty string will be returned.
+func (client *Client) GetRealtimeServerAddressByKey(key string) string {
+	rawKey := client.addPrefix(key)
+
+	cKey := C.CString(rawKey)
+	defer C.free(unsafe.Pointer(cKey))
+	cKeyLen := C.size_t(len(rawKey))
+	cServerAddr := C.client_get_realtime_server_address_by_key(client._imp, cKey, cKeyLen)
+	if cServerAddr != nil {
+		return C.GoString(cServerAddr)
+	}
+	return ""
 }
 
 func (client *Client) removePrefix(key string) string {

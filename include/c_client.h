@@ -16,6 +16,8 @@ extern "C" {
   void client_destroy(void* client);
 
   const char* client_get_server_address_by_key(void* client, const char* key, size_t key_len);
+  const char* client_get_realtime_server_address_by_key(void* client, const char* key,
+                                                        size_t key_len);
 
   int client_version(void* client, broadcast_result_t** results, size_t* n_hosts);
   void client_destroy_broadcast_result(void* client);
