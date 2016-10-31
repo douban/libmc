@@ -128,8 +128,7 @@ std::vector<continuum_item_t>::iterator KetamaSelector::getServerIt(const char* 
         if (it == m_continuum.end()) {
           it = m_continuum.begin();
         }
-        if (it->conn != origin_conn && it->conn->tryReconnect()) {
-          origin_conn = it->conn;
+        if (it->conn->tryReconnect()) {
           break;
         }
       } while (--max_iter);
