@@ -12,4 +12,5 @@ _client.so
 .clang_complete
 .eggs/
 .tox/
+.cache/
 tests/resources/keys_*.txt
