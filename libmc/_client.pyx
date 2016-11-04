@@ -115,6 +115,7 @@ cdef extern from "Client.h" namespace "douban::mc":
         int init(const char* const * hosts, const uint32_t* ports, size_t n,
                  const char* const * aliases) nogil
         char* getServerAddressByKey(const char* key, size_t keyLen) nogil
+        char* getRealtimeServerAddressByKey(const char* key, size_t keyLen) nogil
         void enableConsistentFailover() nogil
         void disableConsistentFailover() nogil
         err_code_t get(
@@ -429,6 +430,20 @@ cdef class PyClient:
         Py_DECREF(key2)
         return c_server_addr
 
+    def get_realtime_host_by_key(self, basestring key):
+        cdef bytes key2 = self.normalize_key(key)
+        cdef char* c_key = NULL
+        cdef const char* c_addr = NULL
+        cdef size_t c_key_len = 0
+        Py_INCREF(key2)
+        PyString_AsStringAndSize(key2, &c_key, <Py_ssize_t*>&c_key_len)
+        with nogil:
+            c_addr = self._imp.getRealtimeServerAddressByKey(c_key, c_key_len)
+        Py_DECREF(key2)
+        cdef basestring c_server_addr
+        if c_addr != NULL:
+            c_server_addr = c_addr
+            return c_server_addr
 
     cdef normalize_key(self, basestring raw_key):
         cdef bytes key
