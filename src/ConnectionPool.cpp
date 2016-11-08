@@ -81,6 +81,16 @@ const char* ConnectionPool::getServerAddressByKey(const char* key, size_t keyLen
 }
 
 
+const char* ConnectionPool::getRealtimeServerAddressByKey(const char* key, size_t keyLen) {
+  bool check_alive = true;
+  Connection* conn = m_connSelector.getConn(key, keyLen, check_alive);
+  if (conn == NULL) {
+    return NULL;
+  }
+  return conn->name();
+}
+
+
 void ConnectionPool::enableConsistentFailover() {
   m_connSelector.enableFailover();
 }

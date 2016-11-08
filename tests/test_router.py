@@ -10,6 +10,9 @@ RES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'resources')
 
 
 class HashRouterCase(unittest.TestCase):
+    """
+    Assume all memecached are accessible and won't establish any connections
+    """
 
     def test_md5_router(self):
         server_list = ['localhost', 'myhost:11211', '127.0.0.1:11212',
@@ -99,3 +102,53 @@ class HashRouterCase(unittest.TestCase):
         }
         for k in rs:
             self.assertEqual(crc_32_mc.get_host_by_key(k), rs[k])
+
+
+class HashRouteRealtimeCase(unittest.TestCase):
+    """
+    Will try to connect to corresponding memcached server and
+    may failover accordingly.
+    """
+
+    def test_realtime_host_w_failover(self):
+        servers = ["127.0.0.1:21211", "127.0.0.1:21212"]
+        mc = Client(servers)
+        failover_mc = Client(servers, failover=True)
+        hosts_visited = set()
+        for i in range(1000):
+            key = "test:realtime:route:%d" % i
+            h1 = mc.get_host_by_key(key)
+            h2 = mc.get_realtime_host_by_key(key)
+            assert h1 is not None
+            assert h1 == h2
+
+            h3 = failover_mc.get_host_by_key(key)
+            h4 = failover_mc.get_realtime_host_by_key(key)
+            assert h3 == h1
+            assert h4 == h1
+            hosts_visited.add(h1)
+        assert len(hosts_visited) == len(servers)
+
+    def test_none_host(self):
+        existed_server = "127.0.0.1:21211"
+        not_existed_server = "127.0.0.1:1"
+        servers = [existed_server, not_existed_server]
+        mc = Client(servers)
+        failover_mc = Client(servers, failover=True)
+
+        hosts_visited = set()
+        for i in range(1000):
+            key = "test:realtime:route:%d" % i
+            h1 = mc.get_host_by_key(key)
+            h2 = mc.get_realtime_host_by_key(key)
+            if h1 == existed_server:
+                assert h1 == h2
+            elif h1 == not_existed_server:
+                assert h2 is None
+
+            h3 = failover_mc.get_host_by_key(key)
+            h4 = failover_mc.get_realtime_host_by_key(key)
+            assert h3 == h1
+            assert h4 == existed_server
+            hosts_visited.add(h1)
+        assert len(hosts_visited) == len(servers)
