@@ -32,12 +32,6 @@ class BigObject(object):
         return self.object == other.object
 
 
-class NoPickle(object):
-
-    def __getattr__(self, name):
-        pass
-
-
 class CmemcachedRegressionCase(unittest.TestCase):
 
     def setUp(self):
@@ -246,11 +240,6 @@ class CmemcachedRegressionCase(unittest.TestCase):
         raw, flags = self.mc.get_raw("a")
         self.assertEqual(raw, pickle.dumps(v, -1))
         '''
-
-    def test_no_pickle(self):
-        v = NoPickle()
-        self.assertEqual(self.mc.set("nopickle", v), None)
-        self.assertEqual(self.mc.get("nopickle"), None)
 
     def test_marshal(self):
         v = [{2: {"a": 337}}]
