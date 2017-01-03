@@ -241,6 +241,16 @@ class CmemcachedRegressionCase(unittest.TestCase):
         self.assertEqual(raw, pickle.dumps(v, -1))
         '''
 
+    def test_no_pickle(self):
+
+        class NoPickle(object):
+
+            def __getattr__(self, name):
+                pass
+
+        v = NoPickle()
+        self.assertRaises(TypeError, lambda: self.mc.set("nopickle", v))
+
     def test_marshal(self):
         v = [{2: {"a": 337}}]
         self.mc.set("a", v)
