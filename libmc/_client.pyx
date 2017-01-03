@@ -276,11 +276,8 @@ cdef bytes _encode_value(object val, int comp_threshold, flags_t *flags):
             enc_val = marshal.dumps(val, 2)
             flags[0] = _FLAG_MARSHAL
         except:
-            try:
-                enc_val = pickle.dumps(val, -1)
-                flags[0] = _FLAG_PICKLE
-            except:
-                pass
+            enc_val = pickle.dumps(val, -1)
+            flags[0] = _FLAG_PICKLE
 
     if comp_threshold > 0 and enc_val is not None and len(enc_val) > comp_threshold:
         enc_val = zlib.compress(enc_val)
@@ -290,7 +287,7 @@ cdef bytes _encode_value(object val, int comp_threshold, flags_t *flags):
 
 
 def encode_value(object val, int comp_threshold):
-    cdef flags_t flags
+    cdef flags_t flags = 0xffffffff
     cdef bytes buf = _encode_value(val, comp_threshold, &flags)
     return buf, flags
 
@@ -298,10 +295,7 @@ def encode_value(object val, int comp_threshold):
 cpdef object decode_value(bytes val, flags_t flags):
     cdef object dec_val = None
     if flags & _FLAG_COMPRESS:
-        try:
-            dec_val = zlib.decompress(val)
-        except zlib.error:
-            return
+        dec_val = zlib.decompress(val)
     else:
         dec_val = val
 
@@ -312,15 +306,9 @@ cpdef object decode_value(bytes val, flags_t flags):
     elif flags & _FLAG_LONG:
         dec_val = long(dec_val.decode('ascii'))
     elif flags & _FLAG_MARSHAL:
-        try:
-            dec_val = marshal.loads(dec_val)
-        except:
-            dec_val = None
+        dec_val = marshal.loads(dec_val)
     elif flags & _FLAG_PICKLE:
-        try:
-            dec_val = pickle.loads(dec_val)
-        except:
-            dec_val = None
+        dec_val = pickle.loads(dec_val)
     return dec_val
 
 
