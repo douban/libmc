@@ -269,7 +269,7 @@ cdef bytes _encode_value(object val, int comp_threshold, flags_t *flags):
         flags[0] = _FLAG_LONG
         enc_val = str(val).encode('ascii')
     elif type_.__module__ == 'numpy':
-        enc_val = pickle.dumps(val, -1)
+        enc_val = pickle.dumps(val, 2)
         flags[0] = _FLAG_PICKLE
     else:
         try:
@@ -277,7 +277,7 @@ cdef bytes _encode_value(object val, int comp_threshold, flags_t *flags):
             flags[0] = _FLAG_MARSHAL
         except:
             try:
-                enc_val = pickle.dumps(val, -1)
+                enc_val = pickle.dumps(val, 2)
                 flags[0] = _FLAG_PICKLE
             except:
                 pass
