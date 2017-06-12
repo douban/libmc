@@ -56,11 +56,7 @@ void BufferWriter::takeNumber(int64_t val) {
 }
 
 
-#ifdef __APPLE__
-const struct iovec* const BufferWriter::getReadPtr(int &n) {
-#else
 const struct iovec* const BufferWriter::getReadPtr(size_t &n) {
-#endif
   n = m_msgIovlen;
   if (n > 0) {
     return &m_iovec[m_readIdx];

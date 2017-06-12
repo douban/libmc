@@ -1,6 +1,7 @@
+#include "Common.h"
+#ifdef __GLIBC__
 #include <execinfo.h>
 #include <cstdlib>
-#include "Common.h"
 
 
 void printBacktrace() {
@@ -12,3 +13,6 @@ void printBacktrace() {
   }
   free(stack_syms);
 }
+#else
+void printBacktrace() {}
+#endif
