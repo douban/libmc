@@ -31,6 +31,10 @@ const (
 	HashCRC32
 )
 
+const (
+	connectionRequestQueueSize = 1000000
+)
+
 var hashFunctionMapping = map[int]C.hash_function_options_t{
 	HashMD5:     C.OPT_HASH_MD5,
 	HashFNV1_32: C.OPT_HASH_FNV1_32,
@@ -89,16 +93,17 @@ type Client struct {
 	prefix         string
 	noreply        bool
 	disableLock    bool
+	failover       bool
 	hashFunc       int
 	failOver       bool
 	connectTimeout int
 	pollTimeout    int
 	retryTimeout   int
 	lk             sync.Mutex
-	freeClients    []*conn
+	freeConns      []*conn
 	numOpen        int
 	openerCh       chan struct{}
-	clientRequests map[uint64]chan *conn
+	connRequest    map[uint64]chan *conn
 	nextRequest    uint64
 	maxLifetime    time.Duration // maximum amount of time a connection may be reused
 	maxOpen        int
@@ -255,6 +260,136 @@ func (client *Client) unlock() {
 	if !client.disableLock {
 		client.lk.Unlock()
 	}
+}
+
+func (client *Client) maybeOpenNewConnections() {
+	if client.closed {
+		return
+	}
+	numRequests := len(client.connRequest)
+	if client.maxOpen > 0 {
+		numCanOpen := client.maxOpen - client.numOpen
+		if numRequests > numCanOpen {
+			numRequests = numCanOpen
+		}
+	}
+	for numRequests > 0 {
+		client.numOpen++
+		numRequests--
+		client.openerCh <- struct{}{}
+	}
+}
+
+func (client *Client) opener() {
+	for range client.openerCh {
+		client.openNewConnection()
+	}
+}
+
+func (client *Client) openNewConnection() {
+	cn := client.newConn()
+	client.lk.Lock()
+	defer client.lk.Unlock()
+	if client.closed {
+		client.numOpen--
+		return
+	}
+	if !client.putConnLocked(cn) {
+		client.numOpen--
+	}
+}
+
+func (client *Client) newConn() *conn {
+	var cn conn
+	cn._imp = C.client_create()
+	// TODO finalizer
+	runtime.SetFinalizer(cn, finalizer)
+
+	n := len(client.servers)
+	cHosts := make([]*C.char, n)
+	cPorts := make([]C.uint32_t, n)
+	cAliases := make([]*C.char, n)
+
+	for i, srv := range client.servers {
+		addrAndAlias := strings.Split(srv, " ")
+
+		addr := addrAndAlias[0]
+		if len(addrAndAlias) == 2 {
+			cAlias := C.CString(addrAndAlias[1])
+			defer C.free(unsafe.Pointer(cAlias))
+			cAliases[i] = cAlias
+		}
+
+		hostAndPort := strings.Split(addr, ":")
+		host := hostAndPort[0]
+		cHost := C.CString(host)
+		defer C.free(unsafe.Pointer(cHost))
+		cHosts[i] = cHost
+
+		if len(hostAndPort) == 2 {
+			port, err := strconv.Atoi(hostAndPort[1])
+			if err != nil {
+				return nil
+			}
+			cPorts[i] = C.uint32_t(port)
+		} else {
+			cPorts[i] = C.uint32_t(DefaultPort)
+		}
+	}
+
+	failoverInt := 0
+	if client.failover {
+		failoverInt = 1
+	}
+
+	C.client_init(
+		cn._imp,
+		(**C.char)(unsafe.Pointer(&cHosts[0])),
+		(*C.uint32_t)(unsafe.Pointer(&cPorts[0])),
+		C.size_t(n),
+		(**C.char)(unsafe.Pointer(&cAliases[0])),
+		C.int(failoverInt),
+	)
+
+	client.configHashFunction(int(hashFunctionMapping[client.hashFunc]))
+	return &cn
+}
+
+func (client *Client) putConn(cn *conn) {
+	client.lk.Lock()
+	if cn.badConn {
+		client.lk.Unlock()
+		// TODO Add processing of closing
+		// if err := cn.close(); err != nil {
+		// 	log.Println("Faild cn.close", err)
+		// }
+		return
+	}
+	client.putConnLocked(cn)
+	client.lk.Unlock()
+}
+
+func (client *Client) putConnLocked(cn *conn) bool {
+	if client.closed {
+		return false
+	}
+	if client.maxOpen > 0 && client.maxOpen < client.numOpen {
+		return false
+	}
+	if len(client.connRequest) > 0 {
+		var req chan *conn
+		var reqKey uint64
+		for reqKey, req = range client.connRequest {
+			break
+		}
+		delete(client.connRequest, reqKey)
+		req <- cn
+	} else {
+		client.freeConns = append(client.freeConns, cn)
+		// TODO start cleaner
+		// client.startCleanerLocked()
+	}
+	return true
 }
 
 func (client *Client) configHashFunction(val int) {
