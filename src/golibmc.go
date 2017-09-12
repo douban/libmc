@@ -79,7 +79,7 @@ func networkError(msg string) error {
 	return errors.New("libmc: network error(" + msg + ")")
 }
 
-// Default memcached port
+// DefaultPort memcached port
 const DefaultPort = 11211
 
 // Client struct
