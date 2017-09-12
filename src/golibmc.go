@@ -84,12 +84,35 @@ const DefaultPort = 11211
 
 // Client struct
 type Client struct {
-	_imp        unsafe.Pointer
-	servers     []string
-	prefix      string
-	noreply     bool
-	disableLock bool
-	lk          sync.Mutex
+	_imp           unsafe.Pointer
+	servers        []string
+	prefix         string
+	noreply        bool
+	disableLock    bool
+	hashFunc       int
+	failOver       bool
+	connectTimeout int
+	pollTimeout    int
+	retryTimeout   int
+	lk             sync.Mutex
+	freeClients    []*conn
+	numOpen        int
+	openerCh       chan struct{}
+	clientRequests map[uint64]chan *conn
+	nextRequest    uint64
+	maxLifetime    time.Duration // maximum amount of time a connection may be reused
+	maxOpen        int
+	cleanerCh      chan struct{}
+	closed         bool
+}
+
+type conn struct {
+	_imp   unsafe.Pointer
+	client *Client
+	sync.Mutex
+	createdAt time.Time
+	badConn   bool
+	closed    bool
 }
 
 // Item is an item to be got or stored in a memcached server.
