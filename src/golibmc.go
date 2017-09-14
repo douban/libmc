@@ -9,6 +9,7 @@ import "C"
 import (
 	"context"
 	"errors"
+	"log"
 	"runtime"
 	"strconv"
 	"strings"
@@ -96,9 +97,8 @@ type Client struct {
 	prefix         string
 	noreply        bool
 	disableLock    bool
-	failover       bool
 	hashFunc       int
-	failOver       bool
+	failover       bool
 	connectTimeout C.int
 	pollTimeout    C.int
 	retryTimeout   C.int
@@ -184,7 +184,12 @@ func New(servers []string, noreply bool, prefix string, hashFunc int, failover b
 	client.noreply = noreply
 	client.disableLock = disableLock
 	client.hashFunc = hashFunc
-	client.failOver = failover
+	client.failover = failover
+	client.openerCh = make(chan struct{}, connectionRequestQueueSize)
+	client.connRequest = make(map[uint64]chan *conn)
+
+	go client.opener()
+
 	return
 }
 
@@ -329,10 +334,9 @@ func (client *Client) putConn(cn *conn) {
 	client.lk.Lock()
 	if cn.badConn {
 		client.lk.Unlock()
-		// TODO Add processing of closing
-		// if err := cn.close(); err != nil {
-		// 	log.Println("Faild cn.close", err)
-		// }
+		if err := cn.close(); err != nil {
+			log.Println("Faild cn.close", err)
+		}
 		return
 	}
 	client.putConnLocked(cn)
@@ -531,8 +535,8 @@ func (cn *conn) configHashFunction(val int) {
 //
 // timeout should of type time.Duration
 func (client *Client) ConfigTimeout(cCfgKey C.config_options_t, timeout time.Duration) {
-	client.lock()
-	defer client.unlock()
+	client.lk.Lock()
+	defer client.lk.Unlock()
 	switch cCfgKey {
 	case RetryTimeout:
 		client.retryTimeout = C.int(timeout / time.Second)
@@ -605,9 +609,6 @@ func (client *Client) addPrefix(key string) string {
 }
 
 func (client *Client) store(cmd string, item *Item) error {
-	client.lock()
-	defer client.unlock()
-
 	key := client.addPrefix(item.Key)
 
 	cKey := C.CString(key)
@@ -715,9 +716,6 @@ func (client *Client) Set(item *Item) error {
 
 // SetMulti will set multi values at once
 func (client *Client) SetMulti(items []*Item) (failedKeys []string, err error) {
-	client.lock()
-	defer client.unlock()
-
 	nItems := len(items)
 	cKeys := make([]*C.char, nItems)
 	cKeyLens := make([]C.size_t, nItems)
@@ -814,9 +812,6 @@ func (client *Client) Cas(item *Item) error {
 
 // Delete a key
 func (client *Client) Delete(key string) error {
-	client.lock()
-	defer client.unlock()
-
 	rawKey := client.addPrefix(key)
 
 	cKey := C.CString(rawKey)
@@ -857,9 +852,6 @@ func (client *Client) Delete(key string) error {
 
 // DeleteMulti will delete multi keys at once
 func (client *Client) DeleteMulti(keys []string) (failedKeys []string, err error) {
-	client.lock()
-	defer client.unlock()
-
 	var rawKeys []string
 	if len(client.prefix) == 0 {
 		rawKeys = keys
@@ -1006,9 +998,6 @@ func (client *Client) Gets(key string) (*Item, error) {
 
 // GetMulti will return a map of multi values
 func (client *Client) GetMulti(keys []string) (rv map[string]*Item, err error) {
-	client.lock()
-	defer client.unlock()
-
 	nKeys := len(keys)
 	var rawKeys []string
 	if len(client.prefix) == 0 {
@@ -1078,9 +1067,6 @@ func (client *Client) GetMulti(keys []string) (rv map[string]*Item, err error) {
 
 // Touch command
 func (client *Client) Touch(key string, expiration int64) error {
-	client.lock()
-	defer client.unlock()
-
 	rawKey := client.addPrefix(key)
 
 	cKey := C.CString(rawKey)
@@ -1121,9 +1107,6 @@ func (client *Client) Touch(key string, expiration int64) error {
 }
 
 func (client *Client) incrOrDecr(cmd string, key string, delta uint64) (uint64, error) {
-	client.lock()
-	defer client.unlock()
-
 	rawKey := client.addPrefix(key)
 	cKey := C.CString(rawKey)
 	defer C.free(unsafe.Pointer(cKey))
@@ -1186,9 +1169,6 @@ func (client *Client) Decr(key string, delta uint64) (uint64, error) {
 
 // Version will return a map reflecting versions of each memcached server
 func (client *Client) Version() (map[string]string, error) {
-	client.lock()
-	defer client.unlock()
-
 	var rst *C.broadcast_result_t
 	var n C.size_t
 	rv := make(map[string]string)
@@ -1223,9 +1203,6 @@ func (client *Client) Version() (map[string]string, error) {
 
 // Stats will return a map reflecting stats map of each memcached server
 func (client *Client) Stats() (map[string](map[string]string), error) {
-	client.lock()
-	defer client.unlock()
-
 	var rst *C.broadcast_result_t
 	var n C.size_t
 
@@ -1276,9 +1253,6 @@ func (client *Client) Stats() (map[string](map[string]string), error) {
 
 // Quit will close the sockets to each memcached server
 func (client *Client) Quit() error {
-	client.lock()
-	defer client.unlock()
-
 	client.lk.Lock()
 
 	close(client.openerCh)
