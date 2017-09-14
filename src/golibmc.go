@@ -386,10 +386,96 @@ func (client *Client) putConnLocked(cn *conn) bool {
 		req <- cn
 	} else {
 		client.freeConns = append(client.freeConns, cn)
-		// TODO start cleaner
-		// client.startCleanerLocked()
+		client.startCleanerLocked()
 	}
 	return true
+}
+
+// SetConnMaxLifetime sets the maximum amount of time a connection may be reused.
+//
+// Expired connections may be closed lazily before reuse.
+//
+// If d <= 0, connections are reused forever.
+func (client *Client) SetConnMaxLifetime(d time.Duration) {
+	if d < 0 {
+		d = 0
+	}
+	client.lk.Lock()
+	// wake cleaner up when lifetime is shortened.
+	if d > 0 && d < client.maxLifetime && client.cleanerCh != nil {
+		select {
+		case client.cleanerCh <- struct{}{}:
+		default:
+		}
+	}
+	client.maxLifetime = d
+	client.startCleanerLocked()
+	client.lk.Unlock()
+}
+
+func (client *Client) needStartCleaner() bool {
+	return client.maxLifetime > 0 &&
+		client.numOpen > 0 &&
+		client.cleanerCh == nil
+}
+
+// startCleanerLocked starts connectionCleaner if needed.
+func (client *Client) startCleanerLocked() {
+	if client.needStartCleaner() {
+		client.cleanerCh = make(chan struct{}, 1)
+		go client.connectionCleaner(client.maxLifetime)
+	}
+}
+
+func (client *Client) connectionCleaner(d time.Duration) {
+	const minInterval = time.Second
+
+	if d < minInterval {
+		d = minInterval
+	}
+	t := time.NewTimer(d)
+
+	for {
+		select {
+		case <-t.C:
+		case <-client.cleanerCh: // maxLifetime was changed or db was closed.
+		}
+
+		client.lk.Lock()
+		d = client.maxLifetime
+		if client.closed || client.numOpen == 0 || d <= 0 {
+			client.cleanerCh = nil
+			client.lk.Unlock()
+			return
+		}
+
+		expiredSince := time.Now().Add(-d)
+		var closing []*conn
+		for i := 0; i < len(client.freeConns); i++ {
+			cn := client.freeConns[i]
+			if cn.createdAt.Before(expiredSince) {
+				closing = append(closing, cn)
+				last := len(client.freeConns) - 1
+				client.freeConns[i] = client.freeConns[last]
+				client.freeConns[last] = nil
+				client.freeConns = client.freeConns[:last]
+				i--
+			}
+		}
+		client.lk.Unlock()
+
+		// TODO closing
+		// for _, c := range closing {
+		// if err := c.close(); err != nil {
+		// 	log.Println("Faild conn.close", err)
+		// }
+		// }
+
+		if d < minInterval {
+			d = minInterval
+		}
+		t.Reset(d)
+	}
 }
 
 func (client *Client) configHashFunction(val int) {
