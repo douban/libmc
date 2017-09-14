@@ -7,7 +7,9 @@ package golibmc
 */
 import "C"
 import (
+	"context"
 	"errors"
+	"fmt"
 	"runtime"
 	"strconv"
 	"strings"
@@ -77,6 +79,9 @@ var (
 	// Keys must be at maximum 250 bytes long, ASCII, and not
 	// contain whitespace or control characters.
 	ErrMalformedKey = errors.New("malformed: key is too long or contains invalid characters")
+
+	ErrMemcachedClosed = errors.New("memcached is closed")
+	ErrBadConn         = errors.New("bad conn")
 )
 
 func networkError(msg string) error {
@@ -287,7 +292,14 @@ func (client *Client) opener() {
 }
 
 func (client *Client) openNewConnection() {
-	cn := client.newConn()
+	cn, err := client.newConn()
+	if err != nil {
+		client.lk.Lock()
+		defer client.lk.Unlock()
+		client.numOpen--
+		client.maybeOpenNewConnections()
+		return
+	}
 	client.lk.Lock()
 	defer client.lk.Unlock()
 	if client.closed {
@@ -299,7 +311,7 @@ func (client *Client) openNewConnection() {
 	}
 }
 
-func (client *Client) newConn() *conn {
+func (client *Client) newConn() (*conn, error) {
 	var cn conn
 	cn._imp = C.client_create()
 	// TODO finalizer
@@ -329,7 +341,7 @@ func (client *Client) newConn() *conn {
 		if len(hostAndPort) == 2 {
 			port, err := strconv.Atoi(hostAndPort[1])
 			if err != nil {
-				return nil
+				return nil, err
 			}
 			cPorts[i] = C.uint32_t(port)
 		} else {
@@ -352,7 +364,7 @@ func (client *Client) newConn() *conn {
 	)
 
 	client.configHashFunction(int(hashFunctionMapping[client.hashFunc]))
-	return &cn
+	return &cn, nil
 }
 
 func (client *Client) putConn(cn *conn) {
@@ -389,6 +401,75 @@ func (client *Client) putConnLocked(cn *conn) bool {
 		client.startCleanerLocked()
 	}
 	return true
+}
+
+func (client *Client) conn(ctx context.Context, userFreeConn bool) (*conn, error) {
+	client.lk.Lock()
+	if client.closed {
+		client.lk.Unlock()
+		return nil, ErrMemcachedClosed
+	}
+	// Check if the context is expired.
+	select {
+	default:
+	case <-ctx.Done():
+		client.lk.Unlock()
+		return nil, ctx.Err()
+	}
+	lifetime := client.maxLifetime
+
+	var cn *conn
+	if userFreeConn && len(client.freeConns) > 0 {
+		cn, client.freeConns = client.freeConns[0], client.freeConns[1:]
+		client.lk.Unlock()
+		if cn.expired(lifetime) {
+			cn.close()
+			return nil, ErrBadConn
+		}
+		return cn, nil
+	}
+
+	if client.maxOpen > 0 && client.maxOpen <= client.numOpen {
+		req := make(chan *conn, 1)
+		reqKey := client.nextRequest
+		client.nextRequest++
+		client.connRequest[reqKey] = req
+		client.lk.Unlock()
+
+		select {
+		// timeout
+		case <-ctx.Done():
+			client.lk.Lock()
+			delete(client.connRequest, reqKey)
+			client.lk.Unlock()
+			select {
+			// 削除後に送信されてきていないことを確認
+			case ret, ok := <-req:
+				if ok {
+					client.putConn(ret)
+				}
+			default:
+			}
+			return nil, ctx.Err()
+		case ret, ok := <-req:
+			if !ok {
+				return nil, ErrMemcachedClosed
+			}
+			return ret, nil
+		}
+	}
+
+	client.numOpen++
+	client.lk.Unlock()
+	newCn, err := client.newConn()
+	if err != nil {
+		client.lk.Lock()
+		defer client.lk.Unlock()
+		client.numOpen--
+		client.maybeOpenNewConnections()
+		return nil, err
+	}
+	return newCn, nil
 }
 
 // SetConnMaxLifetime sets the maximum amount of time a connection may be reused.
@@ -1175,4 +1256,28 @@ func (client *Client) Quit() error {
 		return nil
 	}
 	return networkError(errorMessage[errCode])
+}
+
+func (cn *conn) expired(timeout time.Duration) bool {
+	if timeout <= 0 {
+		return false
+	}
+	return cn.createdAt.Add(timeout).Before(time.Now())
+}
+
+func (cn *conn) close() error {
+	cn.Lock()
+	defer cn.Unlock()
+	if cn.closed {
+		return errors.New("duplicate client close")
+	}
+	cn.closed = true
+	if err := cn.client.Quit(); err != nil {
+		return fmt.Errorf("Faild golibmc.Client.Quit: %v", err)
+	}
+	cn.client.lk.Lock()
+	defer cn.client.lk.Unlock()
+	cn.client.numOpen--
+	cn.client.maybeOpenNewConnections()
+	return nil
 }
