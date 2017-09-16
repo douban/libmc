@@ -33,9 +33,7 @@ const (
 	HashCRC32
 )
 
-const (
-	connectionRequestQueueSize = 1000000
-)
+const connectionRequestQueueSize = 1000000
 
 var hashFunctionMapping = map[int]C.hash_function_options_t{
 	HashMD5:     C.OPT_HASH_MD5,
