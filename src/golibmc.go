@@ -454,6 +454,13 @@ func (client *Client) SetConnMaxLifetime(d time.Duration) {
 	client.lk.Unlock()
 }
 
+// SetConnMaxOpen sets the maximum amount of opening connections.
+func (client *Client) SetConnMaxOpen(maxOpen int) {
+	client.lk.Lock()
+	defer client.lk.Unlock()
+	client.maxOpen = maxOpen
+}
+
 func (client *Client) needStartCleaner() bool {
 	return client.maxLifetime > 0 &&
 		client.numOpen > 0 &&
