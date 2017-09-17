@@ -265,8 +265,7 @@ func (client *Client) openNewConnection() {
 }
 
 func (client *Client) newConn() (*conn, error) {
-	var cn conn
-	cn._imp = C.client_create()
+	cn := conn{client: client, _imp: C.client_create()}
 	runtime.SetFinalizer(&cn, finalizer)
 
 	n := len(client.servers)
@@ -332,7 +331,7 @@ func (client *Client) putConn(cn *conn) {
 	client.lk.Lock()
 	if cn.badConn {
 		client.lk.Unlock()
-		if err := cn.close(); err != nil {
+		if err := cn.quit(); err != nil {
 			log.Println("Faild cn.close", err)
 		}
 		return
@@ -383,7 +382,7 @@ func (client *Client) conn(ctx context.Context) (*conn, error) {
 		cn, client.freeConns = client.freeConns[0], client.freeConns[1:]
 		client.lk.Unlock()
 		if cn.expired(lifetime) {
-			cn.close()
+			cn.quit()
 			return nil, ErrBadConn
 		}
 		return cn, nil
@@ -513,7 +512,7 @@ func (client *Client) connectionCleaner(d time.Duration) {
 		client.lk.Unlock()
 
 		for _, cn := range closing {
-			if err := cn.close(); err != nil {
+			if err := cn.quit(); err != nil {
 				log.Println("Faild conn.close", err)
 			}
 		}
@@ -1268,8 +1267,8 @@ func (client *Client) Quit() error {
 	}
 	client.closed = true
 	client.lk.Unlock()
-	for _, c := range client.freeConns {
-		if err := c.close(); err != nil {
+	for _, cn := range client.freeConns {
+		if err := cn.quit(); err != nil {
 			return err
 		}
 	}
@@ -1287,7 +1286,7 @@ func (cn *conn) expired(timeout time.Duration) bool {
 	return cn.createdAt.Add(timeout).Before(time.Now())
 }
 
-func (cn *conn) close() error {
+func (cn *conn) quit() error {
 	cn.Lock()
 	defer cn.Unlock()
 	if cn.closed {
@@ -1297,11 +1296,11 @@ func (cn *conn) close() error {
 	errCode := C.client_quit(cn._imp)
 	C.client_destroy_broadcast_result(cn._imp)
 	if errCode == C.RET_CONN_POLL_ERR || errCode == C.RET_RECV_ERR {
+		cn.client.lk.Lock()
+		defer cn.client.lk.Unlock()
+		cn.client.numOpen--
+		cn.client.maybeOpenNewConnections()
 		return nil
 	}
-	cn.client.lk.Lock()
-	defer cn.client.lk.Unlock()
-	cn.client.numOpen--
-	cn.client.maybeOpenNewConnections()
 	return networkError(errorMessage[errCode])
 }
