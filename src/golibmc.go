@@ -512,12 +512,11 @@ func (client *Client) connectionCleaner(d time.Duration) {
 		}
 		client.lk.Unlock()
 
-		// TODO closing
-		// for _, c := range closing {
-		// if err := c.close(); err != nil {
-		// 	log.Println("Faild conn.close", err)
-		// }
-		// }
+		for _, cn := range closing {
+			if err := cn.close(); err != nil {
+				log.Println("Faild conn.close", err)
+			}
+		}
 
 		if d < minInterval {
 			d = minInterval
