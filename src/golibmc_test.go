@@ -1,10 +1,14 @@
 package golibmc
 
-import "fmt"
-import "time"
-import "strings"
-import "testing"
-import "strconv"
+import (
+	"fmt"
+	"strconv"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+)
 
 const LocalMC = "localhost:21211"
 const ErrorSet = "Error on Set"
@@ -855,11 +859,18 @@ func TestMaybeOpenNewConnections(t *testing.T) {
 	mc.maybeOpenNewConnections()
 
 	select {
-	case ret, ok := <-req:
+	case cn, ok := <-req:
 		if !ok {
-			t.Errorf("Receive an invalid connection: %v", ret)
+			t.Errorf("Receive an invalid connection: %v", cn)
 		}
+		mc.putConn(cn)
 	}
+	assert.Len(t, mc.freeConns, 1)
+
+	// Check cleaner
+	time.Sleep(2 * time.Second)
+	assert.Len(t, mc.freeConns, 0)
+	mc.Quit()
 }
 
 func BenchmarkSetAndGet(b *testing.B) {
