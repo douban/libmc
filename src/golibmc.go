@@ -486,7 +486,7 @@ func (client *Client) connectionCleaner(d time.Duration) {
 	for {
 		select {
 		case <-t.C:
-		case <-client.cleanerCh: // maxLifetime was changed or db was closed.
+		case <-client.cleanerCh: // maxLifetime was changed or memcached was closed.
 		}
 
 		client.lk.Lock()
