@@ -265,7 +265,11 @@ func (client *Client) openNewConnection() {
 }
 
 func (client *Client) newConn() (*conn, error) {
-	cn := conn{client: client, _imp: C.client_create()}
+	cn := conn{
+		client:    client,
+		_imp:      C.client_create(),
+		createdAt: time.Now(),
+	}
 	runtime.SetFinalizer(&cn, finalizer)
 
 	n := len(client.servers)
