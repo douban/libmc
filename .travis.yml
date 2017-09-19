@@ -25,7 +25,7 @@ addons:
       - valgrind
       - cppcheck
       - memcached
-      - libmemcached
+      - libmemcached-tools
       - golang
 
 install:
