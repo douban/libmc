@@ -6,8 +6,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/assert"
 )
 
 const LocalMC = "localhost:21211"
@@ -867,13 +865,21 @@ func TestMaybeOpenNewConnections(t *testing.T) {
 		}
 		mc.putConn(cn)
 	}
-	assert.Len(t, mc.freeConns, 1)
-	assert.Equal(t, 1, mc.numOpen)
+	if len(mc.freeConns) != 1 {
+		t.Errorf("mc.freeConns' len expected 1 but %d", len(mc.freeConns))
+	}
+	if mc.numOpen != 1 {
+		t.Errorf("mc.numOpen expected 1 but %d", mc.numOpen)
+	}
 
 	// Check cleaner
 	time.Sleep(2 * time.Second)
-	assert.Len(t, mc.freeConns, 0)
-	assert.Equal(t, 0, mc.numOpen)
+	if len(mc.freeConns) != 0 {
+		t.Errorf("mc.freeConns' len expected 0 but (%d)", len(mc.freeConns))
+	}
+	if mc.numOpen != 0 {
+		t.Errorf("mc.numOpen expected 0 but (%d)", mc.numOpen)
+	}
 	mc.Quit()
 }
 
