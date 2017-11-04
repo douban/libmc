@@ -59,7 +59,7 @@
 #define _mc_output_stderr(LEVEL, FORMAT, ...) ( \
   fprintf( \
     stderr, \
-    "[" PROJECT_NAME "] [" #LEVEL "] [%s:%u] " FORMAT "\n", \
+    "[" PROJECT_NAME "] [" #LEVEL "] [%s:%d] " FORMAT "\n", \
     __FILE__, __LINE__, ##__VA_ARGS__ \
   ), \
   __VOID_CAST(0) \
