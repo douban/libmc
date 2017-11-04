@@ -138,7 +138,7 @@ void PacketParser::process_packets(err_code_t& err) {
         break;
       case FSM_GET_FLAG: // got "flag "
         {
-          assert(mt_kvPtr != NULL && mt_kvPtr->bytes >= 0 && mt_kvPtr->bytes + 1 >= mt_kvPtr->bytesRemain);
+          assert(mt_kvPtr != NULL && mt_kvPtr->bytes + 1 >= mt_kvPtr->bytesRemain);
           uint64_t bytes;
           READ_UNSIGNED(bytes);
           mt_kvPtr->bytes = static_cast<uint32_t>(bytes);
