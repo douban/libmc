@@ -517,7 +517,9 @@ func testTouch(mc *Client, t *testing.T) {
 	if itemGot, err := mc.Get(key); err != nil || string(itemGot.Value) != value {
 		t.Error(err)
 	}
-	time.Sleep(1000 * time.Millisecond)
+	// The value is expected to be exired in 1s,
+	// so we sleep 2s and check if it's expired.
+	time.Sleep(2 * time.Second)
 	if itemGot, err := mc.Get(key); err != ErrCacheMiss || itemGot != nil {
 		t.Error(err)
 	}
