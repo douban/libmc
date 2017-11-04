@@ -197,12 +197,12 @@ TEST(test_client, test_version) {
       broadcast_result_t* r = results + i;
       ASSERT_TRUE(r->len == 1);
       ASSERT_TRUE(r->line_lens[0]);
-      char c = r->lines[0][r->line_lens[0] - 1];
+      // possible version strings:
+      // - "1.4.14 (Ubuntu)" (on Travis-CI)
+      // - "1.5.2"
+      // First char is expected to be a digit
+      char c = r->lines[0][0];
       ASSERT_TRUE('0' <= c && c <= '9');
-      // for (int j = 0; j < r->len; j++) {
-      //   printf("%s: %.*s\n", r->host, static_cast<int>(r->line_lens[j]), r->lines[j]);
-      // }
-      // printf("\r\n");
     }
     client->destroyBroadcastResult();
     delete client;

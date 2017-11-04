@@ -1,6 +1,6 @@
 package golibmc
 
-const _Version = "v1.1.0-5-gf78040f"
+const _Version = "v1.1.0-5-gfc0d6ac"
 const _Author = "mckelvin"
 const _Email = "mckelvin@users.noreply.github.com"
 const _Date = "Sat Nov 4 11:05:49 2017 +0800"
