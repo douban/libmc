@@ -78,8 +78,12 @@ var (
 	// contain whitespace or control characters.
 	ErrMalformedKey = errors.New("malformed: key is too long or contains invalid characters")
 
+	// ErrMemcachedClosed is returned when the memcached connection is
+	// already closing.
 	ErrMemcachedClosed = errors.New("memcached is closed")
-	ErrBadConn         = errors.New("bad conn")
+
+	// ErrBadConn is returned when the connection is out of its lifetime.
+	ErrBadConn = errors.New("bad conn")
 )
 
 func networkError(msg string) error {
@@ -185,6 +189,7 @@ func New(servers []string, noreply bool, prefix string, hashFunc int, failover b
 	client.failover = failover
 	client.openerCh = make(chan struct{}, connectionRequestQueueSize)
 	client.connRequest = make(map[uint64]chan *conn)
+	client.maxOpen = 1 // default value
 
 	go client.opener()
 
@@ -367,6 +372,17 @@ func (client *Client) putConnLocked(cn *conn) bool {
 }
 
 func (client *Client) conn(ctx context.Context) (*conn, error) {
+	cn, err := client._conn(ctx, true)
+	if err == nil {
+		return cn, nil
+	}
+	if err == ErrBadConn {
+		return client._conn(ctx, false)
+	}
+	return cn, err
+}
+
+func (client *Client) _conn(ctx context.Context, useFreeClient bool) (*conn, error) {
 	client.lk.Lock()
 	if client.closed {
 		client.lk.Unlock()
@@ -382,7 +398,7 @@ func (client *Client) conn(ctx context.Context) (*conn, error) {
 	lifetime := client.maxLifetime
 
 	var cn *conn
-	if len(client.freeConns) > 0 {
+	if useFreeClient && len(client.freeConns) > 0 {
 		cn, client.freeConns = client.freeConns[0], client.freeConns[1:]
 		client.lk.Unlock()
 		if cn.expired(lifetime) {
