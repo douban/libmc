@@ -418,11 +418,12 @@ func (client *Client) _conn(ctx context.Context, useFreeClient bool) (*conn, err
 		select {
 		// timeout
 		case <-ctx.Done():
+			// Remove the connection request and ensure no value has been sent
+			// on it after removing.
 			client.lk.Lock()
 			delete(client.connRequest, reqKey)
 			client.lk.Unlock()
 			select {
-			// 削除後に送信されてきていないことを確認
 			case ret, ok := <-req:
 				if ok {
 					client.putConn(ret)
