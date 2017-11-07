@@ -111,7 +111,7 @@ type Client struct {
 	connRequest    map[uint64]chan *conn
 	nextRequest    uint64
 	maxLifetime    time.Duration // maximum amount of time a connection may be reused
-	maxOpen        int
+	maxOpen        int           // maximum amount of connection num. maxOpen <= 0 means unlimited.
 	cleanerCh      chan struct{}
 	closed         bool
 }
