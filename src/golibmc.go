@@ -250,6 +250,12 @@ func (client *Client) opener() {
 }
 
 func (client *Client) openNewConnection() {
+	if client.closed {
+		client.lk.Lock()
+		client.numOpen--
+		client.lk.Unlock()
+		return
+	}
 	cn, err := client.newConn()
 	if err != nil {
 		client.lk.Lock()
@@ -260,10 +266,6 @@ func (client *Client) openNewConnection() {
 	}
 	client.lk.Lock()
 	defer client.lk.Unlock()
-	if client.closed {
-		client.numOpen--
-		return
-	}
 	if !client.putConnLocked(cn) {
 		client.numOpen--
 	}
