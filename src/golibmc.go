@@ -340,7 +340,8 @@ func (client *Client) putConn(cn *conn) error {
 	client.lk.Lock()
 	if cn.badConn {
 		client.lk.Unlock()
-		if err := cn.quit(); err != nil {
+		err := cn.quit()
+		if err != nil {
 			log.Println("Faild cn.close", err)
 		}
 		return err
