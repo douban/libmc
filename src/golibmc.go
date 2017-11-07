@@ -336,17 +336,18 @@ func (client *Client) newConn() (*conn, error) {
 	return &cn, nil
 }
 
-func (client *Client) putConn(cn *conn) {
+func (client *Client) putConn(cn *conn) error {
 	client.lk.Lock()
 	if cn.badConn {
 		client.lk.Unlock()
 		if err := cn.quit(); err != nil {
 			log.Println("Faild cn.close", err)
 		}
-		return
+		return err
 	}
 	client.putConnLocked(cn)
 	client.lk.Unlock()
+	return nil
 }
 
 func (client *Client) putConnLocked(cn *conn) bool {
