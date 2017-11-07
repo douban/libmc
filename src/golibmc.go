@@ -969,9 +969,7 @@ func (client *Client) getOrGets(cmd string, key string) (item *Item, err error) 
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		client.putConn(cn)
-	}()
+	defer client.putConn(cn)
 
 	rawKey := client.addPrefix(key)
 
