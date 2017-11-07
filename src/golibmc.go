@@ -386,7 +386,7 @@ func (client *Client) conn(ctx context.Context) (*conn, error) {
 	return cn, err
 }
 
-func (client *Client) _conn(ctx context.Context, useFreeClient bool) (*conn, error) {
+func (client *Client) _conn(ctx context.Context, useFreeConn bool) (*conn, error) {
 	client.lk.Lock()
 	if client.closed {
 		client.lk.Unlock()
@@ -403,7 +403,7 @@ func (client *Client) _conn(ctx context.Context, useFreeClient bool) (*conn, err
 
 	var cn *conn
 	numFree := len(client.freeConns)
-	if useFreeClient && numFree > 0 {
+	if useFreeConn && numFree > 0 {
 		cn = client.freeConns[0]
 		copy(client.freeConns, client.freeConns[1:])
 		client.freeConns = client.freeConns[:numFree-1]
