@@ -344,7 +344,7 @@ func (client *Client) putConn(cn *conn) error {
 		client.lk.Unlock()
 		err := cn.quit()
 		if err != nil {
-			log.Println("Faild cn.close", err)
+			log.Println("Failed cn.close", err)
 		}
 		return err
 	}
@@ -541,7 +541,7 @@ func (client *Client) connectionCleaner(d time.Duration) {
 
 		for _, cn := range closing {
 			if err := cn.quit(); err != nil {
-				log.Println("Faild conn.close", err)
+				log.Println("Failed conn.close", err)
 			}
 		}
 
