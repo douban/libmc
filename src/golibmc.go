@@ -108,7 +108,7 @@ type Client struct {
 	freeConns      []*conn
 	numOpen        int
 	openerCh       chan struct{}
-	connRequest    map[uint64]chan *conn
+	connRequests   map[uint64]chan *conn
 	nextRequest    uint64
 	maxLifetime    time.Duration // maximum amount of time a connection may be reused
 	maxOpen        int           // maximum amount of connection num. maxOpen <= 0 means unlimited.
@@ -188,7 +188,7 @@ func New(servers []string, noreply bool, prefix string, hashFunc int, failover b
 	client.hashFunc = hashFunc
 	client.failover = failover
 	client.openerCh = make(chan struct{}, connectionRequestQueueSize)
-	client.connRequest = make(map[uint64]chan *conn)
+	client.connRequests = make(map[uint64]chan *conn)
 	client.maxOpen = 1 // default value
 
 	go client.opener()
@@ -229,7 +229,7 @@ func (client *Client) maybeOpenNewConnections() {
 	if client.closed {
 		return
 	}
-	numRequests := len(client.connRequest)
+	numRequests := len(client.connRequests)
 	if client.maxOpen > 0 {
 		numCanOpen := client.maxOpen - client.numOpen
 		if numRequests > numCanOpen {
@@ -358,13 +358,13 @@ func (client *Client) putConnLocked(cn *conn) bool {
 	if client.maxOpen > 0 && client.maxOpen < client.numOpen {
 		return false
 	}
-	if len(client.connRequest) > 0 {
+	if len(client.connRequests) > 0 {
 		var req chan *conn
 		var reqKey uint64
-		for reqKey, req = range client.connRequest {
+		for reqKey, req = range client.connRequests {
 			break
 		}
-		delete(client.connRequest, reqKey)
+		delete(client.connRequests, reqKey)
 		req <- cn
 	} else {
 		client.freeConns = append(client.freeConns, cn)
@@ -414,7 +414,7 @@ func (client *Client) _conn(ctx context.Context, useFreeClient bool) (*conn, err
 		req := make(chan *conn, 1)
 		reqKey := client.nextRequest
 		client.nextRequest++
-		client.connRequest[reqKey] = req
+		client.connRequests[reqKey] = req
 		client.lk.Unlock()
 
 		select {
@@ -423,7 +423,7 @@ func (client *Client) _conn(ctx context.Context, useFreeClient bool) (*conn, err
 			// Remove the connection request and ensure no value has been sent
 			// on it after removing.
 			client.lk.Lock()
-			delete(client.connRequest, reqKey)
+			delete(client.connRequests, reqKey)
 			client.lk.Unlock()
 			select {
 			case ret, ok := <-req:
@@ -1285,7 +1285,7 @@ func (client *Client) Quit() error {
 	if client.cleanerCh != nil {
 		close(client.cleanerCh)
 	}
-	for _, cr := range client.connRequest {
+	for _, cr := range client.connRequests {
 		close(cr)
 	}
 	client.closed = true

@@ -855,7 +855,7 @@ func TestMaybeOpenNewConnections(t *testing.T) {
 	req := make(chan *conn, 1)
 	reqKey := mc.nextRequest
 	mc.nextRequest++
-	mc.connRequest[reqKey] = req
+	mc.connRequests[reqKey] = req
 	mc.maybeOpenNewConnections()
 
 	select {
