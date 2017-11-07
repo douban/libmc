@@ -402,8 +402,11 @@ func (client *Client) _conn(ctx context.Context, useFreeClient bool) (*conn, err
 	lifetime := client.maxLifetime
 
 	var cn *conn
-	if useFreeClient && len(client.freeConns) > 0 {
-		cn, client.freeConns = client.freeConns[0], client.freeConns[1:]
+	numFree := len(client.freeConns)
+	if useFreeClient && numFree > 0 {
+		cn = client.freeConns[0]
+		copy(client.freeConns, client.freeConns[1:])
+		client.freeConns = client.freeConns[:numFree-1]
 		client.lk.Unlock()
 		if cn.expired(lifetime) {
 			cn.quit()
