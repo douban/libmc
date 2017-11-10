@@ -344,17 +344,17 @@ func (client *Client) newConn() (*conn, error) {
 
 func (client *Client) putConn(cn *conn, err error) error {
 	client.lk.Lock()
-	if err == ErrBadConn {
+	if err == ErrBadConn ||
+		!client.putConnLocked(cn, nil) {
 		client.lk.Unlock()
-		err := cn.quit()
-		if err != nil {
-			log.Println("Failed cn.close", err)
+		err1 := cn.quit()
+		if err1 != nil {
+			log.Printf("Failed cn.quit: %v", err1)
 		}
 		return err
 	}
-	client.putConnLocked(cn, nil)
 	client.lk.Unlock()
-	return nil
+	return err
 }
 
 func (client *Client) putConnLocked(cn *conn, err error) bool {
