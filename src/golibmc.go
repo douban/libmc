@@ -108,7 +108,7 @@ type Client struct {
 	freeConns      []*conn
 	numOpen        int
 	openerCh       chan struct{}
-	connRequests   map[uint64]chan *conn
+	connRequests   map[uint64]chan connRequest
 	nextRequest    uint64
 	maxLifetime    time.Duration // maximum amount of time a connection may be reused
 	maxOpen        int           // maximum amount of connection num. maxOpen <= 0 means unlimited.
@@ -116,12 +116,16 @@ type Client struct {
 	closed         bool
 }
 
+type connRequest struct {
+	*conn
+	err error
+}
+
 type conn struct {
 	_imp   unsafe.Pointer
 	client *Client
 	sync.Mutex
 	createdAt time.Time
-	badConn   bool
 	closed    bool
 }
 
@@ -188,7 +192,7 @@ func New(servers []string, noreply bool, prefix string, hashFunc int, failover b
 	client.hashFunc = hashFunc
 	client.failover = failover
 	client.openerCh = make(chan struct{}, connectionRequestQueueSize)
-	client.connRequests = make(map[uint64]chan *conn)
+	client.connRequests = make(map[uint64]chan connRequest)
 	client.maxOpen = 1 // default value
 
 	go client.opener()
@@ -266,7 +270,7 @@ func (client *Client) openNewConnection() {
 	}
 	client.lk.Lock()
 	defer client.lk.Unlock()
-	if !client.putConnLocked(cn) {
+	if !client.putConnLocked(cn, err) {
 		client.numOpen--
 	}
 }
@@ -338,9 +342,9 @@ func (client *Client) newConn() (*conn, error) {
 	return &cn, nil
 }
 
-func (client *Client) putConn(cn *conn) error {
+func (client *Client) putConn(cn *conn, err error) error {
 	client.lk.Lock()
-	if cn.badConn {
+	if err == ErrBadConn {
 		client.lk.Unlock()
 		err := cn.quit()
 		if err != nil {
@@ -348,12 +352,12 @@ func (client *Client) putConn(cn *conn) error {
 		}
 		return err
 	}
-	client.putConnLocked(cn)
+	client.putConnLocked(cn, nil)
 	client.lk.Unlock()
 	return nil
 }
 
-func (client *Client) putConnLocked(cn *conn) bool {
+func (client *Client) putConnLocked(cn *conn, err error) bool {
 	if client.closed {
 		return false
 	}
@@ -361,13 +365,16 @@ func (client *Client) putConnLocked(cn *conn) bool {
 		return false
 	}
 	if len(client.connRequests) > 0 {
-		var req chan *conn
+		var req chan connRequest
 		var reqKey uint64
 		for reqKey, req = range client.connRequests {
 			break
 		}
 		delete(client.connRequests, reqKey)
-		req <- cn
+		req <- connRequest{
+			conn: cn,
+			err:  err,
+		}
 	} else {
 		client.freeConns = append(client.freeConns, cn)
 		client.startCleanerLocked()
@@ -416,7 +423,7 @@ func (client *Client) _conn(ctx context.Context, useFreeConn bool) (*conn, error
 	}
 
 	if client.maxOpen > 0 && client.maxOpen <= client.numOpen {
-		req := make(chan *conn, 1)
+		req := make(chan connRequest, 1)
 		reqKey := client.nextRequest
 		client.nextRequest++
 		client.connRequests[reqKey] = req
@@ -433,7 +440,7 @@ func (client *Client) _conn(ctx context.Context, useFreeConn bool) (*conn, error
 			select {
 			case ret, ok := <-req:
 				if ok {
-					client.putConn(ret)
+					client.putConn(ret.conn, ret.err)
 				}
 			default:
 			}
@@ -442,7 +449,7 @@ func (client *Client) _conn(ctx context.Context, useFreeConn bool) (*conn, error
 			if !ok {
 				return nil, ErrMemcachedClosed
 			}
-			return ret, nil
+			return ret.conn, nil
 		}
 	}
 
@@ -589,10 +596,10 @@ func (client *Client) GetServerAddressByKey(key string) string {
 	cKeyLen := C.size_t(len(rawKey))
 
 	cn, err := client.conn(context.Background())
+	defer client.putConn(cn, err)
 	if err != nil {
 		return ""
 	}
-	defer client.putConn(cn)
 	cServerAddr := C.client_get_server_address_by_key(cn._imp, cKey, cKeyLen)
 	return C.GoString(cServerAddr)
 }
@@ -608,10 +615,10 @@ func (client *Client) GetRealtimeServerAddressByKey(key string) string {
 	defer C.free(unsafe.Pointer(cKey))
 	cKeyLen := C.size_t(len(rawKey))
 	cn, err := client.conn(context.Background())
+	defer client.putConn(cn, err)
 	if err != nil {
 		return ""
 	}
-	defer client.putConn(cn)
 	cServerAddr := C.client_get_realtime_server_address_by_key(cn._imp, cKey, cKeyLen)
 	if cServerAddr != nil {
 		return C.GoString(cServerAddr)
@@ -658,10 +665,10 @@ func (client *Client) store(cmd string, item *Item) error {
 	var errCode C.int
 
 	cn, err := client.conn(context.Background())
+	defer client.putConn(cn, err)
 	if err != nil {
 		return err
 	}
-	defer client.putConn(cn)
 
 	switch cmd {
 	case "set":
@@ -783,10 +790,10 @@ func (client *Client) SetMulti(items []*Item) (failedKeys []string, err error) {
 	var n C.size_t
 
 	cn, err := client.conn(context.Background())
+	defer client.putConn(cn, err)
 	if err != nil {
 		return []string{}, err
 	}
-	defer client.putConn(cn)
 
 	errCode := C.client_set(
 		cn._imp,
@@ -854,10 +861,10 @@ func (client *Client) Delete(key string) error {
 	var n C.size_t
 
 	cn, err := client.conn(context.Background())
+	defer client.putConn(cn, err)
 	if err != nil {
 		return err
 	}
-	defer client.putConn(cn)
 
 	errCode := C.client_delete(
 		cn._imp, &cKey, &cKeyLen, cNoreply, 1, &rst, &n,
@@ -911,10 +918,10 @@ func (client *Client) DeleteMulti(keys []string) (failedKeys []string, err error
 		cKeyLens[i] = cKeyLen
 	}
 	cn, err := client.conn(context.Background())
+	defer client.putConn(cn, err)
 	if err != nil {
 		return []string{}, err
 	}
-	defer client.putConn(cn)
 
 	errCode := C.client_delete(
 		cn._imp, (**C.char)(&cKeys[0]), (*C.size_t)(&cKeyLens[0]), cNoreply, cNKeys,
@@ -966,10 +973,10 @@ func (client *Client) DeleteMulti(keys []string) (failedKeys []string, err error
 
 func (client *Client) getOrGets(cmd string, key string) (item *Item, err error) {
 	cn, err := client.conn(context.Background())
+	defer client.putConn(cn, err)
 	if err != nil {
 		return nil, err
 	}
-	defer client.putConn(cn)
 
 	rawKey := client.addPrefix(key)
 
@@ -1054,11 +1061,11 @@ func (client *Client) GetMulti(keys []string) (rv map[string]*Item, err error) {
 	var n C.size_t
 
 	cn, err1 := client.conn(context.Background())
+	defer client.putConn(cn, err)
 	if err1 != nil {
 		err = err1
 		return
 	}
-	defer client.putConn(cn)
 
 	errCode := C.client_get(cn._imp, &cKeys[0], &cKeyLens[0], cNKeys, &rst, &n)
 	defer C.client_destroy_retrieval_result(cn._imp)
@@ -1108,10 +1115,10 @@ func (client *Client) Touch(key string, expiration int64) error {
 	var n C.size_t
 
 	cn, err := client.conn(context.Background())
+	defer client.putConn(cn, err)
 	if err != nil {
 		return err
 	}
-	defer client.putConn(cn)
 
 	errCode := C.client_touch(
 		cn._imp, &cKey, &cKeyLen, cExptime, cNoreply, 1, &rst, &n,
@@ -1149,10 +1156,10 @@ func (client *Client) incrOrDecr(cmd string, key string, delta uint64) (uint64, 
 	var errCode C.int
 
 	cn, err := client.conn(context.Background())
+	defer client.putConn(cn, err)
 	if err != nil {
 		return 0, err
 	}
-	defer client.putConn(cn)
 
 	switch cmd {
 	case "incr":
@@ -1203,10 +1210,10 @@ func (client *Client) Version() (map[string]string, error) {
 	rv := make(map[string]string)
 
 	cn, err := client.conn(context.Background())
+	defer client.putConn(cn, err)
 	if err != nil {
 		return rv, err
 	}
-	defer client.putConn(cn)
 
 	errCode := C.client_version(cn._imp, &rst, &n)
 	defer C.client_destroy_broadcast_result(cn._imp)
@@ -1238,10 +1245,10 @@ func (client *Client) Stats() (map[string](map[string]string), error) {
 	rv := make(map[string](map[string]string))
 
 	cn, err := client.conn(context.Background())
+	defer client.putConn(cn, err)
 	if err != nil {
 		return rv, err
 	}
-	defer client.putConn(cn)
 
 	errCode := C.client_stats(cn._imp, &rst, &n)
 	defer C.client_destroy_broadcast_result(cn._imp)

@@ -852,18 +852,18 @@ func TestMaybeOpenNewConnections(t *testing.T) {
 	mc := newSimpleClient(1)
 	mc.SetConnMaxOpen(10)
 	mc.SetConnMaxLifetime(1 * time.Second)
-	req := make(chan *conn, 1)
+	req := make(chan connRequest, 1)
 	reqKey := mc.nextRequest
 	mc.nextRequest++
 	mc.connRequests[reqKey] = req
 	mc.maybeOpenNewConnections()
 
 	select {
-	case cn, ok := <-req:
+	case ret, ok := <-req:
 		if !ok {
-			t.Errorf("Receive an invalid connection: %v", cn)
+			t.Errorf("Receive an invalid connection: %v", ret.err)
 		}
-		mc.putConn(cn)
+		mc.putConn(ret.conn, ret.err)
 	}
 	if len(mc.freeConns) != 1 {
 		t.Errorf("mc.freeConns' len expected 1 but %d", len(mc.freeConns))
