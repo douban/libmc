@@ -1323,7 +1323,7 @@ func (cn *conn) quit() error {
 	cn.Lock()
 	defer cn.Unlock()
 	if cn.closed {
-		return errors.New("duplicate client close")
+		return errors.New("duplicate conn close")
 	}
 	cn.closed = true
 	errCode := C.client_quit(cn._imp)
