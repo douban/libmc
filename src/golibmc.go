@@ -357,8 +357,7 @@ func (client *Client) newConn() (*conn, error) {
 
 func (client *Client) putConn(cn *conn, err error) error {
 	client.lk.Lock()
-	if isBadConnErr(err) ||
-		!client.putConnLocked(cn, nil) {
+	if isBadConnErr(err) || !client.putConnLocked(cn, nil) {
 		client.lk.Unlock()
 		err1 := cn.quit()
 		if err1 != nil {
