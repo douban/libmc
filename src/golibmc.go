@@ -9,6 +9,7 @@ import "C"
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"runtime"
 	"strconv"
@@ -84,10 +85,22 @@ var (
 
 	// ErrBadConn is returned when the connection is out of its lifetime.
 	ErrBadConn = errors.New("bad conn")
+
+	errTemplate   = "libmc: network error(%s)"
+	badConnErrors []error
 )
 
+func init() {
+	badConnErrors = []error{
+		networkError(errorMessage[C.RET_MC_SERVER_ERR]),
+		networkError(errorMessage[C.RET_SEND_ERR]),
+		networkError(errorMessage[C.RET_CONN_POLL_ERR]),
+		networkError(errorMessage[C.RET_RECV_ERR]),
+	}
+}
+
 func networkError(msg string) error {
-	return errors.New("libmc: network error(" + msg + ")")
+	return fmt.Errorf(errTemplate, msg)
 }
 
 // DefaultPort memcached port
@@ -344,7 +357,7 @@ func (client *Client) newConn() (*conn, error) {
 
 func (client *Client) putConn(cn *conn, err error) error {
 	client.lk.Lock()
-	if err == ErrBadConn ||
+	if isBadConnErr(err) ||
 		!client.putConnLocked(cn, nil) {
 		client.lk.Unlock()
 		err1 := cn.quit()
@@ -1352,12 +1365,30 @@ func (cn *conn) quit() error {
 	cn.closed = true
 	errCode := C.client_quit(cn._imp)
 	C.client_destroy_broadcast_result(cn._imp)
-	if errCode == C.RET_CONN_POLL_ERR || errCode == C.RET_RECV_ERR {
+	err := networkError(errorMessage[errCode])
+	if isBadConnErr(err) {
 		cn.client.lk.Lock()
 		defer cn.client.lk.Unlock()
 		cn.client.numOpen--
 		cn.client.maybeOpenNewConnections()
 		return nil
 	}
-	return networkError(errorMessage[errCode])
+	return err
+}
+
+func isBadConnErr(err error) (r bool) {
+	if err == nil {
+		return
+	}
+	if err == ErrBadConn {
+		r = true
+		return
+	}
+	for _, be := range badConnErrors {
+		if err.Error() == be.Error() {
+			r = true
+			break
+		}
+	}
+	return
 }
