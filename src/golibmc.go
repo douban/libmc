@@ -596,10 +596,12 @@ func (client *Client) GetServerAddressByKey(key string) string {
 	cKeyLen := C.size_t(len(rawKey))
 
 	cn, err := client.conn(context.Background())
-	defer client.putConn(cn, err)
 	if err != nil {
 		return ""
 	}
+	defer func() {
+		client.putConn(cn, err)
+	}()
 	cServerAddr := C.client_get_server_address_by_key(cn._imp, cKey, cKeyLen)
 	return C.GoString(cServerAddr)
 }
@@ -615,10 +617,12 @@ func (client *Client) GetRealtimeServerAddressByKey(key string) string {
 	defer C.free(unsafe.Pointer(cKey))
 	cKeyLen := C.size_t(len(rawKey))
 	cn, err := client.conn(context.Background())
-	defer client.putConn(cn, err)
 	if err != nil {
 		return ""
 	}
+	defer func() {
+		client.putConn(cn, err)
+	}()
 	cServerAddr := C.client_get_realtime_server_address_by_key(cn._imp, cKey, cKeyLen)
 	if cServerAddr != nil {
 		return C.GoString(cServerAddr)
@@ -665,10 +669,12 @@ func (client *Client) store(cmd string, item *Item) error {
 	var errCode C.int
 
 	cn, err := client.conn(context.Background())
-	defer client.putConn(cn, err)
 	if err != nil {
 		return err
 	}
+	defer func() {
+		client.putConn(cn, err)
+	}()
 
 	switch cmd {
 	case "set":
@@ -790,10 +796,12 @@ func (client *Client) SetMulti(items []*Item) (failedKeys []string, err error) {
 	var n C.size_t
 
 	cn, err := client.conn(context.Background())
-	defer client.putConn(cn, err)
 	if err != nil {
 		return []string{}, err
 	}
+	defer func() {
+		client.putConn(cn, err)
+	}()
 
 	errCode := C.client_set(
 		cn._imp,
@@ -861,10 +869,12 @@ func (client *Client) Delete(key string) error {
 	var n C.size_t
 
 	cn, err := client.conn(context.Background())
-	defer client.putConn(cn, err)
 	if err != nil {
 		return err
 	}
+	defer func() {
+		client.putConn(cn, err)
+	}()
 
 	errCode := C.client_delete(
 		cn._imp, &cKey, &cKeyLen, cNoreply, 1, &rst, &n,
@@ -918,10 +928,12 @@ func (client *Client) DeleteMulti(keys []string) (failedKeys []string, err error
 		cKeyLens[i] = cKeyLen
 	}
 	cn, err := client.conn(context.Background())
-	defer client.putConn(cn, err)
 	if err != nil {
 		return []string{}, err
 	}
+	defer func() {
+		client.putConn(cn, err)
+	}()
 
 	errCode := C.client_delete(
 		cn._imp, (**C.char)(&cKeys[0]), (*C.size_t)(&cKeyLens[0]), cNoreply, cNKeys,
@@ -973,10 +985,12 @@ func (client *Client) DeleteMulti(keys []string) (failedKeys []string, err error
 
 func (client *Client) getOrGets(cmd string, key string) (item *Item, err error) {
 	cn, err := client.conn(context.Background())
-	defer client.putConn(cn, err)
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		client.putConn(cn, err)
+	}()
 
 	rawKey := client.addPrefix(key)
 
@@ -1061,11 +1075,13 @@ func (client *Client) GetMulti(keys []string) (rv map[string]*Item, err error) {
 	var n C.size_t
 
 	cn, err1 := client.conn(context.Background())
-	defer client.putConn(cn, err)
 	if err1 != nil {
 		err = err1
 		return
 	}
+	defer func() {
+		client.putConn(cn, err)
+	}()
 
 	errCode := C.client_get(cn._imp, &cKeys[0], &cKeyLens[0], cNKeys, &rst, &n)
 	defer C.client_destroy_retrieval_result(cn._imp)
@@ -1115,10 +1131,12 @@ func (client *Client) Touch(key string, expiration int64) error {
 	var n C.size_t
 
 	cn, err := client.conn(context.Background())
-	defer client.putConn(cn, err)
 	if err != nil {
 		return err
 	}
+	defer func() {
+		client.putConn(cn, err)
+	}()
 
 	errCode := C.client_touch(
 		cn._imp, &cKey, &cKeyLen, cExptime, cNoreply, 1, &rst, &n,
@@ -1156,10 +1174,12 @@ func (client *Client) incrOrDecr(cmd string, key string, delta uint64) (uint64, 
 	var errCode C.int
 
 	cn, err := client.conn(context.Background())
-	defer client.putConn(cn, err)
 	if err != nil {
 		return 0, err
 	}
+	defer func() {
+		client.putConn(cn, err)
+	}()
 
 	switch cmd {
 	case "incr":
@@ -1210,10 +1230,12 @@ func (client *Client) Version() (map[string]string, error) {
 	rv := make(map[string]string)
 
 	cn, err := client.conn(context.Background())
-	defer client.putConn(cn, err)
 	if err != nil {
 		return rv, err
 	}
+	defer func() {
+		client.putConn(cn, err)
+	}()
 
 	errCode := C.client_version(cn._imp, &rst, &n)
 	defer C.client_destroy_broadcast_result(cn._imp)
@@ -1245,10 +1267,12 @@ func (client *Client) Stats() (map[string](map[string]string), error) {
 	rv := make(map[string](map[string]string))
 
 	cn, err := client.conn(context.Background())
-	defer client.putConn(cn, err)
 	if err != nil {
 		return rv, err
 	}
+	defer func() {
+		client.putConn(cn, err)
+	}()
 
 	errCode := C.client_stats(cn._imp, &rst, &n)
 	defer C.client_destroy_broadcast_result(cn._imp)
