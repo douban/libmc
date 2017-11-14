@@ -283,7 +283,7 @@ func (client *Client) openNewConnection() {
 	}
 	client.lk.Lock()
 	defer client.lk.Unlock()
-	if !client.putConnLocked(cn, err) {
+	if !client.putConnLocked(cn, nil) {
 		client.numOpen--
 	}
 }
