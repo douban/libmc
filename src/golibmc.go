@@ -1368,11 +1368,11 @@ func (cn *conn) quit() error {
 	cn.closed = true
 	errCode := C.client_quit(cn._imp)
 	C.client_destroy_broadcast_result(cn._imp)
+	cn.client.lk.Lock()
+	defer cn.client.lk.Unlock()
+	cn.client.numOpen--
 	err := networkError(errorMessage[errCode])
 	if isBadConnErr(err) {
-		cn.client.lk.Lock()
-		defer cn.client.lk.Unlock()
-		cn.client.numOpen--
 		cn.client.maybeOpenNewConnections()
 		return nil
 	}
