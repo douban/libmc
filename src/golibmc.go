@@ -461,7 +461,7 @@ func (client *Client) _conn(ctx context.Context, useFreeConn bool) (*conn, error
 			if !ok {
 				return nil, ErrMemcachedClosed
 			}
-			return ret.conn, nil
+			return ret.conn, ret.err
 		}
 	}
 
