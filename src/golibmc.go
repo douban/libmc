@@ -1326,6 +1326,10 @@ func (client *Client) Stats() (map[string](map[string]string), error) {
 // Quit will close the sockets to each memcached server
 func (client *Client) Quit() error {
 	client.lk.Lock()
+	if client.closed {
+		client.lk.Unlock()
+		return nil
+	}
 
 	close(client.openerCh)
 	if client.cleanerCh != nil {
