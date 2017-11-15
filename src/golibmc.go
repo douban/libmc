@@ -282,10 +282,14 @@ func (client *Client) openNewConnection() {
 		return
 	}
 	client.lk.Lock()
-	defer client.lk.Unlock()
 	if !client.putConnLocked(cn, nil) {
 		client.numOpen--
+		client.lk.Unlock()
+		cn.quit()
+		return
 	}
+	client.lk.Unlock()
+	return
 }
 
 func (client *Client) newConn() (*conn, error) {
