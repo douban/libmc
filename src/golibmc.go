@@ -1341,9 +1341,7 @@ func (client *Client) Quit() error {
 	client.closed = true
 	client.lk.Unlock()
 	for _, cn := range client.freeConns {
-		if err := cn.quit(); err != nil {
-			return err
-		}
+		cn.quit()
 	}
 	client.lk.Lock()
 	client.freeConns = nil
