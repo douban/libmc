@@ -1343,14 +1343,18 @@ func (client *Client) Quit() error {
 	}
 	client.closed = true
 	client.lk.Unlock()
+	var err error
 	for _, cn := range client.freeConns {
-		cn.quit()
+		err1 := cn.quit()
+		if err1 != nil {
+			err = err1
+		}
 	}
 	client.lk.Lock()
 	client.freeConns = nil
 	client.lk.Unlock()
 
-	return nil
+	return err
 }
 
 func (cn *conn) expired(timeout time.Duration) bool {
