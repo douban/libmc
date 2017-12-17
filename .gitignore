@@ -1,16 +1,22 @@
+# python
 *.pyc
-*.sw[op]
 *.egg-info
 *.egg/
 *.egg
-build/
+.eggs/
 dist/
+
+# Ignore CI build directory
+cmake-build-debug/
+.idea/
+build/
 venv/
 bench_venv/
 _client.cpp
 _client.so
-.clang_complete
-.eggs/
 .tox/
+
 .cache/
+.clang_complete
+*.sw[op]
 tests/resources/keys_*.txt

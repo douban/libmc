@@ -105,7 +105,7 @@ void ConnectionPool::dispatchStorage(op_code_t op,
                                       const char* const* keys, const size_t* keyLens,
                                       const flags_t* flags, const exptime_t exptime,
                                       const cas_unique_t* cas_uniques, const bool noreply,
-                                      const char* const* vals, const size_t* val_lens,
+                                      const char* const* vals, const size_t* valLens,
                                       size_t nItems) {
 
   size_t i = 0, idx = 0;
@@ -149,7 +149,7 @@ void ConnectionPool::dispatchStorage(op_code_t op,
     conn->takeBuffer(kSPACE, 1);
     conn->takeNumber(exptime);
     conn->takeBuffer(kSPACE, 1);
-    conn->takeNumber(val_lens[i]);
+    conn->takeNumber(valLens[i]);
     if (op == CAS_OP) {
       conn->takeBuffer(kSPACE, 1);
       conn->takeNumber(cas_uniques[i]);
@@ -161,7 +161,7 @@ void ConnectionPool::dispatchStorage(op_code_t op,
     }
     ++conn->m_counter;
     conn->takeBuffer(kCRLF, 2);
-    conn->takeBuffer(vals[i], val_lens[i]);
+    conn->takeBuffer(vals[i], valLens[i]);
     conn->takeBuffer(kCRLF, 2);
   }
 
