@@ -55,7 +55,7 @@ err_code_t Client::gets(const char* const* keys, const size_t* keyLens, size_t n
 
 
 void Client::collectRetrievalResult(retrieval_result_t*** results, size_t* nResults) {
-  assert(m_outRetrievalResultPtrs.size() == 0);
+  assert(m_outRetrievalResultPtrs.empty());
   ConnectionPool::collectRetrievalResult(m_outRetrievalResultPtrs);
   *nResults = m_outRetrievalResultPtrs.size();
   if (*nResults == 0) {
@@ -73,7 +73,7 @@ void Client::destroyRetrievalResult() {
 
 
 void Client::collectMessageResult(message_result_t*** results, size_t* nResults) {
-  assert(m_outMessageResultPtrs.size() == 0);
+  assert(m_outMessageResultPtrs.empty());
   ConnectionPool::collectMessageResult(m_outMessageResultPtrs);
   *nResults = m_outMessageResultPtrs.size();
 
@@ -123,7 +123,7 @@ err_code_t Client::_delete(const char* const* keys, const size_t* key_lens,
 
 
 void Client::collectBroadcastResult(broadcast_result_t** results, size_t* nHosts) {
-  assert(m_outBroadcastResultPtrs.size() == 0);
+  assert(m_outBroadcastResultPtrs.empty());
   *nHosts = m_nConns;
   ConnectionPool::collectBroadcastResult(m_outBroadcastResultPtrs);
   *results = &m_outBroadcastResultPtrs.front();
@@ -175,7 +175,7 @@ err_code_t Client::touch(const char* const* keys, const size_t* keyLens,
 
 void Client::collectUnsignedResult(unsigned_result_t** results, size_t* nResults) {
 
-  assert(m_outUnsignedResultPtrs.size() == 0);
+  assert(m_outUnsignedResultPtrs.empty());
   ConnectionPool::collectUnsignedResult(m_outUnsignedResultPtrs);
   *nResults = m_outUnsignedResultPtrs.size();
 
