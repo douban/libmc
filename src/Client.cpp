@@ -112,10 +112,10 @@ IMPL_STORAGE_CMD(prepend, PREPEND_OP)
 IMPL_STORAGE_CMD(cas, CAS_OP)
 #undef IMPL_STORAGE_CMD
 
-err_code_t Client::_delete(const char* const* keys, const size_t* key_lens,
+err_code_t Client::_delete(const char* const* keys, const size_t* keyLens,
                      const bool noreply, size_t nItems,
                      message_result_t*** results, size_t* nResults) {
-  dispatchDeletion(keys, key_lens, noreply, nItems);
+  dispatchDeletion(keys, keyLens, noreply, nItems);
   err_code_t rv = waitPoll();
   collectMessageResult(results, nResults);
   return rv;

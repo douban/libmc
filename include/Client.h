@@ -40,7 +40,7 @@ DECL_RETRIEVAL_CMD(gets)
   DECL_STORAGE_CMD(prepend);
   DECL_STORAGE_CMD(cas);
 #undef DECL_STORAGE_CMD
-  err_code_t _delete(const char* const* keys, const size_t* key_lens,
+  err_code_t _delete(const char* const* keys, const size_t* keyLens,
                const bool noreply, size_t nItems,
                message_result_t*** results, size_t* nResults);
 
