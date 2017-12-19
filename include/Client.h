@@ -27,10 +27,10 @@ DECL_RETRIEVAL_CMD(gets)
   // storage commands
   void destroyMessageResult();
 #define DECL_STORAGE_CMD(M) \
-  err_code_t M(const char* const* keys, const size_t* key_lens, \
+  err_code_t M(const char* const* keys, const size_t* keyLens, \
            const flags_t* flags, const exptime_t exptime, \
            const cas_unique_t* cas_uniques, const bool noreply, \
-           const char* const* vals, const size_t* val_lens, \
+           const char* const* vals, const size_t* valLens, \
            size_t nItems, message_result_t*** results, size_t* nResults)
 
   DECL_STORAGE_CMD(set);
