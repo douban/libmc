@@ -182,9 +182,9 @@ void ConnectionPool::dispatchStorage(op_code_t op,
 
 
 void ConnectionPool::dispatchRetrieval(op_code_t op, const char* const* keys,
-                                  const size_t* keyLens, size_t n_keys) {
+                                  const size_t* keyLens, size_t nKeys) {
   size_t i = 0, idx = 0;
-  for (; i < n_keys; ++i) {
+  for (; i < nKeys; ++i) {
     const char* key = keys[i];
     const size_t len = keyLens[i];
     if (!utility::isValidKey(key, len)) {
