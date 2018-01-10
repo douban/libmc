@@ -231,7 +231,9 @@ void Connection::takeNumber(int64_t val) {
 ssize_t Connection::send() {
   struct msghdr msg = {};
 
-  msg.msg_iov = const_cast<struct iovec *>(m_buffer_writer->getReadPtr(msg.msg_iovlen));
+  size_t n = 0;
+  msg.msg_iov = const_cast<struct iovec *>(m_buffer_writer->getReadPtr(n));
+  msg.msg_iovlen = n;
 
   // otherwise may lead to EMSGSIZE, SEE issue#3 on code
   int flags = 0;

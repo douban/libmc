@@ -7,7 +7,10 @@ package golibmc
 */
 import "C"
 import (
+	"context"
 	"errors"
+	"fmt"
+	"log"
 	"runtime"
 	"strconv"
 	"strings"
@@ -30,6 +33,8 @@ const (
 	HashFNV1a32
 	HashCRC32
 )
+
+const connectionRequestQueueSize = 1000000
 
 var hashFunctionMapping = map[int]C.hash_function_options_t{
 	HashMD5:     C.OPT_HASH_MD5,
@@ -73,23 +78,68 @@ var (
 	// Keys must be at maximum 250 bytes long, ASCII, and not
 	// contain whitespace or control characters.
 	ErrMalformedKey = errors.New("malformed: key is too long or contains invalid characters")
+
+	// ErrMemcachedClosed is returned when the memcached connection is
+	// already closing.
+	ErrMemcachedClosed = errors.New("memcached is closed")
+
+	// ErrBadConn is returned when the connection is out of its lifetime.
+	ErrBadConn = errors.New("bad conn")
+
+	errTemplate   = "libmc: network error(%s)"
+	badConnErrors []error
 )
 
-func networkError(msg string) error {
-	return errors.New("libmc: network error(" + msg + ")")
+func init() {
+	badConnErrors = []error{
+		networkError(errorMessage[C.RET_MC_SERVER_ERR]),
+		networkError(errorMessage[C.RET_SEND_ERR]),
+		networkError(errorMessage[C.RET_CONN_POLL_ERR]),
+		networkError(errorMessage[C.RET_RECV_ERR]),
+	}
 }
 
-// Default memcached port
+func networkError(msg string) error {
+	return fmt.Errorf(errTemplate, msg)
+}
+
+// DefaultPort memcached port
 const DefaultPort = 11211
 
 // Client struct
 type Client struct {
-	_imp        unsafe.Pointer
-	servers     []string
-	prefix      string
-	noreply     bool
-	disableLock bool
-	lk          sync.Mutex
+	servers        []string
+	prefix         string
+	noreply        bool
+	disableLock    bool
+	hashFunc       int
+	failover       bool
+	connectTimeout C.int
+	pollTimeout    C.int
+	retryTimeout   C.int
+	lk             sync.Mutex
+	freeConns      []*conn
+	numOpen        int
+	openerCh       chan struct{}
+	connRequests   map[uint64]chan connRequest
+	nextRequest    uint64
+	maxLifetime    time.Duration // maximum amount of time a connection may be reused
+	maxOpen        int           // maximum amount of connection num. maxOpen <= 0 means unlimited.
+	cleanerCh      chan struct{}
+	closed         bool
+}
+
+type connRequest struct {
+	*conn
+	err error
+}
+
+type conn struct {
+	_imp   unsafe.Pointer
+	client *Client
+	sync.Mutex
+	createdAt time.Time
+	closed    bool
 }
 
 // Item is an item to be got or stored in a memcached server.
@@ -148,15 +198,113 @@ use in every retrieval/storage command. default False.
 */
 func New(servers []string, noreply bool, prefix string, hashFunc int, failover bool, disableLock bool) (client *Client) {
 	client = new(Client)
-	client._imp = C.client_create()
-	runtime.SetFinalizer(client, finalizer)
+	client.servers = servers
+	client.prefix = prefix
+	client.noreply = noreply
+	client.disableLock = disableLock
+	client.hashFunc = hashFunc
+	client.failover = failover
+	client.openerCh = make(chan struct{}, connectionRequestQueueSize)
+	client.connRequests = make(map[uint64]chan connRequest)
+	client.maxOpen = 1 // default value
 
-	n := len(servers)
+	go client.opener()
+
+	return
+}
+
+// SimpleNew to create a memcached client with default params
+func SimpleNew(servers []string) (client *Client) {
+	noreply := false
+	prefix := ""
+	hashFunc := HashCRC32
+	failover := false
+	disableLock := false
+	return New(
+		servers, noreply, prefix, hashFunc,
+		failover, disableLock,
+	)
+}
+
+func finalizer(cn *conn) {
+	C.client_destroy(cn._imp)
+}
+
+func (client *Client) lock() {
+	if !client.disableLock {
+		client.lk.Lock()
+	}
+}
+
+func (client *Client) unlock() {
+	if !client.disableLock {
+		client.lk.Unlock()
+	}
+}
+
+func (client *Client) maybeOpenNewConnections() {
+	if client.closed {
+		return
+	}
+	numRequests := len(client.connRequests)
+	if client.maxOpen > 0 {
+		numCanOpen := client.maxOpen - client.numOpen
+		if numRequests > numCanOpen {
+			numRequests = numCanOpen
+		}
+	}
+	for numRequests > 0 {
+		client.numOpen++
+		numRequests--
+		client.openerCh <- struct{}{}
+	}
+}
+
+func (client *Client) opener() {
+	for range client.openerCh {
+		client.openNewConnection()
+	}
+}
+
+func (client *Client) openNewConnection() {
+	if client.closed {
+		client.lk.Lock()
+		client.numOpen--
+		client.lk.Unlock()
+		return
+	}
+	cn, err := client.newConn()
+	if err != nil {
+		client.lk.Lock()
+		defer client.lk.Unlock()
+		client.numOpen--
+		client.maybeOpenNewConnections()
+		return
+	}
+	client.lk.Lock()
+	if !client.putConnLocked(cn, nil) {
+		client.lk.Unlock()
+		cn.quit()
+		return
+	}
+	client.lk.Unlock()
+	return
+}
+
+func (client *Client) newConn() (*conn, error) {
+	cn := conn{
+		client:    client,
+		_imp:      C.client_create(),
+		createdAt: time.Now(),
+	}
+	runtime.SetFinalizer(&cn, finalizer)
+
+	n := len(client.servers)
 	cHosts := make([]*C.char, n)
 	cPorts := make([]C.uint32_t, n)
 	cAliases := make([]*C.char, n)
 
-	for i, srv := range servers {
+	for i, srv := range client.servers {
 		addrAndAlias := strings.Split(srv, " ")
 
 		addr := addrAndAlias[0]
@@ -175,7 +323,7 @@ func New(servers []string, noreply bool, prefix string, hashFunc int, failover b
 		if len(hostAndPort) == 2 {
 			port, err := strconv.Atoi(hostAndPort[1])
 			if err != nil {
-				return nil
+				return nil, err
 			}
 			cPorts[i] = C.uint32_t(port)
 		} else {
@@ -184,12 +332,12 @@ func New(servers []string, noreply bool, prefix string, hashFunc int, failover b
 	}
 
 	failoverInt := 0
-	if failover {
+	if client.failover {
 		failoverInt = 1
 	}
 
 	C.client_init(
-		client._imp,
+		cn._imp,
 		(**C.char)(unsafe.Pointer(&cHosts[0])),
 		(*C.uint32_t)(unsafe.Pointer(&cPorts[0])),
 		C.size_t(n),
@@ -197,48 +345,240 @@ func New(servers []string, noreply bool, prefix string, hashFunc int, failover b
 		C.int(failoverInt),
 	)
 
-	client.configHashFunction(int(hashFunctionMapping[hashFunc]))
-	client.servers = servers
-	client.prefix = prefix
-	client.noreply = noreply
-	client.disableLock = disableLock
-	return
-}
-
-// SimpleNew to create a memcached client with default params
-func SimpleNew(servers []string) (client *Client) {
-	noreply := false
-	prefix := ""
-	hashFunc := HashCRC32
-	failover := false
-	disableLock := false
-	return New(
-		servers, noreply, prefix, hashFunc,
-		failover, disableLock,
-	)
-}
-
-func finalizer(client *Client) {
-	C.client_destroy(client._imp)
-}
-
-func (client *Client) lock() {
-	if !client.disableLock {
-		client.lk.Lock()
+	cn.configHashFunction(int(hashFunctionMapping[client.hashFunc]))
+	if client.retryTimeout > 0 {
+		C.client_config(cn._imp, RetryTimeout, client.retryTimeout)
 	}
+	if client.pollTimeout > 0 {
+		C.client_config(cn._imp, PollTimeout, client.pollTimeout)
+	}
+	if client.connectTimeout > 0 {
+		C.client_config(cn._imp, ConnectTimeout, client.connectTimeout)
+	}
+	return &cn, nil
 }
 
-func (client *Client) unlock() {
-	if !client.disableLock {
+func (client *Client) putConn(cn *conn, err error) error {
+	client.lk.Lock()
+	if isBadConnErr(err) || !client.putConnLocked(cn, nil) {
 		client.lk.Unlock()
+		err1 := cn.quit()
+		if err1 != nil {
+			log.Printf("Failed cn.quit: %v", err1)
+		}
+		return err
+	}
+	client.lk.Unlock()
+	return err
+}
+
+func (client *Client) putConnLocked(cn *conn, err error) bool {
+	if client.closed {
+		return false
+	}
+	if client.maxOpen > 0 && client.maxOpen < client.numOpen {
+		return false
+	}
+	if len(client.connRequests) > 0 {
+		var req chan connRequest
+		var reqKey uint64
+		for reqKey, req = range client.connRequests {
+			break
+		}
+		delete(client.connRequests, reqKey)
+		req <- connRequest{
+			conn: cn,
+			err:  err,
+		}
+	} else {
+		client.freeConns = append(client.freeConns, cn)
+		client.startCleanerLocked()
+	}
+	return true
+}
+
+func (client *Client) conn(ctx context.Context) (*conn, error) {
+	cn, err := client._conn(ctx, true)
+	if err == nil {
+		return cn, nil
+	}
+	if err == ErrBadConn {
+		return client._conn(ctx, false)
+	}
+	return cn, err
+}
+
+func (client *Client) _conn(ctx context.Context, useFreeConn bool) (*conn, error) {
+	client.lk.Lock()
+	if client.closed {
+		client.lk.Unlock()
+		return nil, ErrMemcachedClosed
+	}
+	// Check if the context is expired.
+	select {
+	default:
+	case <-ctx.Done():
+		client.lk.Unlock()
+		return nil, ctx.Err()
+	}
+	lifetime := client.maxLifetime
+
+	var cn *conn
+	numFree := len(client.freeConns)
+	if useFreeConn && numFree > 0 {
+		cn = client.freeConns[0]
+		copy(client.freeConns, client.freeConns[1:])
+		client.freeConns = client.freeConns[:numFree-1]
+		client.lk.Unlock()
+		if cn.expired(lifetime) {
+			cn.quit()
+			return nil, ErrBadConn
+		}
+		return cn, nil
+	}
+
+	if client.maxOpen > 0 && client.maxOpen <= client.numOpen {
+		req := make(chan connRequest, 1)
+		reqKey := client.nextRequest
+		client.nextRequest++
+		client.connRequests[reqKey] = req
+		client.lk.Unlock()
+
+		select {
+		// timeout
+		case <-ctx.Done():
+			// Remove the connection request and ensure no value has been sent
+			// on it after removing.
+			client.lk.Lock()
+			delete(client.connRequests, reqKey)
+			client.lk.Unlock()
+			select {
+			case ret, ok := <-req:
+				if ok {
+					client.putConn(ret.conn, ret.err)
+				}
+			default:
+			}
+			return nil, ctx.Err()
+		case ret, ok := <-req:
+			if !ok {
+				return nil, ErrMemcachedClosed
+			}
+			return ret.conn, ret.err
+		}
+	}
+
+	client.numOpen++
+	client.lk.Unlock()
+	newCn, err := client.newConn()
+	if err != nil {
+		client.lk.Lock()
+		defer client.lk.Unlock()
+		client.numOpen--
+		client.maybeOpenNewConnections()
+		return nil, err
+	}
+	return newCn, nil
+}
+
+// SetConnMaxLifetime sets the maximum amount of time a connection may be reused.
+//
+// Expired connections may be closed lazily before reuse.
+//
+// If d <= 0, connections are reused forever.
+func (client *Client) SetConnMaxLifetime(d time.Duration) {
+	if d < 0 {
+		d = 0
+	}
+	client.lk.Lock()
+	// wake cleaner up when lifetime is shortened.
+	if d > 0 && d < client.maxLifetime && client.cleanerCh != nil {
+		select {
+		case client.cleanerCh <- struct{}{}:
+		default:
+		}
+	}
+	client.maxLifetime = d
+	client.startCleanerLocked()
+	client.lk.Unlock()
+}
+
+// SetConnMaxOpen sets the maximum amount of opening connections.
+func (client *Client) SetConnMaxOpen(maxOpen int) {
+	client.lk.Lock()
+	defer client.lk.Unlock()
+	client.maxOpen = maxOpen
+}
+
+func (client *Client) needStartCleaner() bool {
+	return client.maxLifetime > 0 &&
+		client.numOpen > 0 &&
+		client.cleanerCh == nil
+}
+
+// startCleanerLocked starts connectionCleaner if needed.
+func (client *Client) startCleanerLocked() {
+	if client.needStartCleaner() {
+		client.cleanerCh = make(chan struct{}, 1)
+		go client.connectionCleaner(client.maxLifetime)
 	}
 }
 
-func (client *Client) configHashFunction(val int) {
-	client.lock()
-	defer client.unlock()
+func (client *Client) connectionCleaner(d time.Duration) {
+	const minInterval = time.Second
 
-	C.client_config(client._imp, C.CFG_HASH_FUNCTION, C.int(val))
+	if d < minInterval {
+		d = minInterval
+	}
+	t := time.NewTimer(d)
+
+	for {
+		select {
+		case <-t.C:
+		case <-client.cleanerCh: // maxLifetime was changed or memcached was closed.
+		}
+
+		client.lk.Lock()
+		d = client.maxLifetime
+		if client.closed || client.numOpen == 0 || d <= 0 {
+			client.cleanerCh = nil
+			client.lk.Unlock()
+			return
+		}
+
+		expiredSince := time.Now().Add(-d)
+		var closing []*conn
+		for i := 0; i < len(client.freeConns); i++ {
+			cn := client.freeConns[i]
+			if cn.createdAt.Before(expiredSince) {
+				closing = append(closing, cn)
+				last := len(client.freeConns) - 1
+				client.freeConns[i] = client.freeConns[last]
+				client.freeConns[last] = nil
+				client.freeConns = client.freeConns[:last]
+				i--
+			}
+		}
+		client.lk.Unlock()
+
+		for _, cn := range closing {
+			if err := cn.quit(); err != nil {
+				log.Println("Failed conn.close", err)
+			}
+		}
+
+		if d < minInterval {
+			d = minInterval
+		}
+		t.Reset(d)
+	}
+}
+
+func (cn *conn) configHashFunction(val int) {
+	cn.Lock()
+	defer cn.Unlock()
+
+	C.client_config(cn._imp, C.CFG_HASH_FUNCTION, C.int(val))
 }
 
 // ConfigTimeout Keys:
@@ -248,15 +588,16 @@ func (client *Client) configHashFunction(val int) {
 //
 // timeout should of type time.Duration
 func (client *Client) ConfigTimeout(cCfgKey C.config_options_t, timeout time.Duration) {
-	client.lock()
-	defer client.unlock()
-	var cTimeout C.int
-	if cCfgKey == C.CFG_RETRY_TIMEOUT {
-		cTimeout = C.int(timeout / time.Second)
-	} else {
-		cTimeout = C.int(timeout / time.Microsecond)
+	client.lk.Lock()
+	defer client.lk.Unlock()
+	switch cCfgKey {
+	case RetryTimeout:
+		client.retryTimeout = C.int(timeout / time.Second)
+	case PollTimeout:
+		client.pollTimeout = C.int(timeout / time.Microsecond)
+	case ConnectTimeout:
+		client.connectTimeout = C.int(timeout / time.Microsecond)
 	}
-	C.client_config(client._imp, cCfgKey, cTimeout)
 }
 
 // GetServerAddressByKey will return the address of the memcached
@@ -268,7 +609,15 @@ func (client *Client) GetServerAddressByKey(key string) string {
 	cKey := C.CString(rawKey)
 	defer C.free(unsafe.Pointer(cKey))
 	cKeyLen := C.size_t(len(rawKey))
-	cServerAddr := C.client_get_server_address_by_key(client._imp, cKey, cKeyLen)
+
+	cn, err := client.conn(context.Background())
+	if err != nil {
+		return ""
+	}
+	defer func() {
+		client.putConn(cn, err)
+	}()
+	cServerAddr := C.client_get_server_address_by_key(cn._imp, cKey, cKeyLen)
 	return C.GoString(cServerAddr)
 }
 
@@ -282,7 +631,14 @@ func (client *Client) GetRealtimeServerAddressByKey(key string) string {
 	cKey := C.CString(rawKey)
 	defer C.free(unsafe.Pointer(cKey))
 	cKeyLen := C.size_t(len(rawKey))
-	cServerAddr := C.client_get_realtime_server_address_by_key(client._imp, cKey, cKeyLen)
+	cn, err := client.conn(context.Background())
+	if err != nil {
+		return ""
+	}
+	defer func() {
+		client.putConn(cn, err)
+	}()
+	cServerAddr := C.client_get_realtime_server_address_by_key(cn._imp, cKey, cKeyLen)
 	if cServerAddr != nil {
 		return C.GoString(cServerAddr)
 	}
@@ -310,9 +666,6 @@ func (client *Client) addPrefix(key string) string {
 }
 
 func (client *Client) store(cmd string, item *Item) error {
-	client.lock()
-	defer client.unlock()
-
 	key := client.addPrefix(item.Key)
 
 	cKey := C.CString(key)
@@ -330,40 +683,48 @@ func (client *Client) store(cmd string, item *Item) error {
 
 	var errCode C.int
 
+	cn, err := client.conn(context.Background())
+	if err != nil {
+		return err
+	}
+	defer func() {
+		client.putConn(cn, err)
+	}()
+
 	switch cmd {
 	case "set":
 		errCode = C.client_set(
-			client._imp, &cKey, &cKeyLen, &cFlags, cExptime, nil,
+			cn._imp, &cKey, &cKeyLen, &cFlags, cExptime, nil,
 			cNoreply, &cValue, &cValueSize, 1, &rst, &n,
 		)
 	case "add":
 		errCode = C.client_add(
-			client._imp, &cKey, &cKeyLen, &cFlags, cExptime, nil,
+			cn._imp, &cKey, &cKeyLen, &cFlags, cExptime, nil,
 			cNoreply, &cValue, &cValueSize, 1, &rst, &n,
 		)
 	case "replace":
 		errCode = C.client_replace(
-			client._imp, &cKey, &cKeyLen, &cFlags, cExptime, nil,
+			cn._imp, &cKey, &cKeyLen, &cFlags, cExptime, nil,
 			cNoreply, &cValue, &cValueSize, 1, &rst, &n,
 		)
 	case "prepend":
 		errCode = C.client_prepend(
-			client._imp, &cKey, &cKeyLen, &cFlags, cExptime, nil,
+			cn._imp, &cKey, &cKeyLen, &cFlags, cExptime, nil,
 			cNoreply, &cValue, &cValueSize, 1, &rst, &n,
 		)
 	case "append":
 		errCode = C.client_append(
-			client._imp, &cKey, &cKeyLen, &cFlags, cExptime, nil,
+			cn._imp, &cKey, &cKeyLen, &cFlags, cExptime, nil,
 			cNoreply, &cValue, &cValueSize, 1, &rst, &n,
 		)
 	case "cas":
 		cCasUnique := C.cas_unique_t(item.casid)
 		errCode = C.client_cas(
-			client._imp, &cKey, &cKeyLen, &cFlags, cExptime, &cCasUnique,
+			cn._imp, &cKey, &cKeyLen, &cFlags, cExptime, &cCasUnique,
 			cNoreply, &cValue, &cValueSize, 1, &rst, &n,
 		)
 	}
-	defer C.client_destroy_message_result(client._imp)
+	defer C.client_destroy_message_result(cn._imp)
 
 	if errCode == 0 {
 		if client.noreply {
@@ -414,9 +775,6 @@ func (client *Client) Set(item *Item) error {
 
 // SetMulti will set multi values at once
 func (client *Client) SetMulti(items []*Item) (failedKeys []string, err error) {
-	client.lock()
-	defer client.unlock()
-
 	nItems := len(items)
 	cKeys := make([]*C.char, nItems)
 	cKeyLens := make([]C.size_t, nItems)
@@ -452,8 +810,16 @@ func (client *Client) SetMulti(items []*Item) (failedKeys []string, err error) {
 	var results **C.message_result_t
 	var n C.size_t
 
+	cn, err := client.conn(context.Background())
+	if err != nil {
+		return []string{}, err
+	}
+	defer func() {
+		client.putConn(cn, err)
+	}()
+
 	errCode := C.client_set(
-		client._imp,
+		cn._imp,
 		(**C.char)(&cKeys[0]),
 		(*C.size_t)(&cKeyLens[0]),
 		(*C.flags_t)(&cFlagsList[0]),
@@ -465,7 +831,7 @@ func (client *Client) SetMulti(items []*Item) (failedKeys []string, err error) {
 		cNItems,
 		&results, &n,
 	)
-	defer C.client_destroy_message_result(client._imp)
+	defer C.client_destroy_message_result(cn._imp)
 	if errCode == 0 {
 		return []string{}, nil
 	}
@@ -507,9 +873,6 @@ func (client *Client) Cas(item *Item) error {
 
 // Delete a key
 func (client *Client) Delete(key string) error {
-	client.lock()
-	defer client.unlock()
-
 	rawKey := client.addPrefix(key)
 
 	cKey := C.CString(rawKey)
@@ -520,10 +883,18 @@ func (client *Client) Delete(key string) error {
 	var rst **C.message_result_t
 	var n C.size_t
 
+	cn, err := client.conn(context.Background())
+	if err != nil {
+		return err
+	}
+	defer func() {
+		client.putConn(cn, err)
+	}()
+
 	errCode := C.client_delete(
-		client._imp, &cKey, &cKeyLen, cNoreply, 1, &rst, &n,
+		cn._imp, &cKey, &cKeyLen, cNoreply, 1, &rst, &n,
 	)
-	defer C.client_destroy_message_result(client._imp)
+	defer C.client_destroy_message_result(cn._imp)
 
 	if errCode == 0 {
 		if client.noreply {
@@ -544,9 +915,6 @@ func (client *Client) Delete(key string) error {
 
 // DeleteMulti will delete multi keys at once
 func (client *Client) DeleteMulti(keys []string) (failedKeys []string, err error) {
-	client.lock()
-	defer client.unlock()
-
 	var rawKeys []string
 	if len(client.prefix) == 0 {
 		rawKeys = keys
@@ -574,12 +942,20 @@ func (client *Client) DeleteMulti(keys []string) (failedKeys []string, err error
 		cKeyLen := C.size_t(len(key))
 		cKeyLens[i] = cKeyLen
 	}
+	cn, err := client.conn(context.Background())
+	if err != nil {
+		return []string{}, err
+	}
+	defer func() {
+		client.putConn(cn, err)
+	}()
+
 	errCode := C.client_delete(
-		client._imp, (**C.char)(&cKeys[0]), (*C.size_t)(&cKeyLens[0]), cNoreply, cNKeys,
+		cn._imp, (**C.char)(&cKeys[0]), (*C.size_t)(&cKeyLens[0]), cNoreply, cNKeys,
 		&results,
 		&n,
 	)
-	defer C.client_destroy_message_result(client._imp)
+	defer C.client_destroy_message_result(cn._imp)
 
 	switch errCode {
 	case 0:
@@ -623,8 +999,13 @@ func (client *Client) DeleteMulti(keys []string) (failedKeys []string, err error
 }
 
 func (client *Client) getOrGets(cmd string, key string) (item *Item, err error) {
-	client.lock()
-	defer client.unlock()
+	cn, err := client.conn(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		client.putConn(cn, err)
+	}()
 
 	rawKey := client.addPrefix(key)
 
@@ -637,12 +1018,12 @@ func (client *Client) getOrGets(cmd string, key string) (item *Item, err error) 
 	var errCode C.int
 	switch cmd {
 	case "get":
-		errCode = C.client_get(client._imp, &cKey, &cKeyLen, 1, &rst, &n)
+		errCode = C.client_get(cn._imp, &cKey, &cKeyLen, 1, &rst, &n)
 	case "gets":
-		errCode = C.client_gets(client._imp, &cKey, &cKeyLen, 1, &rst, &n)
+		errCode = C.client_gets(cn._imp, &cKey, &cKeyLen, 1, &rst, &n)
 	}
 
-	defer C.client_destroy_retrieval_result(client._imp)
+	defer C.client_destroy_retrieval_result(cn._imp)
 
 	if errCode != 0 {
 		if errCode == C.RET_INVALID_KEY_ERR {
@@ -682,9 +1063,6 @@ func (client *Client) Gets(key string) (*Item, error) {
 
 // GetMulti will return a map of multi values
 func (client *Client) GetMulti(keys []string) (rv map[string]*Item, err error) {
-	client.lock()
-	defer client.unlock()
-
 	nKeys := len(keys)
 	var rawKeys []string
 	if len(client.prefix) == 0 {
@@ -711,8 +1089,17 @@ func (client *Client) GetMulti(keys []string) (rv map[string]*Item, err error) {
 	var rst **C.retrieval_result_t
 	var n C.size_t
 
-	errCode := C.client_get(client._imp, &cKeys[0], &cKeyLens[0], cNKeys, &rst, &n)
-	defer C.client_destroy_retrieval_result(client._imp)
+	cn, err1 := client.conn(context.Background())
+	if err1 != nil {
+		err = err1
+		return
+	}
+	defer func() {
+		client.putConn(cn, err)
+	}()
+
+	errCode := C.client_get(cn._imp, &cKeys[0], &cKeyLens[0], cNKeys, &rst, &n)
+	defer C.client_destroy_retrieval_result(cn._imp)
 
 	switch errCode {
 	case 0:
@@ -747,9 +1134,6 @@ func (client *Client) GetMulti(keys []string) (rv map[string]*Item, err error) {
 
 // Touch command
 func (client *Client) Touch(key string, expiration int64) error {
-	client.lock()
-	defer client.unlock()
-
 	rawKey := client.addPrefix(key)
 
 	cKey := C.CString(rawKey)
@@ -761,10 +1145,18 @@ func (client *Client) Touch(key string, expiration int64) error {
 	var rst **C.message_result_t
 	var n C.size_t
 
+	cn, err := client.conn(context.Background())
+	if err != nil {
+		return err
+	}
+	defer func() {
+		client.putConn(cn, err)
+	}()
+
 	errCode := C.client_touch(
-		client._imp, &cKey, &cKeyLen, cExptime, cNoreply, 1, &rst, &n,
+		cn._imp, &cKey, &cKeyLen, cExptime, cNoreply, 1, &rst, &n,
 	)
-	defer C.client_destroy_message_result(client._imp)
+	defer C.client_destroy_message_result(cn._imp)
 
 	switch errCode {
 	case 0:
@@ -784,9 +1176,6 @@ func (client *Client) Touch(key string, expiration int64) error {
 }
 
 func (client *Client) incrOrDecr(cmd string, key string, delta uint64) (uint64, error) {
-	client.lock()
-	defer client.unlock()
-
 	rawKey := client.addPrefix(key)
 	cKey := C.CString(rawKey)
 	defer C.free(unsafe.Pointer(cKey))
@@ -799,21 +1188,29 @@ func (client *Client) incrOrDecr(cmd string, key string, delta uint64) (uint64, 
 
 	var errCode C.int
 
+	cn, err := client.conn(context.Background())
+	if err != nil {
+		return 0, err
+	}
+	defer func() {
+		client.putConn(cn, err)
+	}()
+
 	switch cmd {
 	case "incr":
 		errCode = C.client_incr(
-			client._imp, cKey, cKeyLen, cDelta, cNoreply,
+			cn._imp, cKey, cKeyLen, cDelta, cNoreply,
 			&rst, &n,
 		)
 	case "decr":
 		errCode = C.client_decr(
-			client._imp, cKey, cKeyLen, cDelta, cNoreply,
+			cn._imp, cKey, cKeyLen, cDelta, cNoreply,
 			&rst, &n,
 		)
 
 	}
 
-	defer C.client_destroy_unsigned_result(client._imp)
+	defer C.client_destroy_unsigned_result(cn._imp)
 
 	if errCode == 0 {
 		if client.noreply {
@@ -843,15 +1240,20 @@ func (client *Client) Decr(key string, delta uint64) (uint64, error) {
 
 // Version will return a map reflecting versions of each memcached server
 func (client *Client) Version() (map[string]string, error) {
-	client.lock()
-	defer client.unlock()
-
 	var rst *C.broadcast_result_t
 	var n C.size_t
 	rv := make(map[string]string)
 
-	errCode := C.client_version(client._imp, &rst, &n)
-	defer C.client_destroy_broadcast_result(client._imp)
+	cn, err := client.conn(context.Background())
+	if err != nil {
+		return rv, err
+	}
+	defer func() {
+		client.putConn(cn, err)
+	}()
+
+	errCode := C.client_version(cn._imp, &rst, &n)
+	defer C.client_destroy_broadcast_result(cn._imp)
 	sr := unsafe.Sizeof(*rst)
 
 	for i := 0; i < int(n); i++ {
@@ -874,16 +1276,21 @@ func (client *Client) Version() (map[string]string, error) {
 
 // Stats will return a map reflecting stats map of each memcached server
 func (client *Client) Stats() (map[string](map[string]string), error) {
-	client.lock()
-	defer client.unlock()
-
 	var rst *C.broadcast_result_t
 	var n C.size_t
 
-	errCode := C.client_stats(client._imp, &rst, &n)
-	defer C.client_destroy_broadcast_result(client._imp)
-
 	rv := make(map[string](map[string]string))
+
+	cn, err := client.conn(context.Background())
+	if err != nil {
+		return rv, err
+	}
+	defer func() {
+		client.putConn(cn, err)
+	}()
+
+	errCode := C.client_stats(cn._imp, &rst, &n)
+	defer C.client_destroy_broadcast_result(cn._imp)
 
 	sr := unsafe.Sizeof(*rst)
 
@@ -921,14 +1328,75 @@ func (client *Client) Stats() (map[string](map[string]string), error) {
 
 // Quit will close the sockets to each memcached server
 func (client *Client) Quit() error {
-	client.lock()
-	defer client.unlock()
-
-	errCode := C.client_quit(client._imp)
-	C.client_destroy_broadcast_result(client._imp)
-
-	if errCode == C.RET_CONN_POLL_ERR || errCode == C.RET_RECV_ERR {
+	client.lk.Lock()
+	if client.closed {
+		client.lk.Unlock()
 		return nil
 	}
-	return networkError(errorMessage[errCode])
+
+	close(client.openerCh)
+	if client.cleanerCh != nil {
+		close(client.cleanerCh)
+	}
+	for _, cr := range client.connRequests {
+		close(cr)
+	}
+	client.closed = true
+	client.lk.Unlock()
+	var err error
+	for _, cn := range client.freeConns {
+		err1 := cn.quit()
+		if err1 != nil {
+			err = err1
+		}
+	}
+	client.lk.Lock()
+	client.freeConns = nil
+	client.lk.Unlock()
+
+	return err
+}
+
+func (cn *conn) expired(timeout time.Duration) bool {
+	if timeout <= 0 {
+		return false
+	}
+	return cn.createdAt.Add(timeout).Before(time.Now())
+}
+
+func (cn *conn) quit() error {
+	cn.Lock()
+	defer cn.Unlock()
+	if cn.closed {
+		return errors.New("duplicate conn close")
+	}
+	cn.closed = true
+	errCode := C.client_quit(cn._imp)
+	C.client_destroy_broadcast_result(cn._imp)
+	cn.client.lk.Lock()
+	defer cn.client.lk.Unlock()
+	cn.client.numOpen--
+	err := networkError(errorMessage[errCode])
+	if isBadConnErr(err) {
+		cn.client.maybeOpenNewConnections()
+		return nil
+	}
+	return err
+}
+
+func isBadConnErr(err error) (r bool) {
+	if err == nil {
+		return
+	}
+	if err == ErrBadConn {
+		r = true
+		return
+	}
+	for _, be := range badConnErrors {
+		if err.Error() == be.Error() {
+			r = true
+			break
+		}
+	}
+	return
 }
