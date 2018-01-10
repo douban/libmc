@@ -15,5 +15,5 @@ cd ..
 python setup.py test
 python setup.py install
 ./tests/shabby/run_test.sh
-cd golibmc
+cd src
 go test
