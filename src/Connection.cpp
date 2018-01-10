@@ -212,8 +212,8 @@ void Connection::takeBuffer(const char* const buf, size_t buf_len) {
   m_buffer_writer->takeBuffer(buf, buf_len);
 }
 
-void Connection::addRequestKey(const char* const buf, const size_t buf_len) {
-  m_parser.addRequestKey(buf, buf_len);
+void Connection::addRequestKey(const char* const key, const size_t len) {
+  m_parser.addRequestKey(key, len);
 }
 
 size_t Connection::requestKeyCount() {

@@ -20,12 +20,12 @@ class ConnectionPool {
   void enableConsistentFailover();
   void disableConsistentFailover();
   void dispatchRetrieval(op_code_t op, const char* const* keys, const size_t* keyLens,
-                    size_t n_keys);
+                    size_t nKeys);
   void dispatchStorage(op_code_t op,
                         const char* const* keys, const size_t* keyLens,
                         const flags_t* flags, const exptime_t exptime,
                         const cas_unique_t* cas_uniques, const bool noreply,
-                        const char* const* vals, const size_t* val_lens,
+                        const char* const* vals, const size_t* valLens,
                         size_t nItems);
   void dispatchDeletion(const char* const* keys, const size_t* keyLens,
                        const bool noreply, size_t nItems);
