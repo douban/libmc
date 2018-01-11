@@ -40,7 +40,7 @@ void BufferWriter::takeBuffer(const char* const buf, size_t buf_len) {
   iov.iov_base = const_cast<char*>(buf);
   iov.iov_len = buf_len;
   m_iovec.push_back(iov);
-  m_msgIovlen += 1;
+  ++m_msgIovlen;
 }
 
 
@@ -52,7 +52,7 @@ void BufferWriter::takeNumber(int64_t val) {
   iov.iov_base = buf;
   iov.iov_len = douban::mc::utility::int64ToCharArray(val, buf);
   m_iovec.push_back(iov);
-  m_msgIovlen += 1;
+  ++m_msgIovlen;
 }
 
 

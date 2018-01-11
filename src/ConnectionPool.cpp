@@ -138,7 +138,7 @@ void ConnectionPool::dispatchStorage(op_code_t op,
 
   for (; i < nItems; ++i) {
     if (!utility::isValidKey(keys[i], keyLens[i])) {
-      m_nInvalidKey += 1;
+      ++m_nInvalidKey;
       continue;
     }
     Connection* conn = m_connSelector.getConn(keys[i], keyLens[i]);
@@ -195,7 +195,7 @@ void ConnectionPool::dispatchStorage(op_code_t op,
     Connection* conn = m_conns + idx;
     if (conn->m_counter > 0) {
       conn->setParserMode(MODE_COUNTING);
-      m_nActiveConn += 1;
+      ++m_nActiveConn;
       m_activeConns.push_back(conn);
     }
     // for ignore noreply
@@ -214,14 +214,14 @@ void ConnectionPool::dispatchRetrieval(op_code_t op, const char* const* keys,
     const char* key = keys[i];
     const size_t len = keyLens[i];
     if (!utility::isValidKey(key, len)) {
-      m_nInvalidKey += 1;
+      ++m_nInvalidKey;
       continue;
     }
     Connection* conn = m_connSelector.getConn(key, len);
     if (conn == NULL) {
       continue;
     }
-    // debug("hash %s => %d (%p)", key, idx % m_nConns, conn);
+
     if (++conn->m_counter == 1) {
       switch (op) {
         case GET_OP:
@@ -243,7 +243,7 @@ void ConnectionPool::dispatchRetrieval(op_code_t op, const char* const* keys,
     if (conn->m_counter > 0) {
       conn->takeBuffer(kCRLF, 2);
       conn->setParserMode(MODE_END_STATE);
-      m_nActiveConn += 1;
+      ++m_nActiveConn;
       m_activeConns.push_back(conn);
       conn->getRetrievalResults()->reserve(conn->m_counter);
     }
@@ -258,7 +258,7 @@ void ConnectionPool::dispatchDeletion(const char* const* keys, const size_t* key
   size_t i = 0, idx = 0;
   for (; i < nItems; ++i) {
     if (!utility::isValidKey(keys[i], keyLens[i])) {
-      m_nInvalidKey += 1;
+      ++m_nInvalidKey;
       continue;
     }
     Connection* conn = m_connSelector.getConn(keys[i], keyLens[i]);
@@ -281,7 +281,7 @@ void ConnectionPool::dispatchDeletion(const char* const* keys, const size_t* key
     Connection* conn = m_conns + idx;
     if (conn->m_counter > 0) {
       conn->setParserMode(MODE_COUNTING);
-      m_nActiveConn += 1;
+      ++m_nActiveConn;
       m_activeConns.push_back(conn);
     }
     // for ignore noreply
@@ -300,7 +300,7 @@ void ConnectionPool::dispatchTouch(
   size_t i = 0, idx = 0;
   for (; i < nItems; ++i) {
     if (!utility::isValidKey(keys[i], keyLens[i])) {
-      m_nInvalidKey += 1;
+      ++m_nInvalidKey;
       continue;
     }
     Connection* conn = m_connSelector.getConn(keys[i], keyLens[i]);
@@ -325,7 +325,7 @@ void ConnectionPool::dispatchTouch(
     Connection* conn = m_conns + idx;
     if (conn->m_counter > 0) {
       conn->setParserMode(MODE_COUNTING);
-      m_nActiveConn += 1;
+      ++m_nActiveConn;
       m_activeConns.push_back(conn);
     }
     // for ignore noreply
@@ -340,7 +340,7 @@ void ConnectionPool::dispatchTouch(
 void ConnectionPool::dispatchIncrDecr(op_code_t op, const char* key, const size_t keyLen,
                                       const uint64_t delta, const bool noreply) {
   if (!utility::isValidKey(key, keyLen)) {
-    m_nInvalidKey += 1;
+    ++m_nInvalidKey;
     return;
   }
   Connection* conn = m_connSelector.getConn(key, keyLen);
@@ -370,7 +370,7 @@ void ConnectionPool::dispatchIncrDecr(op_code_t op, const char* key, const size_
   conn->takeBuffer(kCRLF, 2);
 
   conn->setParserMode(MODE_COUNTING);
-  m_nActiveConn += 1;
+  ++m_nActiveConn;
   m_activeConns.push_back(conn);
 
   // for ignore noreply
@@ -394,7 +394,7 @@ void ConnectionPool::broadcastCommand(const char * const cmd, const size_t cmdLe
     }
     conn->takeBuffer(kCRLF, 2);
     conn->setParserMode(MODE_END_STATE);
-    m_nActiveConn += 1;
+    ++m_nActiveConn;
     m_activeConns.push_back(conn);
   }
 }
@@ -447,7 +447,7 @@ err_code_t ConnectionPool::waitPoll() {
         if (pollfd_ptr->revents & (POLLERR | POLLHUP | POLLNVAL)) {
           markDeadConn(conn, keywords::kCONN_POLL_ERROR, pollfd_ptr);
           ret_code = RET_CONN_POLL_ERR;
-          m_nActiveConn -= 1;
+          --m_nActiveConn;
           goto next_fd;
         }
 
@@ -458,7 +458,7 @@ err_code_t ConnectionPool::waitPoll() {
           if (nToSend == -1) {
             markDeadConn(conn, keywords::kSEND_ERROR, pollfd_ptr);
             ret_code = RET_SEND_ERR;
-            m_nActiveConn -= 1;
+            --m_nActiveConn;
             goto next_fd;
           } else {
             // start to recv if any data is sent
@@ -469,7 +469,7 @@ err_code_t ConnectionPool::waitPoll() {
               pollfd_ptr->events &= ~POLLOUT;
               if (conn->m_counter == 0) {
                 // just send, no recv for noreply
-                --this->m_nActiveConn;
+                --m_nActiveConn;
               }
             }
           }
@@ -482,7 +482,7 @@ err_code_t ConnectionPool::waitPoll() {
           if (nRecv == -1 || nRecv == 0) {
             markDeadConn(conn, keywords::kRECV_ERROR, pollfd_ptr);
             ret_code = RET_RECV_ERR;
-            m_nActiveConn -= 1;
+            --m_nActiveConn;
             goto next_fd;
           }
 
@@ -497,14 +497,14 @@ err_code_t ConnectionPool::waitPoll() {
             case RET_PROGRAMMING_ERR:
               markDeadConn(conn, keywords::kPROGRAMMING_ERROR, pollfd_ptr);
               ret_code = RET_PROGRAMMING_ERR;
-              m_nActiveConn -= 1;
+              --m_nActiveConn;
               goto next_fd;
               break;
             case RET_MC_SERVER_ERR:
               // soft server error
               markDeadConn(conn, keywords::kSERVER_ERROR, pollfd_ptr);
               ret_code = RET_MC_SERVER_ERR;
-              m_nActiveConn -= 1;
+              --m_nActiveConn;
               goto next_fd;
               break;
             default:
