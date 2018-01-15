@@ -453,6 +453,7 @@ err_code_t ConnectionPool::waitPoll() {
           ssize_t nRecv = conn->recv();
           if (nRecv == -1 || nRecv == 0) {
             markDeadConn(conn, keywords::kRECV_ERROR, pollfd_ptr);
+            log_err("recv_error conn:%s nRecv:%zd", conn->name(), nRecv);
             ret_code = RET_RECV_ERR;
             m_nActiveConn -= 1;
             goto next_fd;
