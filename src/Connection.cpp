@@ -1,10 +1,10 @@
+#include <arpa/inet.h>
 #include <netdb.h>
 #include <netinet/tcp.h>
-#include <unistd.h>
-#include <arpa/inet.h>
-#include <sys/socket.h>
 #include <sys/poll.h>
+#include <sys/socket.h>
 #include <sys/types.h>
+#include <unistd.h>
 
 #include <errno.h>
 #include <fcntl.h>
@@ -12,15 +12,19 @@
 
 #include "Connection.h"
 
-using douban::mc::io::BufferWriter;
 using douban::mc::io::BufferReader;
+using douban::mc::io::BufferWriter;
 
 namespace douban {
 namespace mc {
 
 Connection::Connection()
-    : m_counter(0), m_port(0), m_socketFd(-1),
-      m_alive(false), m_hasAlias(false), m_deadUntil(0),
+    : m_counter(0),
+      m_port(0),
+      m_socketFd(-1),
+      m_alive(false),
+      m_hasAlias(false),
+      m_deadUntil(0),
       m_connectTimeout(MC_DEFAULT_CONNECT_TIMEOUT),
       m_retryTimeout(MC_DEFAULT_RETRY_TIMEOUT) {
   m_name[0] = '\0';
@@ -50,9 +54,8 @@ int Connection::init(const char* host, uint32_t port, const char* alias) {
     m_hasAlias = true;
     snprintf(m_name, sizeof m_name, "%s", alias);
   }
-  return -1; // -1 means the connection is not established yet
+  return -1;  // -1 means the connection is not established yet
 }
-
 
 int Connection::connect() {
   assert(!m_alive);
@@ -73,7 +76,8 @@ int Connection::connect() {
 
   int opt_nodelay = 1, opt_keepalive = 1;
   for (ai_ptr = server_addrinfo; ai_ptr != NULL; ai_ptr = ai_ptr->ai_next) {
-    int fd = socket(ai_ptr->ai_family, ai_ptr->ai_socktype, ai_ptr->ai_protocol);
+    int fd =
+        socket(ai_ptr->ai_family, ai_ptr->ai_socktype, ai_ptr->ai_protocol);
     if (fd == -1) {
       continue;
     }
@@ -99,12 +103,14 @@ int Connection::connect() {
     }
 
     // no delay
-    if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &opt_nodelay, sizeof opt_nodelay) != 0) {
+    if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &opt_nodelay,
+                   sizeof opt_nodelay) != 0) {
       goto try_next_ai;
     }
 
     // keep alive
-    if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt_keepalive, sizeof opt_keepalive) != 0) {
+    if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt_keepalive,
+                   sizeof opt_keepalive) != 0) {
       goto try_next_ai;
     }
 
@@ -115,7 +121,7 @@ int Connection::connect() {
       break;
     }
 
-try_next_ai:
+  try_next_ai:
     ::close(fd);
     continue;
   }
@@ -134,27 +140,26 @@ int Connection::connectPoll(int fd, struct addrinfo* ai_ptr) {
   assert(rv == -1);
   switch (errno) {
     case EINPROGRESS:
-    case EALREADY:
-      {
-        nfds_t n_fds = 1;
-        pollfd_t pollfds[n_fds];
-        pollfds[0].fd = fd;
-        pollfds[0].events = POLLOUT;
-        int max_timeout = 6;
-        while (--max_timeout) {
-          int rv = poll(pollfds, n_fds, m_connectTimeout);
-          if (rv == 1) {
-            if (pollfds[0].revents & (POLLERR | POLLHUP | POLLNVAL)) {
-              return -1;
-            } else {
-              return 0;
-            }
-          } else if (rv == -1) {
+    case EALREADY: {
+      nfds_t n_fds = 1;
+      pollfd_t pollfds[n_fds];
+      pollfds[0].fd = fd;
+      pollfds[0].events = POLLOUT;
+      int max_timeout = 6;
+      while (--max_timeout) {
+        int rv = poll(pollfds, n_fds, m_connectTimeout);
+        if (rv == 1) {
+          if (pollfds[0].revents & (POLLERR | POLLHUP | POLLNVAL)) {
             return -1;
+          } else {
+            return 0;
           }
+        } else if (rv == -1) {
+          return -1;
         }
-        return -1;
       }
+      return -1;
+    }
     default:
       return -1;
   }
@@ -191,7 +196,7 @@ bool Connection::tryReconnect() {
 void Connection::markDead(const char* reason, int delay) {
   if (m_alive) {
     time(&m_deadUntil);
-    m_deadUntil += delay; // check after `delay` seconds, default 0
+    m_deadUntil += delay;  // check after `delay` seconds, default 0
     this->close();
     log_warn("Connection %s is dead(reason: %s, delay: %d), next check at %lu",
              m_name, reason, delay, m_deadUntil);
@@ -204,9 +209,7 @@ void Connection::markDead(const char* reason, int delay) {
   }
 }
 
-int Connection::socketFd() const {
-  return m_socketFd;
-}
+int Connection::socketFd() const { return m_socketFd; }
 
 void Connection::takeBuffer(const char* const buf, size_t buf_len) {
   m_buffer_writer->takeBuffer(buf, buf_len);
@@ -216,23 +219,17 @@ void Connection::addRequestKey(const char* const key, const size_t len) {
   m_parser.addRequestKey(key, len);
 }
 
-size_t Connection::requestKeyCount() {
-  return m_parser.requestKeyCount();
-}
+size_t Connection::requestKeyCount() { return m_parser.requestKeyCount(); }
 
-void Connection::setParserMode(ParserMode md) {
-  m_parser.setMode(md);
-}
+void Connection::setParserMode(ParserMode md) { m_parser.setMode(md); }
 
-void Connection::takeNumber(int64_t val) {
-  m_buffer_writer->takeNumber(val);
-}
+void Connection::takeNumber(int64_t val) { m_buffer_writer->takeNumber(val); }
 
 ssize_t Connection::send() {
   struct msghdr msg = {};
 
   size_t n = 0;
-  msg.msg_iov = const_cast<struct iovec *>(m_buffer_writer->getReadPtr(n));
+  msg.msg_iov = const_cast<struct iovec*>(m_buffer_writer->getReadPtr(n));
   msg.msg_iovlen = n;
 
   // otherwise may lead to EMSGSIZE, SEE issue#3 on code
@@ -264,8 +261,10 @@ ssize_t Connection::recv() {
   size_t bufferSize = m_buffer_reader->getNextPreferedDataBlockSize();
   size_t bufferSizeAvailable = m_buffer_reader->prepareWriteBlock(bufferSize);
   char* writePtr = m_buffer_reader->getWritePtr();
-  ssize_t bufferSizeActual = ::recv(m_socketFd, writePtr, bufferSizeAvailable, 0);
-  // log_info("%p recv(%lu) %.*s", this, bufferSizeActual, (int)bufferSizeActual, writePtr);
+  ssize_t bufferSizeActual =
+      ::recv(m_socketFd, writePtr, bufferSizeAvailable, 0);
+  // log_info("%p recv(%lu) %.*s", this, bufferSizeActual,
+  // (int)bufferSizeActual, writePtr);
   if (bufferSizeActual > 0) {
     m_buffer_reader->commitWrite(bufferSizeActual);
   }
@@ -300,16 +299,12 @@ void Connection::reset() {
   m_counter = 0;
   m_parser.reset();
   m_buffer_reader->reset();
-  m_buffer_writer->reset(); // flush data dispatched but not sent
+  m_buffer_writer->reset();  // flush data dispatched but not sent
 }
 
-void Connection::setRetryTimeout(int timeout) {
-  m_retryTimeout = timeout;
-}
+void Connection::setRetryTimeout(int timeout) { m_retryTimeout = timeout; }
 
-void Connection::setConnectTimeout(int timeout) {
-  m_connectTimeout = timeout;
-}
+void Connection::setConnectTimeout(int timeout) { m_connectTimeout = timeout; }
 
-} // namespace mc
-} // namespace douban
+}  // namespace mc
+}  // namespace douban

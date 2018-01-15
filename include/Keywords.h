@@ -34,7 +34,6 @@ static const char kSTATS[] = "stats";
 
 static const char kQUIT[] = "quit";
 
-
 // error messages for humman
 static const char kSEND_ERROR[] = "send_error";
 static const char kRECV_ERROR[] = "recv_error";
@@ -44,6 +43,6 @@ static const char kPOLL_TIMEOUT[] = "poll_timeout";
 static const char kPOLL_ERROR[] = "poll_error";
 static const char kPROGRAMMING_ERROR[] = "programming_error";
 
-} // namespace keywords
-} // namespace mc
-} // namespace douban
+}  // namespace keywords
+}  // namespace mc
+}  // namespace douban

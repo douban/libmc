@@ -5,7 +5,6 @@ namespace douban {
 namespace mc {
 namespace types {
 
-
 RetrievalResult::RetrievalResult() {
   this->cas_unique = 0;
   this->bytes = 0;
@@ -29,9 +28,8 @@ RetrievalResult::RetrievalResult(const RetrievalResult& other) {
   this->m_inner.data_block = NULL;
 }
 
-
 RetrievalResult::~RetrievalResult() {
-  if (key.size() > 1) { // copy happened
+  if (key.size() > 1) {  // copy happened
     delete[] m_inner.key;
   }
   if (data_block.size() > 1) {
@@ -48,13 +46,12 @@ retrieval_result_t* RetrievalResult::inner() {
   if (m_inner.data_block == NULL) {
     m_inner.data_block = parseTokenData(this->data_block, this->bytes);
   }
-  m_inner.cas_unique = this->cas_unique; // 8B
-  m_inner.bytes = this->bytes; // 4B
-  m_inner.flags = this->flags;  // 2B
-  m_inner.key_len = this->key_len; // 1B
+  m_inner.cas_unique = this->cas_unique;  // 8B
+  m_inner.bytes = this->bytes;            // 4B
+  m_inner.flags = this->flags;            // 2B
+  m_inner.key_len = this->key_len;        // 1B
   return &m_inner;
 }
-
 
 LineResult::LineResult() {
   this->m_inner = NULL;
@@ -67,7 +64,6 @@ LineResult::LineResult(const LineResult& other) {
   this->m_inner = NULL;
 }
 
-
 LineResult::~LineResult() {
   if (this->line.size() > 1) {
     delete[] this->m_inner;
@@ -79,10 +75,10 @@ char* LineResult::inner(size_t& n) {
   if (this->m_inner == NULL) {
     this->m_inner = parseTokenData(this->line, this->line_len);
   }
-  n = this->line_len - 1;  // NOTE: LineResult is always ends with '\r', which should be ignored
+  n = this->line_len -
+      1;  // NOTE: LineResult is always ends with '\r', which should be ignored
   return this->m_inner;
 }
-
 
 void delete_broadcast_result(broadcast_result_t* ptr) {
   if (ptr->lines) {
@@ -95,7 +91,6 @@ void delete_broadcast_result(broadcast_result_t* ptr) {
   }
 }
 
-
-} // namespace types
-} // namespace mc
-} // namespace douban
+}  // namespace types
+}  // namespace mc
+}  // namespace douban

@@ -6,9 +6,9 @@
 #include <list>
 #include <vector>
 
-#include "Export.h"
 #include "Common.h"
 #include "DataBlock.h"
+#include "Export.h"
 
 #ifdef MC_USE_SMALL_VECTOR
 #include "llvm/SmallVector.h"
@@ -20,7 +20,6 @@ namespace io {
 
 typedef std::list<DataBlock> DataBlockList;
 typedef DataBlockList::iterator DataBlockListIterator;
-
 
 struct DataCursor_s {
   DataBlockListIterator iterator;
@@ -35,7 +34,6 @@ struct DataCursor_s {
   }
 };
 typedef struct DataCursor_s DataCursor;
-
 
 typedef struct {
   DataBlockListIterator iterator;
@@ -52,7 +50,6 @@ typedef std::vector<DataBlockSlice> TokenData;
 void freeTokenData(TokenData& td);
 char* parseTokenData(TokenData& td, size_t reserved);
 void copyTokenData(const TokenData& src, TokenData& dst);
-
 
 class BufferReader {
  public:
@@ -95,7 +92,6 @@ class BufferReader {
   size_t m_nextPreferedDataBlockSize;
 };
 
-
 inline const char BufferReader::charAtCursor(DataCursor& cur) const {
   // NOTE: make sure cur is valid
   /**
@@ -106,11 +102,8 @@ inline const char BufferReader::charAtCursor(DataCursor& cur) const {
   return *((*cur.iterator)[cur.offset]);
 }
 
+inline size_t BufferReader::readLeft() { return m_readLeft; }
 
-inline size_t BufferReader::readLeft() {
-  return m_readLeft;
-}
-
-} // namespace io
-} // namespace mc
-} // namespace douban
+}  // namespace io
+}  // namespace mc
+}  // namespace douban

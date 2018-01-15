@@ -3,20 +3,14 @@
 #include <sys/uio.h>
 #include <queue>
 
-#include "Common.h"
 #include "BufferReader.h"
+#include "Common.h"
 #include "Result.h"
-
 
 namespace douban {
 namespace mc {
 
-typedef enum {
-  MODE_UNDEFINED,
-  MODE_END_STATE,
-  MODE_COUNTING
-} ParserMode;
-
+typedef enum { MODE_UNDEFINED, MODE_END_STATE, MODE_COUNTING } ParserMode;
 
 class PacketParser {
  public:
@@ -28,7 +22,7 @@ class PacketParser {
   void addRequestKey(const char* const key, const size_t len);
   std::queue<struct iovec>* getRequestKeys();
   size_t requestKeyCount();
-  void process_packets(err_code_t &err);
+  void process_packets(err_code_t& err);
   void reset();
 
   types::RetrievalResultList* getRetrievalResults();
@@ -41,7 +35,6 @@ class PacketParser {
   bool canEndParse();
   void processMessageResult(message_result_type tp);
   void processLineResult(err_code_t& err);
-
 
   std::queue<struct ::iovec> m_requestKeys;
   io::BufferReader* m_buffer_reader;
@@ -58,11 +51,11 @@ class PacketParser {
   types::RetrievalResult* mt_kvPtr;
 };
 
-
 inline bool PacketParser::canEndParse() {
   assert(m_mode == MODE_END_STATE || m_mode == MODE_COUNTING);
-  return m_mode == MODE_END_STATE ? IS_END_STATE(m_state) : m_requestKeys.empty();
+  return m_mode == MODE_END_STATE ? IS_END_STATE(m_state)
+                                  : m_requestKeys.empty();
 }
 
-} // namespace mc
-} // namespace douban
+}  // namespace mc
+}  // namespace douban

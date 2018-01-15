@@ -3,7 +3,6 @@
 #include <cstdlib>
 #include "Common.h"
 
-
 namespace douban {
 namespace mc {
 namespace io {
@@ -53,21 +52,15 @@ class DataBlock {
   static size_t s_minCapacity;  // FIXME: bad design
 };
 
-
-inline void DataBlock::acquire(size_t len) {
-  this->m_nBytesRef += len;
-}
+inline void DataBlock::acquire(size_t len) { this->m_nBytesRef += len; }
 
 inline void DataBlock::release(size_t len) {
   assert(this->m_nBytesRef >= len);
   this->m_nBytesRef -= len;
 }
 
+inline size_t DataBlock::size() { return m_size; }
 
-inline size_t DataBlock::size() {
-  return m_size;
-}
-
-} // namespace io
-} // namespace mc
-} // namespace douban
+}  // namespace io
+}  // namespace mc
+}  // namespace douban

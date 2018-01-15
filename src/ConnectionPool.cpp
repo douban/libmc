@@ -1,21 +1,21 @@
-#include <sys/socket.h>
-#include <poll.h>
 #include <errno.h>
+#include <poll.h>
 #include <stdlib.h>
+#include <sys/socket.h>
+#include <algorithm>
 #include <list>
 #include <vector>
-#include <algorithm>
 
 #include "ConnectionPool.h"
-#include "Utility.h"
 #include "Keywords.h"
 #include "Parser.h"
+#include "Utility.h"
 
 using std::vector;
 
+using douban::mc::keywords::k_NOREPLY;
 using douban::mc::keywords::kCRLF;
 using douban::mc::keywords::kSPACE;
-using douban::mc::keywords::k_NOREPLY;
 
 using douban::mc::hashkit::KetamaSelector;
 
@@ -25,15 +25,13 @@ namespace douban {
 namespace mc {
 
 ConnectionPool::ConnectionPool()
-  : m_nActiveConn(0), m_nInvalidKey(0), m_conns(NULL), m_nConns(0),
-    m_pollTimeout(MC_DEFAULT_POLL_TIMEOUT) {
-}
+    : m_nActiveConn(0),
+      m_nInvalidKey(0),
+      m_conns(NULL),
+      m_nConns(0),
+      m_pollTimeout(MC_DEFAULT_POLL_TIMEOUT) {}
 
-
-ConnectionPool::~ConnectionPool() {
-  delete[] m_conns;
-}
-
+ConnectionPool::~ConnectionPool() { delete[] m_conns; }
 
 void ConnectionPool::setHashFunction(hash_function_options_t fn_opt) {
   switch (fn_opt) {
@@ -55,23 +53,23 @@ void ConnectionPool::setHashFunction(hash_function_options_t fn_opt) {
   }
 }
 
-
-int ConnectionPool::init(const char* const * hosts, const uint32_t* ports, const size_t n,
-                         const char* const * aliases) {
+int ConnectionPool::init(const char* const* hosts, const uint32_t* ports,
+                         const size_t n, const char* const* aliases) {
   delete[] m_conns;
   m_connSelector.reset();
   int rv = 0;
   m_nConns = n;
   m_conns = new Connection[m_nConns];
   for (size_t i = 0; i < m_nConns; i++) {
-    rv += m_conns[i].init(hosts[i], ports[i], aliases == NULL ? NULL : aliases[i]);
+    rv += m_conns[i].init(hosts[i], ports[i],
+                          aliases == NULL ? NULL : aliases[i]);
   }
   m_connSelector.addServers(m_conns, m_nConns);
   return rv;
 }
 
-
-const char* ConnectionPool::getServerAddressByKey(const char* key, size_t keyLen) {
+const char* ConnectionPool::getServerAddressByKey(const char* key,
+                                                  size_t keyLen) {
   bool check_alive = false;
   Connection* conn = m_connSelector.getConn(key, keyLen, check_alive);
   if (conn == NULL) {
@@ -80,8 +78,8 @@ const char* ConnectionPool::getServerAddressByKey(const char* key, size_t keyLen
   return conn->name();
 }
 
-
-const char* ConnectionPool::getRealtimeServerAddressByKey(const char* key, size_t keyLen) {
+const char* ConnectionPool::getRealtimeServerAddressByKey(const char* key,
+                                                          size_t keyLen) {
   bool check_alive = true;
   Connection* conn = m_connSelector.getConn(key, keyLen, check_alive);
   if (conn == NULL) {
@@ -90,24 +88,19 @@ const char* ConnectionPool::getRealtimeServerAddressByKey(const char* key, size_
   return conn->name();
 }
 
-
 void ConnectionPool::enableConsistentFailover() {
   m_connSelector.enableFailover();
 }
-
 
 void ConnectionPool::disableConsistentFailover() {
   m_connSelector.disableFailover();
 }
 
-
-void ConnectionPool::dispatchStorage(op_code_t op,
-                                      const char* const* keys, const size_t* keyLens,
-                                      const flags_t* flags, const exptime_t exptime,
-                                      const cas_unique_t* cas_uniques, const bool noreply,
-                                      const char* const* vals, const size_t* valLens,
-                                      size_t nItems) {
-
+void ConnectionPool::dispatchStorage(
+    op_code_t op, const char* const* keys, const size_t* keyLens,
+    const flags_t* flags, const exptime_t exptime,
+    const cas_unique_t* cas_uniques, const bool noreply,
+    const char* const* vals, const size_t* valLens, size_t nItems) {
   size_t i = 0, idx = 0;
 
   for (; i < nItems; ++i) {
@@ -180,9 +173,8 @@ void ConnectionPool::dispatchStorage(op_code_t op,
   }
 }
 
-
 void ConnectionPool::dispatchRetrieval(op_code_t op, const char* const* keys,
-                                  const size_t* keyLens, size_t nKeys) {
+                                       const size_t* keyLens, size_t nKeys) {
   size_t i = 0, idx = 0;
   for (; i < nKeys; ++i) {
     const char* key = keys[i];
@@ -225,10 +217,9 @@ void ConnectionPool::dispatchRetrieval(op_code_t op, const char* const* keys,
   // debug("after dispatchRetrieval: m_nActiveConn: %d", this->m_nActiveConn);
 }
 
-
-void ConnectionPool::dispatchDeletion(const char* const* keys, const size_t* keyLens,
-                                     const bool noreply, size_t nItems) {
-
+void ConnectionPool::dispatchDeletion(const char* const* keys,
+                                      const size_t* keyLens, const bool noreply,
+                                      size_t nItems) {
   size_t i = 0, idx = 0;
   for (; i < nItems; ++i) {
     if (!utility::isValidKey(keys[i], keyLens[i])) {
@@ -266,11 +257,10 @@ void ConnectionPool::dispatchDeletion(const char* const* keys, const size_t* key
   }
 }
 
-
-void ConnectionPool::dispatchTouch(
-    const char* const* keys, const size_t* keyLens,
-    const exptime_t exptime, const bool noreply, size_t nItems) {
-
+void ConnectionPool::dispatchTouch(const char* const* keys,
+                                   const size_t* keyLens,
+                                   const exptime_t exptime, const bool noreply,
+                                   size_t nItems) {
   size_t i = 0, idx = 0;
   for (; i < nItems; ++i) {
     if (!utility::isValidKey(keys[i], keyLens[i])) {
@@ -310,9 +300,9 @@ void ConnectionPool::dispatchTouch(
   }
 }
 
-
-void ConnectionPool::dispatchIncrDecr(op_code_t op, const char* key, const size_t keyLen,
-                                      const uint64_t delta, const bool noreply) {
+void ConnectionPool::dispatchIncrDecr(op_code_t op, const char* key,
+                                      const size_t keyLen, const uint64_t delta,
+                                      const bool noreply) {
   if (!utility::isValidKey(key, keyLen)) {
     m_nInvalidKey += 1;
     return;
@@ -348,13 +338,15 @@ void ConnectionPool::dispatchIncrDecr(op_code_t op, const char* key, const size_
   m_activeConns.push_back(conn);
 
   // for ignore noreply
-  // before the below line, conn->m_counter is a counter regarding how many packet to *send*
+  // before the below line, conn->m_counter is a counter regarding how many
+  // packet to *send*
   conn->m_counter = conn->requestKeyCount();
-  // after the upper line, conn->m_counter is a counter regarding how many packet to *recv*
+  // after the upper line, conn->m_counter is a counter regarding how many
+  // packet to *recv*
 }
 
-
-void ConnectionPool::broadcastCommand(const char * const cmd, const size_t cmdLens) {
+void ConnectionPool::broadcastCommand(const char* const cmd,
+                                      const size_t cmdLens) {
   for (size_t idx = 0; idx < m_nConns; ++idx) {
     Connection* conn = m_conns + idx;
     if (!conn->alive()) {
@@ -388,8 +380,8 @@ err_code_t ConnectionPool::waitPoll() {
   pollfd_t* pollfd_ptr = NULL;
   nfds_t fd_idx = 0;
 
-  for (std::vector<Connection*>::iterator it = m_activeConns.begin(); it != m_activeConns.end();
-       ++it, ++fd_idx) {
+  for (std::vector<Connection*>::iterator it = m_activeConns.begin();
+       it != m_activeConns.end(); ++it, ++fd_idx) {
     Connection* conn = *it;
     pollfd_ptr = &pollfds[fd_idx];
     pollfd_ptr->fd = conn->socketFd();
@@ -485,20 +477,21 @@ err_code_t ConnectionPool::waitPoll() {
           }
         }
 
-next_fd: {}
-      } // end for
+      next_fd : {}
+      }  // end for
     }
   }
   return ret_code;
 }
 
-
-void ConnectionPool::collectRetrievalResult(std::vector<retrieval_result_t*>& results) {
+void ConnectionPool::collectRetrievalResult(
+    std::vector<retrieval_result_t*>& results) {
   for (std::vector<Connection*>::iterator it = m_activeConns.begin();
        it != m_activeConns.end(); ++it) {
     types::RetrievalResultList* rst = (*it)->getRetrievalResults();
 
-    for (types::RetrievalResultList::iterator it2 = rst->begin(); it2 != rst->end(); ++it2) {
+    for (types::RetrievalResultList::iterator it2 = rst->begin();
+         it2 != rst->end(); ++it2) {
       RetrievalResult& r1 = *it2;
       if (r1.bytesRemain > 0) {
         // This may be triggered on get_multi when data_block
@@ -510,20 +503,21 @@ void ConnectionPool::collectRetrievalResult(std::vector<retrieval_result_t*>& re
   }
 }
 
-
-void ConnectionPool::collectMessageResult(std::vector<message_result_t*>& results) {
+void ConnectionPool::collectMessageResult(
+    std::vector<message_result_t*>& results) {
   for (std::vector<Connection*>::iterator it = m_activeConns.begin();
        it != m_activeConns.end(); ++it) {
     types::MessageResultList* rst = (*it)->getMessageResults();
 
-    for (types::MessageResultList::iterator it2 = rst->begin(); it2 != rst->end(); ++it2) {
+    for (types::MessageResultList::iterator it2 = rst->begin();
+         it2 != rst->end(); ++it2) {
       results.push_back(&(*it2));
     }
   }
 }
 
-
-void ConnectionPool::collectBroadcastResult(std::vector<broadcast_result_t>& results) {
+void ConnectionPool::collectBroadcastResult(
+    std::vector<broadcast_result_t>& results) {
   results.resize(m_nConns);
   for (size_t i = 0; i < m_nConns; ++i) {
     Connection* conn = m_conns + i;
@@ -541,18 +535,21 @@ void ConnectionPool::collectBroadcastResult(std::vector<broadcast_result_t>& res
     conn_result->line_lens = new size_t[conn_result->len];
 
     int j = 0;
-    for (types::LineResultList::iterator it2 = rst->begin(); it2 != rst->end(); ++it2, ++j) {
+    for (types::LineResultList::iterator it2 = rst->begin(); it2 != rst->end();
+         ++it2, ++j) {
       types::LineResult* r1 = &(*it2);
       conn_result->lines[j] = r1->inner(conn_result->line_lens[j]);
     }
   }
 }
 
-
-void ConnectionPool::collectUnsignedResult(std::vector<unsigned_result_t*>& results) {
+void ConnectionPool::collectUnsignedResult(
+    std::vector<unsigned_result_t*>& results) {
   if (m_activeConns.size() == 1) {
-    types::UnsignedResultList* numericRst =  m_activeConns.front()->getUnsignedResults();
-    types::MessageResultList* msgRst = m_activeConns.front()->getMessageResults();
+    types::UnsignedResultList* numericRst =
+        m_activeConns.front()->getUnsignedResults();
+    types::MessageResultList* msgRst =
+        m_activeConns.front()->getMessageResults();
 
     if (numericRst->size() == 1) {
       results.push_back(&numericRst->front());
@@ -562,7 +559,6 @@ void ConnectionPool::collectUnsignedResult(std::vector<unsigned_result_t*>& resu
     }
   }
 }
-
 
 void ConnectionPool::reset() {
   for (std::vector<Connection*>::iterator it = m_activeConns.begin();
@@ -574,11 +570,7 @@ void ConnectionPool::reset() {
   m_activeConns.clear();
 }
 
-
-void ConnectionPool::setPollTimeout(int timeout) {
-  m_pollTimeout = timeout;
-}
-
+void ConnectionPool::setPollTimeout(int timeout) { m_pollTimeout = timeout; }
 
 void ConnectionPool::setConnectTimeout(int timeout) {
   for (size_t idx = 0; idx < m_nConns; ++idx) {
@@ -587,7 +579,6 @@ void ConnectionPool::setConnectTimeout(int timeout) {
   }
 }
 
-
 void ConnectionPool::setRetryTimeout(int timeout) {
   for (size_t idx = 0; idx < m_nConns; ++idx) {
     Connection* conn = m_conns + idx;
@@ -595,13 +586,10 @@ void ConnectionPool::setRetryTimeout(int timeout) {
   }
 }
 
-
 void ConnectionPool::markDeadAll(pollfd_t* pollfds, const char* reason) {
-
   nfds_t fd_idx = 0;
   for (std::vector<Connection*>::iterator it = m_activeConns.begin();
-      it != m_activeConns.end();
-      ++it, ++fd_idx) {
+       it != m_activeConns.end(); ++it, ++fd_idx) {
     Connection* conn = *it;
     pollfd_t* pollfd_ptr = &pollfds[fd_idx];
     if (pollfd_ptr->events & (POLLOUT | POLLIN)) {
@@ -610,13 +598,12 @@ void ConnectionPool::markDeadAll(pollfd_t* pollfds, const char* reason) {
   }
 }
 
-
-void ConnectionPool::markDeadConn(Connection* conn, const char* reason, pollfd_t* fd_ptr) {
+void ConnectionPool::markDeadConn(Connection* conn, const char* reason,
+                                  pollfd_t* fd_ptr) {
   conn->markDead(reason);
   fd_ptr->events = ~POLLOUT & ~POLLIN;
   fd_ptr->fd = conn->socketFd();
 }
 
-
-} // namespace mc
-} // namespace douban
+}  // namespace mc
+}  // namespace douban

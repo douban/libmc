@@ -1,10 +1,10 @@
+#include <algorithm>
 #include <cassert>
 #include <cstring>
 #include <stdexcept>
-#include <algorithm>
 
-#include "Export.h"
 #include "BufferReader.h"
+#include "Export.h"
 #include "Utility.h"
 
 namespace douban {
@@ -12,12 +12,11 @@ namespace mc {
 namespace io {
 
 BufferReader::BufferReader()
-  :m_capacity(0), m_size(0), m_readLeft(0), m_nextPreferedDataBlockSize(0) {
-    m_blockWriteIterator = m_dataBlockList.end();
-    m_blockReadCursor.iterator = m_dataBlockList.end();
-    m_blockReadCursor.offset = 0;
+    : m_capacity(0), m_size(0), m_readLeft(0), m_nextPreferedDataBlockSize(0) {
+  m_blockWriteIterator = m_dataBlockList.end();
+  m_blockReadCursor.iterator = m_dataBlockList.end();
+  m_blockReadCursor.offset = 0;
 }
-
 
 BufferReader::~BufferReader() {
   for (DataBlockListIterator it = m_dataBlockList.begin();
@@ -33,21 +32,21 @@ BufferReader::~BufferReader() {
   m_readLeft = 0;
 }
 
-
 void BufferReader::reset() {
-
   // assume all datablocks are reusable(ref == 0)
   int i = 0;
   for (DataBlockListIterator it = m_dataBlockList.begin();
        it != m_dataBlockList.end(); ++it, ++i) {
     DataBlock* dbPtr = &*it;
     if (!dbPtr->reusable()) {
-      log_warn("A DataBlock(%p) in use is backspace-ed. "
-               "This should ONLY be happened on error. "
-               "nBytes: %zu:",
-               dbPtr, dbPtr->nBytesRef());
+      log_warn(
+          "A DataBlock(%p) in use is backspace-ed. "
+          "This should ONLY be happened on error. "
+          "nBytes: %zu:",
+          dbPtr, dbPtr->nBytesRef());
 #if MC_LOG_LEVEL >= MC_LOG_LEVEL_WARNING
-      utility::fprintBuffer(stderr, dbPtr->at(0), std::min(dbPtr->nBytesRef(), 128UL));
+      utility::fprintBuffer(stderr, dbPtr->at(0),
+                            std::min(dbPtr->nBytesRef(), 128UL));
 #endif
     }
     dbPtr->reset();
@@ -66,9 +65,7 @@ void BufferReader::reset() {
   m_blockReadCursor.offset = 0;
 }
 
-
 size_t BufferReader::prepareWriteBlock(size_t len) {
-
   if (m_blockWriteIterator != m_dataBlockList.end() &&
       m_blockWriteIterator->getWriteLeft() == 0) {
     ++m_blockWriteIterator;
@@ -77,7 +74,7 @@ size_t BufferReader::prepareWriteBlock(size_t len) {
   assert(m_blockWriteIterator == m_dataBlockList.end() ||
          m_blockWriteIterator->getWriteLeft() > 0);
 
-  DataBlock *dbPtr = NULL;
+  DataBlock* dbPtr = NULL;
 
   if (m_blockWriteIterator == m_dataBlockList.end()) {
     // create new block
@@ -101,7 +98,6 @@ size_t BufferReader::prepareWriteBlock(size_t len) {
   return std::min(len, dbPtr->getWriteLeft());
 }
 
-
 char* BufferReader::getWritePtr() {
   if (m_blockWriteIterator != m_dataBlockList.end()) {
     return m_blockWriteIterator->getWritePtr();
@@ -109,9 +105,9 @@ char* BufferReader::getWritePtr() {
   return NULL;
 }
 
-
 void BufferReader::commitWrite(size_t len) {
-  assert(m_blockWriteIterator->size() + len <= m_blockWriteIterator->capacity());
+  assert(m_blockWriteIterator->size() + len <=
+         m_blockWriteIterator->capacity());
   m_blockWriteIterator->push(len);
   if (m_blockWriteIterator->size() + len == m_blockWriteIterator->capacity()) {
     ++m_blockWriteIterator;
@@ -119,7 +115,6 @@ void BufferReader::commitWrite(size_t len) {
   m_size += len;
   m_readLeft += len;
 }
-
 
 void BufferReader::write(char* ptr, size_t len, bool copying) {
   // TODO copying = false, and take over ptr
@@ -134,28 +129,20 @@ void BufferReader::write(char* ptr, size_t len, bool copying) {
   }
 }
 
+size_t BufferReader::capacity() { return m_capacity; }
 
-size_t BufferReader::capacity() {
-  return m_capacity;
-}
+size_t BufferReader::size() { return m_size; }
 
-size_t BufferReader::size() {
-  return m_size;
-}
-
-size_t BufferReader::nDataBlock() {
-  return m_dataBlockList.size();
-}
+size_t BufferReader::nDataBlock() { return m_dataBlockList.size(); }
 
 size_t BufferReader::nBytesRef() {
   size_t t = 0;
   for (DataBlockListIterator it = m_dataBlockList.begin();
-      it != m_dataBlockList.end(); ++it) {
+       it != m_dataBlockList.end(); ++it) {
     t += it->nBytesRef();
   }
   return t;
 }
-
 
 const char BufferReader::peek(err_code_t& err, size_t offset) const {
   err = RET_OK;
@@ -184,12 +171,12 @@ const char BufferReader::peek(err_code_t& err, size_t offset) const {
   return charAtCursor(cur);
 }
 
-
-size_t BufferReader::readUntil(err_code_t& err, char value, TokenData& tokenData) {
+size_t BufferReader::readUntil(err_code_t& err, char value,
+                               TokenData& tokenData) {
   assert(tokenData.empty());
   err = RET_OK;
   DataCursor endCur = m_blockReadCursor;
-  DataBlock * dbPtr = NULL;
+  DataBlock* dbPtr = NULL;
   size_t nSize = 0;
   while (endCur.iterator != m_dataBlockList.end()) {
     dbPtr = &*endCur.iterator;
@@ -212,7 +199,7 @@ size_t BufferReader::readUntil(err_code_t& err, char value, TokenData& tokenData
 
     DataBlockSlice dbs;
     dbs.iterator = m_blockReadCursor.iterator;
-    dbs.offset =  m_blockReadCursor.offset;
+    dbs.offset = m_blockReadCursor.offset;
     if (m_blockReadCursor.iterator == endCur.iterator) {
       dbs.size = endCur.offset - m_blockReadCursor.offset;
       m_blockReadCursor.offset = endCur.offset;
@@ -231,11 +218,10 @@ size_t BufferReader::readUntil(err_code_t& err, char value, TokenData& tokenData
   return nSize;
 }
 
-
 size_t BufferReader::skipUntil(err_code_t& err, char value) {
   err = RET_OK;
   DataCursor endCur = m_blockReadCursor;
-  DataBlock * dbPtr = NULL;
+  DataBlock* dbPtr = NULL;
   size_t nSize = 0;
   while (endCur.iterator != m_dataBlockList.end()) {
     dbPtr = &*endCur.iterator;
@@ -273,7 +259,6 @@ size_t BufferReader::skipUntil(err_code_t& err, char value) {
   }
   return nSize;
 }
-
 
 void BufferReader::readUnsigned(err_code_t& err, uint64_t& value) {
   err = RET_OK;
@@ -329,8 +314,8 @@ void BufferReader::readUnsigned(err_code_t& err, uint64_t& value) {
   }
 }
 
-
-void BufferReader::readBytes(err_code_t& err, size_t len, TokenData& tokenData) {
+void BufferReader::readBytes(err_code_t& err, size_t len,
+                             TokenData& tokenData) {
   assert(tokenData.empty());
   err = RET_OK;
   if (len == 0) {
@@ -347,13 +332,14 @@ void BufferReader::readBytes(err_code_t& err, size_t len, TokenData& tokenData) 
     dbs.iterator = m_blockReadCursor.iterator;
     dbs.offset = m_blockReadCursor.offset;
 
-    size_t maxToRead = m_blockReadCursor.iterator->size() - m_blockReadCursor.offset;
+    size_t maxToRead =
+        m_blockReadCursor.iterator->size() - m_blockReadCursor.offset;
 
     if (len < maxToRead) {
       dbs.size = len;
       m_blockReadCursor.offset += len;
       len = 0;
-    } else { // len == maxToRead
+    } else {  // len == maxToRead
       dbs.size = maxToRead;
       len -= maxToRead;
       ++m_blockReadCursor.iterator;
@@ -362,7 +348,6 @@ void BufferReader::readBytes(err_code_t& err, size_t len, TokenData& tokenData) 
     tokenData.push_back(dbs);
   }
 }
-
 
 void BufferReader::expectBytes(err_code_t& err, const char* str, size_t len) {
   assert(len > 0);
@@ -388,8 +373,9 @@ void BufferReader::expectBytes(err_code_t& err, const char* str, size_t len) {
       dbPtr->release(len);
       m_blockReadCursor.offset += len;
       len = 0;
-    } else { // len == maxToRead
-      if (strncmp(dbPtr->at(m_blockReadCursor.offset), str + pos, maxToRead) != 0) {
+    } else {  // len == maxToRead
+      if (strncmp(dbPtr->at(m_blockReadCursor.offset), str + pos, maxToRead) !=
+          0) {
         err = RET_PROGRAMMING_ERR;
         return;
       }
@@ -401,7 +387,6 @@ void BufferReader::expectBytes(err_code_t& err, const char* str, size_t len) {
     }
   }
 }
-
 
 void BufferReader::skipBytes(err_code_t& err, size_t len) {
   assert(len > 0);
@@ -420,7 +405,7 @@ void BufferReader::skipBytes(err_code_t& err, size_t len) {
       dbPtr->release(len);
       m_blockReadCursor.offset += len;
       len = 0;
-    } else { // len == maxToRead
+    } else {  // len == maxToRead
       dbPtr->release(maxToRead);
       len -= maxToRead;
       ++m_blockReadCursor.iterator;
@@ -429,15 +414,12 @@ void BufferReader::skipBytes(err_code_t& err, size_t len) {
   }
 }
 
-
 size_t BufferReader::getNextPreferedDataBlockSize() {
-  size_t tmp = m_nextPreferedDataBlockSize == 0 ?
-      DataBlock::minCapacity() :
-      m_nextPreferedDataBlockSize;
+  size_t tmp = m_nextPreferedDataBlockSize == 0 ? DataBlock::minCapacity()
+                                                : m_nextPreferedDataBlockSize;
   m_nextPreferedDataBlockSize = DataBlock::minCapacity();
   return tmp;
 }
-
 
 void BufferReader::setNextPreferedDataBlockSize(size_t n) {
   m_nextPreferedDataBlockSize = n;
@@ -475,7 +457,6 @@ char* parseTokenData(TokenData& td, size_t reserved) {
   return ptr;
 }
 
-
 void copyTokenData(const TokenData& src, TokenData& dst) {
   if (src.empty()) {
     return;
@@ -488,8 +469,6 @@ void copyTokenData(const TokenData& src, TokenData& dst) {
   }
 }
 
-
-
-} // namespace io
-} // namespace mc
-} // namespace douban
+}  // namespace io
+}  // namespace mc
+}  // namespace douban
