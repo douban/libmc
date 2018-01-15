@@ -1,10 +1,9 @@
 #pragma once
 
 #include <vector>
+#include "ConnectionPool.h"
 #include "Export.h"
 #include "Result.h"
-#include "ConnectionPool.h"
-
 
 namespace douban {
 namespace mc {
@@ -17,21 +16,21 @@ class Client : public ConnectionPool {
   // retrieval commands
   void destroyRetrievalResult();
 
-#define DECL_RETRIEVAL_CMD(M) \
+#define DECL_RETRIEVAL_CMD(M)                                                \
   err_code_t M(const char* const* keys, const size_t* keyLens, size_t nKeys, \
-           retrieval_result_t*** results, size_t* nResults);
-DECL_RETRIEVAL_CMD(get)
-DECL_RETRIEVAL_CMD(gets)
+               retrieval_result_t*** results, size_t* nResults);
+  DECL_RETRIEVAL_CMD(get)
+  DECL_RETRIEVAL_CMD(gets)
 #undef DECL_RETRIEVAL_CMD
 
   // storage commands
   void destroyMessageResult();
-#define DECL_STORAGE_CMD(M) \
-  err_code_t M(const char* const* keys, const size_t* keyLens, \
-           const flags_t* flags, const exptime_t exptime, \
-           const cas_unique_t* cas_uniques, const bool noreply, \
-           const char* const* vals, const size_t* valLens, \
-           size_t nItems, message_result_t*** results, size_t* nResults)
+#define DECL_STORAGE_CMD(M)                                                   \
+  err_code_t M(const char* const* keys, const size_t* keyLens,                \
+               const flags_t* flags, const exptime_t exptime,                 \
+               const cas_unique_t* cas_uniques, const bool noreply,           \
+               const char* const* vals, const size_t* valLens, size_t nItems, \
+               message_result_t*** results, size_t* nResults)
 
   DECL_STORAGE_CMD(set);
   DECL_STORAGE_CMD(add);
@@ -41,8 +40,8 @@ DECL_RETRIEVAL_CMD(gets)
   DECL_STORAGE_CMD(cas);
 #undef DECL_STORAGE_CMD
   err_code_t _delete(const char* const* keys, const size_t* keyLens,
-               const bool noreply, size_t nItems,
-               message_result_t*** results, size_t* nResults);
+                     const bool noreply, size_t nItems,
+                     message_result_t*** results, size_t* nResults);
 
   // broadcast commands
   void destroyBroadcastResult();
@@ -53,19 +52,19 @@ DECL_RETRIEVAL_CMD(gets)
 
   // touch
   err_code_t touch(const char* const* keys, const size_t* keyLens,
-             const exptime_t exptime, const bool noreply, size_t nItems,
-             message_result_t*** results, size_t* nResults);
+                   const exptime_t exptime, const bool noreply, size_t nItems,
+                   message_result_t*** results, size_t* nResults);
 
   // incr / decr
   void destroyUnsignedResult();
   err_code_t incr(const char* key, const size_t keyLen, const uint64_t delta,
-           const bool noreply,
-           unsigned_result_t** result, size_t* nResults);
+                  const bool noreply, unsigned_result_t** result,
+                  size_t* nResults);
   err_code_t decr(const char* key, const size_t keyLen, const uint64_t delta,
-           const bool noreply,
-           unsigned_result_t** result, size_t* nResults);
+                  const bool noreply, unsigned_result_t** result,
+                  size_t* nResults);
 
-  void _sleep(uint32_t seconds); // check GIL in Python
+  void _sleep(uint32_t seconds);  // check GIL in Python
 
  protected:
   void collectRetrievalResult(retrieval_result_t*** results, size_t* nResults);
@@ -79,5 +78,5 @@ DECL_RETRIEVAL_CMD(gets)
   std::vector<unsigned_result_t*> m_outUnsignedResultPtrs;
 };
 
-} // namespace mc
-} // namespace douban
+}  // namespace mc
+}  // namespace douban
