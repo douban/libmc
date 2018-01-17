@@ -70,7 +70,7 @@ size_t DataBlock::capacity() {
 }
 
 
-size_t DataBlock::push(size_t len) {
+size_t DataBlock::occupy(size_t len) {
   assert(m_size + len <= m_capacity);
   this->acquire(len);
   return m_size += len;
