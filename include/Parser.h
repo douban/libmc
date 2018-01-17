@@ -43,7 +43,7 @@ class PacketParser {
   void processLineResult(err_code_t& err);
 
 
-  std::queue<struct ::iovec> m_requestKeys;
+  std::queue<struct iovec> m_requestKeys;
   io::BufferReader* m_buffer_reader;
   parser_state_t m_state;
   ParserMode m_mode;
