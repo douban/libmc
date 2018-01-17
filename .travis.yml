@@ -8,9 +8,11 @@ cache:
     - $HOME/.cache/pip
     - $HOME/.pip-cache/
     - $HOME/virtualenv/python2.7/lib/python2.7/site-packages
+    - $HOME/virtualenv/python3.5/lib/python3.5/site-packages
 
 env:
   matrix:
+  - TEST_SUITE=cppcheck
   - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Release PRJ_COMPILER=clang
   - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Debug PRJ_COMPILER=clang
   - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Release PRJ_COMPILER=gcc
@@ -29,22 +31,21 @@ addons:
       - golang
 
 install:
-  - pip install --upgrade pip
-  - pip install future
-  - pip install --upgrade setuptools
-  - if [ $TEST_SUITE = "unittest" ]; then pip install pytest greenify gevent; fi
-  - if [ $TEST_SUITE = "benchmark" ]; then pip install python-memcached pylibmc; fi
+  - if [[ $TEST_SUITE != "cppcheck" ]]; then pip install --upgrade pip setuptools; fi
+  - if [[ $TEST_SUITE != "cppcheck" ]]; then pip install future; fi
+  - if [[ $TEST_SUITE = "unittest" ]]; then pip install pytest greenify gevent; fi
+  - if [[ $TEST_SUITE = "benchmark" ]]; then pip install python-memcached pylibmc; fi
 
 before_script:
-  - ./misc/memcached_server start
+  - if [[ $TEST_SUITE != "cppcheck" ]]; then ./misc/memcached_server start; fi
 
 script:
-  - if [ $PRJ_COMPILER = "gcc" ]; then export CC=gcc CXX=g++; fi
-  - if [ $PRJ_COMPILER = "clang" ]; then export CC=clang CXX=clang++; fi
+  - if [[ $PRJ_COMPILER = "gcc" ]]; then export CC=gcc CXX=g++; fi
+  - if [[ $PRJ_COMPILER = "clang" ]]; then export CC=clang CXX=clang++; fi
   - ./misc/travis/$TEST_SUITE.sh
 
 after_script:
-  - ./misc/memcached_server stop
+  - if [[ $TEST_SUITE != "cppcheck" ]]; then ./misc/memcached_server stop; fi
 
 deploy:
   provider: pypi

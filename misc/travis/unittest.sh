@@ -3,8 +3,6 @@ set -x
 set -e
 echo $CXX
 go version
-cppcheck --enable=all --std=c99 --error-exitcode=1 \
-    --suppressions-list=misc/.cppcheck-supp -Iinclude src tests
 python misc/generate_hash_dataset.py tests/resources/keys.txt
 mkdir -p build
 cd build
