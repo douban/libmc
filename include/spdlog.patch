@@ -1,0 +1,21 @@
+From d7fdfca8b50460aaee123b50429e7947333cbfb4 Mon Sep 17 00:00:00 2001
+From: MOON_CLJ <lijunli2598@gmail.com>
+Date: Thu, 18 Jan 2018 19:12:59 +0800
+Subject: [PATCH] patch spdlog
+
+---
+ include/spdlog/details/log_msg.h | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/include/spdlog/details/log_msg.h b/include/spdlog/details/log_msg.h
+index a9fe920..adf12d4 100644
+--- a/include/spdlog/details/log_msg.h
++++ b/include/spdlog/details/log_msg.h
+@@ -6,7 +6,6 @@
+ #pragma once
+ 
+ #include "../common.h"
+-#include "../details/os.h"
+ 
+ 
+ #include <string>
