@@ -1,5 +1,9 @@
-cmake_minimum_required(VERSION 2.8.2)
+cmake_minimum_required(VERSION 3.1)
+
 project(libmc)
+
+set(CMAKE_CXX_STANDARD 11)
+
 set(CMAKE_MACOSX_RPATH 1)
 
 set (MC_VERSION_MAJOR 1)
