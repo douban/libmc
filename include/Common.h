@@ -9,6 +9,8 @@
 #include <cstdlib>
 #include <cerrno>
 
+#include "spdlog/spdlog.h"
+
 #define PROJECT_NAME "libmc"
 #define MC_DEFAULT_PORT 11211
 #define MC_DEFAULT_POLL_TIMEOUT 300
@@ -73,6 +75,8 @@ void printBacktrace();
 #define MC_LOG_LEVEL_DEBUG 4
 
 #define MC_LOG_LEVEL MC_LOG_LEVEL_ERROR
+
+extern auto stderr_logger = spdlog::stderr_logger_mt(PROJECT_NAME);
 
 #ifdef NDEBUG
 #define debug(M, ...) __VOID_CAST(0)
