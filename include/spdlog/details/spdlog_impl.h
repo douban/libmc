@@ -10,8 +10,13 @@
 //
 #include "../spdlog.h"
 #include "../details/registry.h"
+#ifdef DMC_SPDLOG_NO_EXCEPTION
 #include "../sinks/file_sinks.h"
+#endif
+
 #include "../sinks/stdout_sinks.h"
+
+#ifdef DMC_SPDLOG_NO_EXCEPTION
 #ifdef SPDLOG_ENABLE_SYSLOG
 #include "../sinks/syslog_sink.h"
 #endif
@@ -21,7 +26,7 @@
 #else
 #include "../sinks/ansicolor_sink.h"
 #endif
-
+#endif
 
 #ifdef __ANDROID__
 #include "../sinks/android_sink.h"
@@ -47,6 +52,7 @@ inline void spdlog::drop(const std::string &name)
     details::registry::instance().drop(name);
 }
 
+#ifdef DMC_SPDLOG_NO_EXCEPTION
 // Create multi/single threaded simple file logger
 inline std::shared_ptr<spdlog::logger> spdlog::basic_logger_mt(const std::string& logger_name, const filename_t& filename, bool truncate)
 {
@@ -79,7 +85,7 @@ inline std::shared_ptr<spdlog::logger> spdlog::daily_logger_st(const std::string
 {
     return create<spdlog::sinks::daily_file_sink_st>(logger_name, filename, hour, minute);
 }
-
+#endif
 
 //
 // stdout/stderr loggers
@@ -104,6 +110,7 @@ inline std::shared_ptr<spdlog::logger> spdlog::stderr_logger_st(const std::strin
     return spdlog::details::registry::instance().create(logger_name, spdlog::sinks::stderr_sink_st::instance());
 }
 
+#ifdef DMC_SPDLOG_NO_EXCEPTION
 //
 // stdout/stderr color loggers
 //
@@ -167,6 +174,7 @@ inline std::shared_ptr<spdlog::logger> spdlog::syslog_logger(const std::string& 
     return create<spdlog::sinks::syslog_sink>(logger_name, syslog_ident, syslog_option, syslog_facility);
 }
 #endif
+#endif
 
 #ifdef __ANDROID__
 inline std::shared_ptr<spdlog::logger> spdlog::android_logger(const std::string& logger_name, const std::string& tag)
@@ -203,6 +211,7 @@ inline std::shared_ptr<spdlog::logger> spdlog::create(const std::string& logger_
     return details::registry::instance().create(logger_name, sinks_begin, sinks_end);
 }
 
+#ifdef DMC_SPDLOG_NO_EXCEPTION
 // Create and register an async logger with a single sink
 inline std::shared_ptr<spdlog::logger> spdlog::create_async(const std::string& logger_name, const sink_ptr& sink, size_t queue_size, const async_overflow_policy overflow_policy, const std::function<void()>& worker_warmup_cb, const std::chrono::milliseconds& flush_interval_ms, const std::function<void()>& worker_teardown_cb)
 {
@@ -220,6 +229,7 @@ inline std::shared_ptr<spdlog::logger> spdlog::create_async(const std::string& l
 {
     return details::registry::instance().create_async(logger_name, queue_size, overflow_policy, worker_warmup_cb, flush_interval_ms, worker_teardown_cb, sinks_begin, sinks_end);
 }
+#endif
 
 inline void spdlog::set_formatter(spdlog::formatter_ptr f)
 {

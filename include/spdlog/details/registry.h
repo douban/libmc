@@ -12,7 +12,9 @@
 
 #include "../details/null_mutex.h"
 #include "../logger.h"
+#ifdef DMC_SPDLOG_NO_EXCEPTION
 #include "../async_logger.h"
+#endif
 #include "../common.h"
 
 #include <chrono>
@@ -52,9 +54,11 @@ public:
         std::lock_guard<Mutex> lock(_mutex);
         throw_if_exists(logger_name);
         std::shared_ptr<logger> new_logger;
+#ifdef DMC_SPDLOG_NO_EXCEPTION
         if (_async_mode)
             new_logger = std::make_shared<async_logger>(logger_name, sinks_begin, sinks_end, _async_q_size, _overflow_policy, _worker_warmup_cb, _flush_interval_ms, _worker_teardown_cb);
         else
+#endif
             new_logger = std::make_shared<logger>(logger_name, sinks_begin, sinks_end);
 
         if (_formatter)
@@ -72,6 +76,7 @@ public:
         return new_logger;
     }
 
+#ifdef DMC_SPDLOG_NO_EXCEPTION
     template<class It>
     std::shared_ptr<async_logger> create_async(const std::string& logger_name, size_t queue_size, const async_overflow_policy overflow_policy, const std::function<void()>& worker_warmup_cb, const std::chrono::milliseconds& flush_interval_ms, const std::function<void()>& worker_teardown_cb, const It& sinks_begin, const It& sinks_end)
     {
@@ -92,6 +97,7 @@ public:
         _loggers[logger_name] = new_logger;
         return new_logger;
     }
+#endif
 
     void apply_all(std::function<void(std::shared_ptr<logger>)> fun)
     {
@@ -121,6 +127,7 @@ public:
         return create(logger_name, { sink });
     }
 
+#ifdef DMC_SPDLOG_NO_EXCEPTION
     std::shared_ptr<async_logger> create_async(const std::string& logger_name, size_t queue_size, const async_overflow_policy overflow_policy, const std::function<void()>& worker_warmup_cb, const std::chrono::milliseconds& flush_interval_ms, const std::function<void()>& worker_teardown_cb, sinks_init_list sinks)
     {
         return create_async(logger_name, queue_size, overflow_policy, worker_warmup_cb, flush_interval_ms, worker_teardown_cb, sinks.begin(), sinks.end());
@@ -130,6 +137,7 @@ public:
     {
         return create_async(logger_name, queue_size, overflow_policy, worker_warmup_cb, flush_interval_ms, worker_teardown_cb, { sink });
     }
+#endif
 
     void formatter(formatter_ptr f)
     {
@@ -200,8 +208,10 @@ private:
 
     void throw_if_exists(const std::string &logger_name)
     {
+#ifdef DMC_SPDLOG_NO_EXCEPTION
         if (_loggers.find(logger_name) != _loggers.end())
             throw spdlog_ex("logger with name '" + logger_name + "' already exists");
+#endif
     }
     Mutex _mutex;
     std::unordered_map <std::string, std::shared_ptr<logger>> _loggers;

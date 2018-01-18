@@ -152,7 +152,7 @@ SPDLOG_CONSTEXPR static const char folder_sep = '\\';
 SPDLOG_CONSTEXPR static const char folder_sep = '/';
 #endif
 
-
+#ifdef DMC_SPDLOG_NO_EXCEPTION
 inline void prevent_child_fd(FILE *f)
 {
 #ifdef _WIN32
@@ -165,6 +165,7 @@ inline void prevent_child_fd(FILE *f)
         throw spdlog_ex("fcntl with FD_CLOEXEC failed", errno);
 #endif
 }
+#endif
 
 
 //fopen_s on non windows for writing
@@ -225,7 +226,7 @@ inline bool file_exists(const filename_t& filename)
 
 
 
-
+#ifdef DMC_SPDLOG_NO_EXCEPTION
 //Return file size according to open FILE* object
 inline size_t filesize(FILE *f)
 {
@@ -259,7 +260,7 @@ inline size_t filesize(FILE *f)
 #endif
     throw spdlog_ex("Failed getting file size from fd", errno);
 }
-
+#endif
 
 
 

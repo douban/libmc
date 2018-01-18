@@ -62,7 +62,9 @@ inline void spdlog::logger::log(level::level_enum lvl, const char* fmt, const Ar
 {
     if (!should_log(lvl)) return;
 
+#ifdef DMC_SPDLOG_NO_EXCEPTION
     try
+#endif
     {
         details::log_msg log_msg(&_name, lvl);
 
@@ -73,6 +75,7 @@ inline void spdlog::logger::log(level::level_enum lvl, const char* fmt, const Ar
 #endif
         _sink_it(log_msg);
     }
+#ifdef DMC_SPDLOG_NO_EXCEPTION
     catch (const std::exception &ex)
     {
         _err_handler(ex.what());
@@ -82,18 +85,22 @@ inline void spdlog::logger::log(level::level_enum lvl, const char* fmt, const Ar
         _err_handler("Unknown exception in logger " + _name);
         throw;
     }
+#endif
 }
 
 template <typename... Args>
 inline void spdlog::logger::log(level::level_enum lvl, const char* msg)
 {
     if (!should_log(lvl)) return;
+#ifdef DMC_SPDLOG_NO_EXCEPTION
     try
+#endif
     {
         details::log_msg log_msg(&_name, lvl);
         log_msg.raw << msg;
         _sink_it(log_msg);
     }
+#ifdef DMC_SPDLOG_NO_EXCEPTION
     catch (const std::exception &ex)
     {
         _err_handler(ex.what());
@@ -103,18 +110,22 @@ inline void spdlog::logger::log(level::level_enum lvl, const char* msg)
         _err_handler("Unknown exception in logger " + _name);
         throw;
     }
+#endif
 }
 
 template<typename T>
 inline void spdlog::logger::log(level::level_enum lvl, const T& msg)
 {
     if (!should_log(lvl)) return;
+#ifdef DMC_SPDLOG_NO_EXCEPTION
     try
+#endif
     {
         details::log_msg log_msg(&_name, lvl);
         log_msg.raw << msg;
         _sink_it(log_msg);
     }
+#ifdef DMC_SPDLOG_NO_EXCEPTION
     catch (const std::exception &ex)
     {
         _err_handler(ex.what());
@@ -124,6 +135,7 @@ inline void spdlog::logger::log(level::level_enum lvl, const T& msg)
         _err_handler("Unknown exception in logger " + _name);
         throw;
     }
+#endif
 }
 
 

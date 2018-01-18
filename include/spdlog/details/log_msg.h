@@ -6,6 +6,7 @@
 #pragma once
 
 #include "../common.h"
+#include "../details/os.h"
 
 
 #include <string>
