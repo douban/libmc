@@ -150,12 +150,14 @@ typedef enum {
   // ERROR
   FSM_ERROR, // got "ERROR\r\n"
 
-  // VALUE
+  // VALUE <key> <flags> <bytes>[ <cas unique>]\r\n
+  // <data block>\r\n
   FSM_GET_START, // got "VALUE "
   FSM_GET_KEY, // got "key "
-  FSM_GET_FLAG, // got "flag "
-  FSM_GET_BYTES_CAS, // got "bytes cas\r" or got "bytes "
-  FSM_GET_VALUE_REMAINING, // got last "\r\n" not got all bytes + "\r\n"
+  FSM_GET_FLAGS, // got "flags "
+  FSM_GET_BYTES, // got "bytes " or "bytes\r"
+  FSM_GET_CAS, // got "cas\r" or got "bytes\r"
+  FSM_GET_VALUE_REMAINING, // not got <data block> + "\r\n"
 
   // VERSION
   FSM_VER_START, // got "VERSION "
@@ -163,7 +165,7 @@ typedef enum {
   // STAT
   FSM_STAT_START, // got "STAT "
 
-  // [0-9] // INCR/DESC
+  // [0-9] // INCR/DECR
   FSM_INCR_DECR_START, // got [0-9]
   FSM_INCR_DECR_REMAINING, // not got "\r\n"
 } parser_state_t;
@@ -172,8 +174,12 @@ typedef enum {
 
 
 typedef enum {
-  // storage commands -> key_va -> success_or_failure
-  // key -> flags_t -> exptime_t -> bytes -> [cas_unique_t] -> success_or_fail
+  // storage commands
+  // <command name> <key> <flags> <exptime> <bytes>[ noreply]\r\n
+  // cas <key> <flags> <exptime> <bytes> <cas unique>[ noreply]\r\n
+  // <data block>\r\n
+  // ->
+  // text msg
   SET_OP,
   ADD_OP,
   REPLACE_OP,
@@ -181,20 +187,32 @@ typedef enum {
   PREPEND_OP,
   CAS_OP,
 
-  // retrieval commands -> key(s) -> key_val(s)
-  // key(s) ->
+  // retrieval commands
+  // get <key>*\r\n
+  // gets <key>*\r\n
+  // ->
+  // VALUE <key> <flags> <bytes> [<cas unique>]\r\n
+  // <data block>\r\n
+  // "END\r\n"
   GET_OP,
   GETS_OP,
 
-  // modify commands -> key -> uint64_t -> uint64_t_or_not_found
+  // incr/decr <key> <value>[ noreply]\r\n
+  // ->
+  // <value>\r\n or "NOT_FOUND\r\n"
   INCR_OP,
   DECR_OP,
 
-  // touch command
-  TOUCH_OP, // key -> exptime_t -> text_msg
+  // touch <key> <exptime>[ noreply]\r\n
+  // ->
+  // text msg
+  TOUCH_OP,
 
-  // key commands -> key -> text_msg
-  DELETE_OP, // key -> text_msg
+  // delete <key>[ noreply]\r\n
+  // ->
+  // text msg
+  DELETE_OP,
+
   STATS_OP,
   FLUSHALL_OP,
   VERSION_OP,

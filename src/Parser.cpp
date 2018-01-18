@@ -79,9 +79,6 @@ size_t PacketParser::requestKeyCount() {
 
 void PacketParser::process_packets(err_code_t& err) {
   // NOTE: always return with err RET_INCOMPLETE_BUFFER_ERR if not all packets are recved.
-  //
-  // m_n_active--;
-  // m_buffer_reader->print();
   err = RET_OK;
 
   if (IS_END_STATE(m_state)) {
@@ -122,7 +119,7 @@ void PacketParser::process_packets(err_code_t& err) {
           if (err != RET_OK) {
             return;
           }
-          SKIP_BYTES(1);  // " "
+          SKIP_BYTES(1);  // ' '
           m_state = FSM_GET_KEY;
         }
         break;
@@ -133,23 +130,23 @@ void PacketParser::process_packets(err_code_t& err) {
           READ_UNSIGNED(flags);
           mt_kvPtr->flags = static_cast<flags_t>(flags);
           SKIP_BYTES(1);
-          m_state = FSM_GET_FLAG;
+          m_state = FSM_GET_FLAGS;
         }
         break;
-      case FSM_GET_FLAG: // got "flag "
+      case FSM_GET_FLAGS: // got "flags "
         {
           assert(mt_kvPtr != NULL && mt_kvPtr->bytes + 1 >= mt_kvPtr->bytesRemain);
           uint64_t bytes;
           READ_UNSIGNED(bytes);
           mt_kvPtr->bytes = static_cast<uint32_t>(bytes);
-          mt_kvPtr->bytesRemain = mt_kvPtr->bytes + 1; // 1 for '\n
-          SKIP_BYTES(1);  // " " or "\r"
-          m_state = FSM_GET_BYTES_CAS;
+          mt_kvPtr->bytesRemain = mt_kvPtr->bytes + 1; // 1 for '\n'
+          SKIP_BYTES(1);  // ' ' or '\r'
+          m_state = FSM_GET_BYTES;
         }
         break;
-      case FSM_GET_BYTES_CAS: // got "bytes\r" or "bytes cas\r"
+      case FSM_GET_BYTES: // got "bytes " or "bytes\r"
         {
-          assert(mt_kvPtr != NULL);
+          assert(mt_kvPtr != NULL && mt_kvPtr->bytesRemain == mt_kvPtr->bytes + 1);
           const char c = m_buffer_reader->peek(err, 0);
           if (err != RET_OK) {
             return;
@@ -158,20 +155,23 @@ void PacketParser::process_packets(err_code_t& err) {
             mt_kvPtr->cas_unique = 0;
           } else {  // gets
             READ_UNSIGNED(mt_kvPtr->cas_unique);
-            SKIP_BYTES(1); // '\r' after cas
+            SKIP_BYTES(1);  // '\r' after cas
           }
+          m_state = FSM_GET_CAS;
+        }
+        break;
+      case FSM_GET_CAS: // got "cas\r" or got "bytes\r"
+        {
+          assert(mt_kvPtr != NULL && mt_kvPtr->bytesRemain == mt_kvPtr->bytes + 1);
+          SKIP_BYTES(1);  // '\n'
+          --mt_kvPtr->bytesRemain;
           m_state = FSM_GET_VALUE_REMAINING;
         }
         break;
-      case FSM_GET_VALUE_REMAINING: // not got "\n" + all bytes + "\r\n"
+      case FSM_GET_VALUE_REMAINING: // not got <data block> + "\r\n"
         {
-          assert(mt_kvPtr != NULL);
-          if (mt_kvPtr->bytesRemain == mt_kvPtr->bytes + 1) {
-            SKIP_BYTES(1);
-            --mt_kvPtr->bytesRemain;
-          }
-
-          if (mt_kvPtr->bytesRemain == mt_kvPtr->bytes) {
+          assert(mt_kvPtr != NULL && (mt_kvPtr->bytesRemain == mt_kvPtr->bytes || mt_kvPtr->bytesRemain == 0));
+          if (mt_kvPtr->bytesRemain > 0) {
             mt_kvPtr->data_block.clear();
             if (m_buffer_reader->readLeft() < mt_kvPtr->bytes + 2) {
               m_buffer_reader->setNextPreferedDataBlockSize(mt_kvPtr->bytes + 2 - m_buffer_reader->readLeft());
@@ -184,7 +184,7 @@ void PacketParser::process_packets(err_code_t& err) {
           }
 
           if (mt_kvPtr->bytesRemain == 0) {
-            SKIP_BYTES(2); // "\r\n
+            SKIP_BYTES(2); // "\r\n"
 #ifndef NDEBUG
             char* _k = parseTokenData(mt_kvPtr->key, mt_kvPtr->key_len);
             // debug("got %.*s", static_cast<int>(mt_kvPtr->key_len), _k);
