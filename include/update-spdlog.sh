@@ -22,5 +22,5 @@ rm spdlog/sinks/ostream_sink.h
 rm spdlog/sinks/syslog_sink.h
 rm spdlog/sinks/wincolor_sink.h
 rm spdlog/sinks/windebug_sink.h
-#patch -p2 < spdlog.patch
+patch -p2 < spdlog.patch
 echo "Use git status, add all files and commit changes."
