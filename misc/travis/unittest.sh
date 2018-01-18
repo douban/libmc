@@ -4,7 +4,7 @@ set -e
 echo $CXX
 go version
 cppcheck --enable=all --std=c99 --error-exitcode=1 \
-    --suppressions-list=misc/.cppcheck-supp -i include/spdlog -Iinclude src tests
+    --suppressions-list=misc/.cppcheck-supp -Iinclude -i include/spdlog src tests
 python misc/generate_hash_dataset.py tests/resources/keys.txt
 mkdir -p build
 cd build
