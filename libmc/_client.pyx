@@ -18,10 +18,12 @@ else:
     import pickle
 
 import os
+import sys
 import traceback
 import threading
 import zlib
 import marshal
+import warnings
 
 
 cdef extern from "Common.h" namespace "douban::mc":
@@ -280,8 +282,8 @@ cdef bytes _encode_value(object val, int comp_threshold, flags_t *flags):
             try:
                 enc_val = pickle.dumps(val, 2)
                 flags[0] = _FLAG_PICKLE
-            except:
-                pass
+            except Exception as err:
+                warnings.warn("[libmc] encode value failed, err type: %s, val type: %s %s" % (type(err), type(val), ''.join(traceback.format_stack())))
 
     if comp_threshold > 0 and enc_val is not None and len(enc_val) > comp_threshold:
         enc_val = zlib.compress(enc_val)
@@ -315,12 +317,14 @@ cpdef object decode_value(bytes val, flags_t flags):
     elif flags & _FLAG_MARSHAL:
         try:
             dec_val = marshal.loads(dec_val)
-        except:
+        except Exception as err:
+            warnings.warn("[libmc] unmarshal failed, err type: %s %s" % (type(err), ''.join(traceback.format_stack())))
             dec_val = None
     elif flags & _FLAG_PICKLE:
         try:
             dec_val = pickle.loads(dec_val)
-        except:
+        except Exception as err:
+            warnings.warn("[libmc] unpickle failed, err type: %s %s" % (type(err), ''.join(traceback.format_stack())))
             dec_val = None
     return dec_val
 
