@@ -1,0 +1,272 @@
+From b460959acdd07804550868351024ff218b309231 Mon Sep 17 00:00:00 2001
+From: MOON_CLJ <lijunli2598@gmail.com>
+Date: Thu, 18 Jan 2018 21:34:15 +0800
+Subject: [PATCH] to revert
+
+---
+ include/spdlog/details/logger_impl.h | 12 ++++++++++++
+ include/spdlog/details/os.h          |  7 ++++---
+ include/spdlog/details/registry.h    | 10 ++++++++++
+ include/spdlog/details/spdlog_impl.h | 14 ++++++++++++--
+ 4 files changed, 38 insertions(+), 5 deletions(-)
+
+diff --git a/include/spdlog/details/logger_impl.h b/include/spdlog/details/logger_impl.h
+index 8804474..d7b7162 100644
+--- a/include/spdlog/details/logger_impl.h
++++ b/include/spdlog/details/logger_impl.h
+@@ -62,7 +62,9 @@ inline void spdlog::logger::log(level::level_enum lvl, const char* fmt, const Ar
+ {
+     if (!should_log(lvl)) return;
+ 
++#ifdef DMC_SPDLOG_NO_EXCEPTION
+     try
++#endif
+     {
+         details::log_msg log_msg(&_name, lvl);
+ 
+@@ -73,6 +75,7 @@ inline void spdlog::logger::log(level::level_enum lvl, const char* fmt, const Ar
+ #endif
+         _sink_it(log_msg);
+     }
++#ifdef DMC_SPDLOG_NO_EXCEPTION
+     catch (const std::exception &ex)
+     {
+         _err_handler(ex.what());
+@@ -82,18 +85,22 @@ inline void spdlog::logger::log(level::level_enum lvl, const char* fmt, const Ar
+         _err_handler("Unknown exception in logger " + _name);
+         throw;
+     }
++#endif
+ }
+ 
+ template <typename... Args>
+ inline void spdlog::logger::log(level::level_enum lvl, const char* msg)
+ {
+     if (!should_log(lvl)) return;
++#ifdef DMC_SPDLOG_NO_EXCEPTION
+     try
++#endif
+     {
+         details::log_msg log_msg(&_name, lvl);
+         log_msg.raw << msg;
+         _sink_it(log_msg);
+     }
++#ifdef DMC_SPDLOG_NO_EXCEPTION
+     catch (const std::exception &ex)
+     {
+         _err_handler(ex.what());
+@@ -103,18 +110,22 @@ inline void spdlog::logger::log(level::level_enum lvl, const char* msg)
+         _err_handler("Unknown exception in logger " + _name);
+         throw;
+     }
++#endif
+ }
+ 
+ template<typename T>
+ inline void spdlog::logger::log(level::level_enum lvl, const T& msg)
+ {
+     if (!should_log(lvl)) return;
++#ifdef DMC_SPDLOG_NO_EXCEPTION
+     try
++#endif
+     {
+         details::log_msg log_msg(&_name, lvl);
+         log_msg.raw << msg;
+         _sink_it(log_msg);
+     }
++#ifdef DMC_SPDLOG_NO_EXCEPTION
+     catch (const std::exception &ex)
+     {
+         _err_handler(ex.what());
+@@ -124,6 +135,7 @@ inline void spdlog::logger::log(level::level_enum lvl, const T& msg)
+         _err_handler("Unknown exception in logger " + _name);
+         throw;
+     }
++#endif
+ }
+ 
+ 
+diff --git a/include/spdlog/details/os.h b/include/spdlog/details/os.h
+index b881cae..9746c8c 100644
+--- a/include/spdlog/details/os.h
++++ b/include/spdlog/details/os.h
+@@ -152,7 +152,7 @@ SPDLOG_CONSTEXPR static const char folder_sep = '\\';
+ SPDLOG_CONSTEXPR static const char folder_sep = '/';
+ #endif
+ 
+-
++#ifdef DMC_SPDLOG_NO_EXCEPTION
+ inline void prevent_child_fd(FILE *f)
+ {
+ #ifdef _WIN32
+@@ -165,6 +165,7 @@ inline void prevent_child_fd(FILE *f)
+         throw spdlog_ex("fcntl with FD_CLOEXEC failed", errno);
+ #endif
+ }
++#endif
+ 
+ 
+ //fopen_s on non windows for writing
+@@ -225,7 +226,7 @@ inline bool file_exists(const filename_t& filename)
+ 
+ 
+ 
+-
++#ifdef DMC_SPDLOG_NO_EXCEPTION
+ //Return file size according to open FILE* object
+ inline size_t filesize(FILE *f)
+ {
+@@ -259,7 +260,7 @@ inline size_t filesize(FILE *f)
+ #endif
+     throw spdlog_ex("Failed getting file size from fd", errno);
+ }
+-
++#endif
+ 
+ 
+ 
+diff --git a/include/spdlog/details/registry.h b/include/spdlog/details/registry.h
+index b68b9f5..7040e37 100644
+--- a/include/spdlog/details/registry.h
++++ b/include/spdlog/details/registry.h
+@@ -12,7 +12,9 @@
+ 
+ #include "../details/null_mutex.h"
+ #include "../logger.h"
++#ifdef DMC_SPDLOG_NO_EXCEPTION
+ #include "../async_logger.h"
++#endif
+ #include "../common.h"
+ 
+ #include <chrono>
+@@ -52,9 +54,11 @@ template <class Mutex> class registry_t
+         std::lock_guard<Mutex> lock(_mutex);
+         throw_if_exists(logger_name);
+         std::shared_ptr<logger> new_logger;
++#ifdef DMC_SPDLOG_NO_EXCEPTION
+         if (_async_mode)
+             new_logger = std::make_shared<async_logger>(logger_name, sinks_begin, sinks_end, _async_q_size, _overflow_policy, _worker_warmup_cb, _flush_interval_ms, _worker_teardown_cb);
+         else
++#endif
+             new_logger = std::make_shared<logger>(logger_name, sinks_begin, sinks_end);
+ 
+         if (_formatter)
+@@ -72,6 +76,7 @@ template <class Mutex> class registry_t
+         return new_logger;
+     }
+ 
++#ifdef DMC_SPDLOG_NO_EXCEPTION
+     template<class It>
+     std::shared_ptr<async_logger> create_async(const std::string& logger_name, size_t queue_size, const async_overflow_policy overflow_policy, const std::function<void()>& worker_warmup_cb, const std::chrono::milliseconds& flush_interval_ms, const std::function<void()>& worker_teardown_cb, const It& sinks_begin, const It& sinks_end)
+     {
+@@ -92,6 +97,7 @@ template <class Mutex> class registry_t
+         _loggers[logger_name] = new_logger;
+         return new_logger;
+     }
++#endif
+ 
+     void apply_all(std::function<void(std::shared_ptr<logger>)> fun)
+     {
+@@ -121,6 +127,7 @@ template <class Mutex> class registry_t
+         return create(logger_name, { sink });
+     }
+ 
++#ifdef DMC_SPDLOG_NO_EXCEPTION
+     std::shared_ptr<async_logger> create_async(const std::string& logger_name, size_t queue_size, const async_overflow_policy overflow_policy, const std::function<void()>& worker_warmup_cb, const std::chrono::milliseconds& flush_interval_ms, const std::function<void()>& worker_teardown_cb, sinks_init_list sinks)
+     {
+         return create_async(logger_name, queue_size, overflow_policy, worker_warmup_cb, flush_interval_ms, worker_teardown_cb, sinks.begin(), sinks.end());
+@@ -130,6 +137,7 @@ template <class Mutex> class registry_t
+     {
+         return create_async(logger_name, queue_size, overflow_policy, worker_warmup_cb, flush_interval_ms, worker_teardown_cb, { sink });
+     }
++#endif
+ 
+     void formatter(formatter_ptr f)
+     {
+@@ -200,8 +208,10 @@ template <class Mutex> class registry_t
+ 
+     void throw_if_exists(const std::string &logger_name)
+     {
++#ifdef DMC_SPDLOG_NO_EXCEPTION
+         if (_loggers.find(logger_name) != _loggers.end())
+             throw spdlog_ex("logger with name '" + logger_name + "' already exists");
++#endif
+     }
+     Mutex _mutex;
+     std::unordered_map <std::string, std::shared_ptr<logger>> _loggers;
+diff --git a/include/spdlog/details/spdlog_impl.h b/include/spdlog/details/spdlog_impl.h
+index 25c7b7e..c67b223 100644
+--- a/include/spdlog/details/spdlog_impl.h
++++ b/include/spdlog/details/spdlog_impl.h
+@@ -10,8 +10,13 @@
+ //
+ #include "../spdlog.h"
+ #include "../details/registry.h"
++#ifdef DMC_SPDLOG_NO_EXCEPTION
+ #include "../sinks/file_sinks.h"
++#endif
++
+ #include "../sinks/stdout_sinks.h"
++
++#ifdef DMC_SPDLOG_NO_EXCEPTION
+ #ifdef SPDLOG_ENABLE_SYSLOG
+ #include "../sinks/syslog_sink.h"
+ #endif
+@@ -21,7 +26,7 @@
+ #else
+ #include "../sinks/ansicolor_sink.h"
+ #endif
+-
++#endif
+ 
+ #ifdef __ANDROID__
+ #include "../sinks/android_sink.h"
+@@ -47,6 +52,7 @@ inline void spdlog::drop(const std::string &name)
+     details::registry::instance().drop(name);
+ }
+ 
++#ifdef DMC_SPDLOG_NO_EXCEPTION
+ // Create multi/single threaded simple file logger
+ inline std::shared_ptr<spdlog::logger> spdlog::basic_logger_mt(const std::string& logger_name, const filename_t& filename, bool truncate)
+ {
+@@ -79,7 +85,7 @@ inline std::shared_ptr<spdlog::logger> spdlog::daily_logger_st(const std::string
+ {
+     return create<spdlog::sinks::daily_file_sink_st>(logger_name, filename, hour, minute);
+ }
+-
++#endif
+ 
+ //
+ // stdout/stderr loggers
+@@ -104,6 +110,7 @@ inline std::shared_ptr<spdlog::logger> spdlog::stderr_logger_st(const std::strin
+     return spdlog::details::registry::instance().create(logger_name, spdlog::sinks::stderr_sink_st::instance());
+ }
+ 
++#ifdef DMC_SPDLOG_NO_EXCEPTION
+ //
+ // stdout/stderr color loggers
+ //
+@@ -167,6 +174,7 @@ inline std::shared_ptr<spdlog::logger> spdlog::syslog_logger(const std::string&
+     return create<spdlog::sinks::syslog_sink>(logger_name, syslog_ident, syslog_option, syslog_facility);
+ }
+ #endif
++#endif
+ 
+ #ifdef __ANDROID__
+ inline std::shared_ptr<spdlog::logger> spdlog::android_logger(const std::string& logger_name, const std::string& tag)
+@@ -203,6 +211,7 @@ inline std::shared_ptr<spdlog::logger> spdlog::create(const std::string& logger_
+     return details::registry::instance().create(logger_name, sinks_begin, sinks_end);
+ }
+ 
++#ifdef DMC_SPDLOG_NO_EXCEPTION
+ // Create and register an async logger with a single sink
+ inline std::shared_ptr<spdlog::logger> spdlog::create_async(const std::string& logger_name, const sink_ptr& sink, size_t queue_size, const async_overflow_policy overflow_policy, const std::function<void()>& worker_warmup_cb, const std::chrono::milliseconds& flush_interval_ms, const std::function<void()>& worker_teardown_cb)
+ {
+@@ -220,6 +229,7 @@ inline std::shared_ptr<spdlog::logger> spdlog::create_async(const std::string& l
+ {
+     return details::registry::instance().create_async(logger_name, queue_size, overflow_policy, worker_warmup_cb, flush_interval_ms, worker_teardown_cb, sinks_begin, sinks_end);
+ }
++#endif
+ 
+ inline void spdlog::set_formatter(spdlog::formatter_ptr f)
+ {

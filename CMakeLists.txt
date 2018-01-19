@@ -14,6 +14,9 @@ set (MC_VERSION ${MC_VERSION_MAJOR}.${MC_VERSION_MINOR})
 set (MC_APIVERSION ${MC_VERSION}.${MC_VERSION_PATCH})
 
 add_definitions(-DMC_USE_SMALL_VECTOR)
+add_definitions(-DSPDLOG_NO_DATETIME)
+add_definitions(-DSPDLOG_NO_THREAD_ID)
+add_definitions(-DMC_SPDLOG_NO_EXCEPTION)
 
 if (NOT CMAKE_BUILD_TYPE)
    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build, options are: Debug Release." FORCE)
