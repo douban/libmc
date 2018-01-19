@@ -12,8 +12,12 @@ rm plog/Appenders/AndroidAppender.h
 rm plog/Appenders/ColorConsoleAppender.h
 rm plog/Appenders/DebugOutputAppender.h
 rm plog/Appenders/EventLogAppender.h
+rm plog/Appenders/RollingFileAppender.h
 rm plog/Converters/NativeEOLConverter.h
+rm plog/Converters/UTF8Converter.h
 rm plog/Formatters/FuncMessageFormatter.h
 rm plog/Formatters/MessageOnlyFormatter.h
+rm plog/Formatters/CsvFormatter.h
 python rm_plog_win32_code.py
+#patch -p2 < plog.patch
 echo "Use git status, add all files and commit changes."
