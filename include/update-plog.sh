@@ -6,7 +6,14 @@ echo "Downloading $URL"
 curl $URL -L -o /tmp/plog.tar.gz
 tar xvf /tmp/plog.tar.gz
 rm -rf plog
-cp -r plog-${VER}/include/plog  plog
+cp -r plog-${VER}/include/plog plog
 rm -rf plog-${VER}
-#patch -p2 < plog.patch
+rm plog/Appenders/AndroidAppender.h
+rm plog/Appenders/ColorConsoleAppender.h
+rm plog/Appenders/DebugOutputAppender.h
+rm plog/Appenders/EventLogAppender.h
+rm plog/Converters/NativeEOLConverter.h
+rm plog/Formatters/FuncMessageFormatter.h
+rm plog/Formatters/MessageOnlyFormatter.h
+
 echo "Use git status, add all files and commit changes."
