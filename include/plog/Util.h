@@ -15,11 +15,6 @@
 #endif
 
 #ifdef _WIN32
-#   include <plog/WinApi.h>
-#   include <time.h>
-#   include <sys/timeb.h>
-#   include <io.h>
-#   include <share.h>
 #else
 #   include <unistd.h>
 #   include <sys/syscall.h>
@@ -31,8 +26,6 @@
 #endif
 
 #ifdef _WIN32
-#   define _PLOG_NSTR(x)   L##x
-#   define PLOG_NSTR(x)    _PLOG_NSTR(x)
 #else
 #   define PLOG_NSTR(x)    x
 #endif
@@ -42,9 +35,6 @@ namespace plog
     namespace util
     {
 #ifdef _WIN32
-        typedef std::wstring nstring;
-        typedef std::wstringstream nstringstream;
-        typedef wchar_t nchar;
 #else
         typedef std::string nstring;
         typedef std::stringstream nstringstream;
@@ -65,12 +55,6 @@ namespace plog
         }
 
 #ifdef _WIN32
-        typedef timeb Time;
-
-        inline void ftime(Time* t)
-        {
-            ::ftime(t);
-        }
 #else
         struct Time
         {
@@ -91,7 +75,6 @@ namespace plog
         inline unsigned int gettid()
         {
 #ifdef _WIN32
-            return GetCurrentThreadId();
 #elif defined(__unix__)
             return static_cast<unsigned int>(::syscall(__NR_gettid));
 #elif defined(__APPLE__)
@@ -126,32 +109,6 @@ namespace plog
 #endif
 
 #ifdef _WIN32
-        inline std::wstring toWide(const char* str)
-        {
-            size_t len = ::strlen(str);
-            std::wstring wstr(len, 0);
-
-            if (!wstr.empty())
-            {
-                int wlen = MultiByteToWideChar(codePage::kActive, 0, str, static_cast<int>(len), &wstr[0], static_cast<int>(wstr.size()));
-                wstr.resize(wlen);
-            }
-
-            return wstr;
-        }
-
-        inline std::string toNarrow(const std::wstring& wstr, long page)
-        {
-            std::string str(wstr.size() * sizeof(wchar_t), 0);
-
-            if (!str.empty())
-            {
-                int len = WideCharToMultiByte(page, 0, wstr.c_str(), static_cast<int>(wstr.size()), &str[0], static_cast<int>(str.size()), 0, 0);
-                str.resize(len);
-            }
-
-            return str;
-        }
 #endif
 
         inline std::string processFuncName(const char* func)
@@ -183,7 +140,6 @@ namespace plog
         inline const nchar* findExtensionDot(const nchar* fileName)
         {
 #ifdef _WIN32
-            return std::wcsrchr(fileName, L'.');
 #else
             return std::strrchr(fileName, '.');
 #endif
@@ -249,7 +205,6 @@ namespace plog
             int write(const void* buf, size_t count)
             {
 #ifdef _WIN32
-                return m_file != -1 ? ::_write(m_file, buf, static_cast<unsigned int>(count)) : -1;
 #else
                 return m_file != -1 ? static_cast<int>(::write(m_file, buf, count)) : -1;
 #endif
@@ -264,7 +219,6 @@ namespace plog
             off_t seek(off_t offset, int whence)
             {
 #ifdef _WIN32
-                return m_file != -1 ? ::_lseek(m_file, offset, whence) : -1;
 #else
                 return m_file != -1 ? ::lseek(m_file, offset, whence) : -1;
 #endif
@@ -275,7 +229,6 @@ namespace plog
                 if (m_file != -1)
                 {
 #ifdef _WIN32
-                    ::_close(m_file);
 #else
                     ::close(m_file);
 #endif
@@ -286,7 +239,6 @@ namespace plog
             static int unlink(const nchar* fileName)
             {
 #ifdef _WIN32
-                return ::_wunlink(fileName);
 #else
                 return ::unlink(fileName);
 #endif
@@ -295,7 +247,6 @@ namespace plog
             static int rename(const nchar* oldFilename, const nchar* newFilename)
             {
 #ifdef _WIN32
-                return MoveFileW(oldFilename, newFilename);
 #else
                 return ::rename(oldFilename, newFilename);
 #endif
@@ -311,7 +262,6 @@ namespace plog
             Mutex()
             {
 #ifdef _WIN32
-                InitializeCriticalSection(&m_sync);
 #else
                 ::pthread_mutex_init(&m_sync, 0);
 #endif
@@ -320,7 +270,6 @@ namespace plog
             ~Mutex()
             {
 #ifdef _WIN32
-                DeleteCriticalSection(&m_sync);
 #else
                 ::pthread_mutex_destroy(&m_sync);
 #endif
@@ -332,7 +281,6 @@ namespace plog
             void lock()
             {
 #ifdef _WIN32
-                EnterCriticalSection(&m_sync);
 #else
                 ::pthread_mutex_lock(&m_sync);
 #endif
@@ -341,7 +289,6 @@ namespace plog
             void unlock()
             {
 #ifdef _WIN32
-                LeaveCriticalSection(&m_sync);
 #else
                 ::pthread_mutex_unlock(&m_sync);
 #endif
@@ -349,7 +296,6 @@ namespace plog
 
         private:
 #ifdef _WIN32
-            CRITICAL_SECTION m_sync;
 #else
             pthread_mutex_t m_sync;
 #endif

@@ -13,7 +13,6 @@ namespace plog
         {
             const util::nchar* dot = util::findExtensionDot(fileName);
 #ifdef _WIN32
-            return dot && 0 == std::wcscmp(dot, L".csv");
 #else
             return dot && 0 == std::strcmp(dot, ".csv");
 #endif
@@ -69,27 +68,5 @@ namespace plog
     // CHAR variants for Windows
 
 #ifdef _WIN32
-    template<class Formatter, int instance>
-    inline Logger<instance>& init(Severity maxSeverity, const char* fileName, size_t maxFileSize = 0, int maxFiles = 0)
-    {
-        return init<Formatter, instance>(maxSeverity, util::toWide(fileName).c_str(), maxFileSize, maxFiles);
-    }
-
-    template<class Formatter>
-    inline Logger<PLOG_DEFAULT_INSTANCE>& init(Severity maxSeverity, const char* fileName, size_t maxFileSize = 0, int maxFiles = 0)
-    {
-        return init<Formatter, PLOG_DEFAULT_INSTANCE>(maxSeverity, fileName, maxFileSize, maxFiles);
-    }
-
-    template<int instance>
-    inline Logger<instance>& init(Severity maxSeverity, const char* fileName, size_t maxFileSize = 0, int maxFiles = 0)
-    {
-        return init<instance>(maxSeverity, util::toWide(fileName).c_str(), maxFileSize, maxFiles);
-    }
-
-    inline Logger<PLOG_DEFAULT_INSTANCE>& init(Severity maxSeverity, const char* fileName, size_t maxFileSize = 0, int maxFiles = 0)
-    {
-        return init<PLOG_DEFAULT_INSTANCE>(maxSeverity, fileName, maxFileSize, maxFiles);
-    }
 #endif
 }
