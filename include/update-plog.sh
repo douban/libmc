@@ -19,5 +19,5 @@ rm plog/Formatters/MessageOnlyFormatter.h
 rm plog/Formatters/CsvFormatter.h
 rm plog/WinApi.h
 python rm_plog_win32_code.py
-#patch -p2 < plog.patch
+patch -p2 < plog.patch
 echo "Use git status, add all files and commit changes."
