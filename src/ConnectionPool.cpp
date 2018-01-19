@@ -6,12 +6,18 @@
 #include <vector>
 #include <algorithm>
 
+#include <plog/Log.h>
+#include <plog/Appenders/ConsoleAppender.h>
+
 #include "ConnectionPool.h"
 #include "Utility.h"
 #include "Keywords.h"
 #include "Parser.h"
 
+
 using std::vector;
+
+namespace logging = plog;
 
 using douban::mc::keywords::kCRLF;
 using douban::mc::keywords::kSPACE;
@@ -58,6 +64,10 @@ void ConnectionPool::setHashFunction(hash_function_options_t fn_opt) {
 
 int ConnectionPool::init(const char* const * hosts, const uint32_t* ports, const size_t n,
                          const char* const * aliases) {
+  // init plog
+  static logging::ConsoleAppender<logging::TxtFormatter> consoleAppender;
+  logging::init(logging::debug, &consoleAppender);
+
   delete[] m_conns;
   m_connSelector.reset();
   int rv = 0;

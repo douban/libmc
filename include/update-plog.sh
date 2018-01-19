@@ -1,0 +1,12 @@
+#!/bin/bash
+set -ex
+VER="1.1.3"
+URL="https://github.com/SergiusTheBest/plog/archive/${VER}.tar.gz"
+echo "Downloading $URL"
+curl $URL -L -o /tmp/plog.tar.gz
+tar xvf /tmp/plog.tar.gz
+rm -rf plog
+cp -r plog-${VER}/include/plog  plog
+rm -rf plog-${VER}
+#patch -p2 < plog.patch
+echo "Use git status, add all files and commit changes."
