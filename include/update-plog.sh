@@ -15,5 +15,5 @@ rm plog/Appenders/EventLogAppender.h
 rm plog/Converters/NativeEOLConverter.h
 rm plog/Formatters/FuncMessageFormatter.h
 rm plog/Formatters/MessageOnlyFormatter.h
-
+python rm_plog_win32_code.py
 echo "Use git status, add all files and commit changes."
