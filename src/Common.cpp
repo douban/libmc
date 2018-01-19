@@ -3,6 +3,7 @@
 #include <execinfo.h>
 #include <cstdlib>
 
+std::shared_ptr<spdlog::logger> stderr_logger = spdlog::stderr_logger_mt(PROJECT_NAME);
 
 void printBacktrace() {
   void *trace_elems[20];

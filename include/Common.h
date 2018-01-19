@@ -76,7 +76,7 @@ void printBacktrace();
 
 #define MC_LOG_LEVEL MC_LOG_LEVEL_ERROR
 
-extern auto stderr_logger = spdlog::stderr_logger_mt(PROJECT_NAME);
+extern std::shared_ptr<spdlog::logger> stderr_logger;
 
 #ifdef NDEBUG
 #define debug(M, ...) __VOID_CAST(0)
