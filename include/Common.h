@@ -56,16 +56,19 @@
 # define __VOID_CAST (void)
 #endif
 
-char* string_format(const char *fmt, ...);
+#ifndef _GNU_SOURCE
+int asprintf(char **s, const char *fmt, ...);
+#endif
+
 void printBacktrace();
 
 #define _mc_clean_errno() (errno == 0 ? "None" : strerror(errno))
 #define _mc_log(LEVEL, FORMAT, ...) do { \
-  char* str = string_format( "[" PROJECT_NAME "] " FORMAT "\n", ##__VA_ARGS__); \
-  if (str != NULL) { \
+  char* str; \
+  if (asprintf(&str, FORMAT "\n", ##__VA_ARGS__) > 0 ) { \
     LOG(LEVEL) << str; \
-    delete[] str; \
   } \
+  delete[] str; \
 } while (0)
 
 #define MC_LOG_LEVEL_ERROR 1

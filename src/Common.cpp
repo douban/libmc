@@ -21,39 +21,25 @@ void printBacktrace() {
 void printBacktrace() {}
 #endif
 
-
-char* string_format(const char *fmt, ...)
-{
-    int size = 0;
-    va_list args;
-
-    // init variadic argumens
-    va_start(args, fmt);
-
-    va_list args2;
-
-    // copy
-    va_copy(args2, args);
-
-    // apply variadic arguments to
-    // sprintf with format to get size
-    size = snprintf(NULL, size, fmt, args2);
-
-    va_end(args2);
-
-    if (size < 0) { return NULL; }
-
-    // alloc with size plus 1 for `\0'
-    char* str = new char[size + 1];
-
-    if (NULL == str) { return NULL; }
-
-    // format string with original
-    // variadic arguments and set new size
-    if (snprintf(str, size, fmt, args) != size) {
-        delete[] str;
-        str = NULL;
-    }
-    va_end(args);
-    return str;
+// Credits to:
+// https://github.com/yandex/ClickHouse/blob/master/libs/libglibc-compatibility/musl/vasprintf.c
+#ifndef _GNU_SOURCE
+int asprintf(char **s, const char *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    int l = vasprintf(s, fmt, ap);
+    va_end(ap);
+    return l;
 }
+
+int vasprintf(char **s, const char *fmt, va_list ap)
+{
+    va_list ap2;
+    va_copy(ap2, ap);
+    int l = vsnprintf(0, 0, fmt, ap2);
+    va_end(ap2);
+
+    if (l<0 || !(*s=(char *)malloc(l+1U))) return -1;
+    return vsnprintf(*s, l+1U, fmt, ap);
+}
+#endif
