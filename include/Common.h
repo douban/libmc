@@ -82,7 +82,7 @@ void printBacktrace();
 #define MC_LOG_LEVEL_INFO 4
 #define MC_LOG_LEVEL_DEBUG 5
 
-#define MC_LOG_LEVEL MC_LOG_LEVEL_ERROR
+#define MC_LOG_LEVEL MC_LOG_LEVEL_INFO
 
 #ifdef NDEBUG
 #define log_debug_if(COND, M, ...) __VOID_CAST(0)
