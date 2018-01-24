@@ -11,6 +11,7 @@
 #include <queue>
 
 #include "Connection.h"
+#include "Keywords.h"
 
 using douban::mc::io::BufferWriter;
 using douban::mc::io::BufferReader;
@@ -193,13 +194,15 @@ void Connection::markDead(const char* reason, int delay) {
     time(&m_deadUntil);
     m_deadUntil += delay; // check after `delay` seconds, default 0
     this->close();
-    log_warn("Connection %s is dead(reason: %s, delay: %d), next check at %lu",
-             m_name, reason, delay, m_deadUntil);
-    std::queue<struct iovec>* q = m_parser.getRequestKeys();
-    if (!q->empty()) {
-      log_warn("%s: first request key: %.*s", m_name,
-               static_cast<int>(q->front().iov_len),
-               static_cast<char*>(q->front().iov_base));
+    if (strcmp(reason, keywords::kCONN_QUIT) != 0) {
+      log_warn("Connection %s is dead(reason: %s, delay: %d), next check at %lu",
+               m_name, reason, delay, m_deadUntil);
+      std::queue<struct iovec>* q = m_parser.getRequestKeys();
+      if (!q->empty()) {
+        log_warn("%s: first request key: %.*s", m_name,
+                 static_cast<int>(q->front().iov_len),
+                 static_cast<char*>(q->front().iov_base));
+      }
     }
   }
 }

@@ -1376,12 +1376,11 @@ func (cn *conn) quit() error {
 	cn.client.lk.Lock()
 	defer cn.client.lk.Unlock()
 	cn.client.numOpen--
-	err := networkError(errorMessage[errCode])
-	if isBadConnErr(err) {
+	if errCode == C.RET_OK || errCode == C.RET_CONN_POLL_ERR {
 		cn.client.maybeOpenNewConnections()
 		return nil
 	}
-	return err
+	return networkError(errorMessage[errCode])
 }
 
 func isBadConnErr(err error) (r bool) {

@@ -1,6 +1,7 @@
 # coding: utf-8
 
 import sys
+import time
 import unittest
 from libmc import (
     Client, encode_value, decode_value,
@@ -242,7 +243,11 @@ class SingleServerCase(unittest.TestCase):
         nc2 = self.mc_alt.stats()[self.mc.servers[0]]['curr_connections']
         assert nc1 == nc2
         assert self.mc.quit()
-        nc2 = self.mc_alt.stats()[self.mc.servers[0]]['curr_connections']
+        max_wait = 3
+        while nc1 - 1 != nc2 and max_wait > 0:
+            nc2 = self.mc_alt.stats()[self.mc.servers[0]]['curr_connections']
+            max_wait -= 1
+            time.sleep(1)
         assert nc1 - 1 == nc2
         # back to life immediately
         assert self.mc.get('all_is_well') == 'bingo'

@@ -10,7 +10,7 @@
 *:include/llvm/SmallVector.h:726
 *:include/llvm/SmallVector.h:735
 *:include/llvm/SmallVector.h:796
-unusedFunction:src/Client.cpp:215
+unusedFunction:src/Client.cpp:216
 unusedFunction:src/c_client.cpp:90
 unusedFunction:src/c_client.cpp:92
 unusedFunction:src/c_client.cpp:94
@@ -39,9 +39,10 @@ unusedFunction:src/c_client.cpp:50
 unusedFunction:src/Utility.cpp:43
 constStatement:src/BufferReader.cpp:27
 constStatement:src/BufferReader.cpp:48
-constStatement:src/Connection.cpp:179
-constStatement:src/Connection.cpp:202
-constStatement:src/ConnectionPool.cpp:408
+constStatement:src/Connection.cpp:180
+constStatement:src/Connection.cpp:199
+constStatement:src/Connection.cpp:204
+constStatement:src/ConnectionPool.cpp:410
 constStatement:src/DataBlock.cpp:52
 constStatement:src/HashkitKetama.cpp:136
 constStatement:src/Utility.cpp:17
