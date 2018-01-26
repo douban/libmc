@@ -85,7 +85,7 @@ int ConnectionPool::updateServers(const char* const* hosts, const uint32_t* port
     if ((strcmp(m_conns[i].host(), hosts[i]) == 0) && (m_conns[i].port() == ports[i])) {
       rv += -1;
     } else {
-      m_conns[i].markDead("update servers", 0);
+      m_conns[i].markDead(keywords::kUPDATE_SERVER, 0);
       rv += m_conns[i].init(hosts[i], ports[i], aliases == NULL ? NULL : aliases[i]);
       m_conns[i].reset();
     }
