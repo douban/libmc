@@ -54,7 +54,7 @@ class MiscCase(unittest.TestCase):
             new_d = decode_value(*encode_value(d, 0))
             assert new_d == d
             if isinstance(d, DiveMaster):
-              assert d is not new_d
+                assert d is not new_d
 
 
 class SingleServerCase(unittest.TestCase):

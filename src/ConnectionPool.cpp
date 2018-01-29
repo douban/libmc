@@ -70,8 +70,9 @@ int ConnectionPool::init(const char* const * hosts, const uint32_t* ports, const
   return rv;
 }
 
+
 int ConnectionPool::updateServers(const char* const* hosts, const uint32_t* ports, const size_t n,
-                                   const char* const* aliases) {
+                                  const char* const* aliases) {
   int rv = 0;
   if (m_nConns != n) {
     return 1;
@@ -83,7 +84,7 @@ int ConnectionPool::updateServers(const char* const* hosts, const uint32_t* port
   }
   for (size_t i = 0; i < m_nConns; i++) {
     if ((strcmp(m_conns[i].host(), hosts[i]) == 0) && (m_conns[i].port() == ports[i])) {
-      rv += -1;
+      --rv;
     } else {
       m_conns[i].markDead(keywords::kUPDATE_SERVER, 0);
       rv += m_conns[i].init(hosts[i], ports[i], aliases == NULL ? NULL : aliases[i]);

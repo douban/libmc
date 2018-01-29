@@ -115,7 +115,7 @@ cdef extern from "Client.h" namespace "douban::mc":
         int init(const char* const * hosts, const uint32_t* ports, size_t n,
                  const char* const * aliases) nogil
         int updateServers(const char* const * hosts, const uint32_t* ports, size_t n,
-                 const char* const * aliases) nogil
+                          const char* const * aliases) nogil
         char* getServerAddressByKey(const char* key, size_t keyLen) nogil
         char* getRealtimeServerAddressByKey(const char* key, size_t keyLen) nogil
         void enableConsistentFailover() nogil
@@ -382,7 +382,7 @@ cdef class PyClient:
         self._thread_ident = None
         self._created_stack = traceback.extract_stack()
 
-    cdef _update_servers(self, list servers):
+    cpdef update_servers(self, list servers):
         cdef int rv = 0
         cdef size_t n = len(servers)
         cdef char** c_hosts = <char**>PyMem_Malloc(n * sizeof(char*))
@@ -1047,9 +1047,6 @@ cdef class PyClient:
     def expire(self, basestring key):
         self._record_thread_ident()
         return self.touch(key, -1)
-
-    def update_servers(self, servers):
-        return self._update_servers(servers)
 
     def reset(self):
         self.clear_thread_ident()

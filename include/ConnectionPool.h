@@ -16,7 +16,7 @@ class ConnectionPool {
   int init(const char* const * hosts, const uint32_t* ports, const size_t n,
            const char* const * aliases = NULL);
   int updateServers(const char* const * hosts, const uint32_t* ports, const size_t n,
-           const char* const * aliases = NULL);
+                    const char* const * aliases = NULL);
   const char* getServerAddressByKey(const char* key, size_t keyLen);
   const char* getRealtimeServerAddressByKey(const char* key, size_t keyLen);
   void enableConsistentFailover();

@@ -359,3 +359,39 @@ TEST(client, noreply) {
     delete client;
   }
 }
+
+TEST(client, update_server) {
+  Client* client = newClient(3);
+  if (client == NULL) {
+    hint();
+  } else {
+    const char * hosts[] = {
+        "127.0.0.1",
+        "127.0.0.1",
+        "127.0.0.1",
+    };
+    const uint32_t ports[] = {
+        21211, 21212, 11213
+    };
+    const char * aliases[] = {
+        "alfa",
+        "bravo",
+        "charlie"
+    };
+    int rv;
+
+    rv = client->updateServers(hosts, ports, 2, aliases);
+    ASSERT_EQ(rv, 1);
+
+    const char * mismatch_aliases[] = {
+        "afla",
+        "bravo",
+        "charlie"
+    };
+    rv = client->updateServers(hosts, ports, 3, mismatch_aliases);
+    ASSERT_EQ(rv, 2);
+
+    rv = client->updateServers(hosts, ports, 3, aliases);
+    ASSERT_EQ(rv, -3);
+  }
+}
