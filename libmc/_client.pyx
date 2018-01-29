@@ -348,25 +348,14 @@ cdef class PyClient:
                   basestring prefix=None, hash_function_options_t hash_fn=OPT_HASH_MD5, failover=False,
                   encoding='utf8'):
         self.servers = servers
-        cdef size_t n = len(servers)
-        cdef char** c_hosts = <char**>PyMem_Malloc(n * sizeof(char*))
-        cdef uint32_t* c_ports = <uint32_t*>PyMem_Malloc(n * sizeof(uint32_t))
-        cdef char** c_aliases = <char**>PyMem_Malloc(n * sizeof(char*))
-
-        self._parse_servers(servers, c_hosts, c_ports, n, c_aliases)
-
-        cdef int rv = 0
         self._imp = new Client()
         self._imp.config(CFG_HASH_FUNCTION, hash_fn)
-        rv = self._imp.init(c_hosts, c_ports, n, c_aliases)
+        rv = self._update_servers(servers, True)
         if failover:
             self._imp.enableConsistentFailover()
         else:
             self._imp.disableConsistentFailover()
 
-        PyMem_Free(c_hosts)
-        PyMem_Free(c_ports)
-        PyMem_Free(c_aliases)
         self.do_split = do_split
         self.comp_threshold = comp_threshold
         self.noreply = noreply
@@ -382,27 +371,13 @@ cdef class PyClient:
         self._thread_ident = None
         self._created_stack = traceback.extract_stack()
 
-    cpdef update_servers(self, list servers):
+    cdef _update_servers(self, list servers, bool_t init):
         cdef int rv = 0
         cdef size_t n = len(servers)
         cdef char** c_hosts = <char**>PyMem_Malloc(n * sizeof(char*))
         cdef uint32_t* c_ports = <uint32_t*>PyMem_Malloc(n * sizeof(uint32_t))
         cdef char** c_aliases = <char**>PyMem_Malloc(n * sizeof(char*))
 
-        self._parse_servers(servers, c_hosts, c_ports, n, c_aliases)
-        rv = self._imp.updateServers(c_hosts, c_ports, n, c_aliases)
-
-        PyMem_Free(c_hosts)
-        PyMem_Free(c_ports)
-        PyMem_Free(c_aliases)
-
-        if rv + int(n) == 0:
-            self.servers = servers
-            return True
-
-        return False
-
-    cdef _parse_servers(self, list servers, char** c_hosts, uint32_t* c_ports, size_t n, char** c_aliases):
         servers_ = []
         for srv in servers:
             addr_alias = srv.split(' ')
@@ -432,7 +407,19 @@ cdef class PyClient:
                 c_aliases[i] = NULL
             else:
                 c_aliases[i] = PyString_AsString(alias)
+
+        if init:
+            rv = self._imp.init(c_hosts, c_ports, n, c_aliases)
+        else:
+            rv = self._imp.updateServers(c_hosts, c_ports, n, c_aliases)
+
+        PyMem_Free(c_hosts)
+        PyMem_Free(c_ports)
+        PyMem_Free(c_aliases)
+
         Py_DECREF(servers_)
+
+        return rv
 
     def __dealloc__(self):
         del self._imp
@@ -1071,6 +1058,13 @@ cdef class PyClient:
 
     def get_last_error(self):
         return self.last_error
+
+    def update_servers(self, servers):
+        rv = self._update_servers(servers, False)
+        if rv + len(servers) == 0:
+            self.servers = servers
+            return True
+        return False
 
     def get_last_strerror(self):
         return ERROR_CODE_TO_STR.get(self.last_error, '')

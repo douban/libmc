@@ -77,17 +77,19 @@ int ConnectionPool::updateServers(const char* const* hosts, const uint32_t* port
   if (m_nConns != n) {
     return 1;
   }
-  for (size_t i = 0; i < m_nConns; i++) {
-    if (m_conns[i].hasAlias() && (strcmp(m_conns[i].name(), aliases[i]) != 0)) {
-      return 2;
+  if (aliases != NULL) {
+    for (size_t i = 0; i < m_nConns; i++) {
+      if (m_conns[i].hasAlias() && (strcmp(m_conns[i].name(), aliases[i]) != 0)) {
+        return 2;
+      }
     }
   }
   for (size_t i = 0; i < m_nConns; i++) {
     if ((strcmp(m_conns[i].host(), hosts[i]) == 0) && (m_conns[i].port() == ports[i])) {
       --rv;
     } else {
-      m_conns[i].markDead(keywords::kUPDATE_SERVER, 0);
       rv += m_conns[i].init(hosts[i], ports[i], aliases == NULL ? NULL : aliases[i]);
+      m_conns[i].markDead(keywords::kUPDATE_SERVER, 0);
       m_conns[i].reset();
     }
   }
