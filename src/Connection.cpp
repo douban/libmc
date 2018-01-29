@@ -69,6 +69,7 @@ int Connection::connect() {
     if (server_addrinfo) {
       freeaddrinfo(server_addrinfo);
     }
+    log_warn("[I: %p] %s getaddrinfo err", this, m_name);
     return -1;
   }
 
@@ -141,25 +142,44 @@ int Connection::connectPoll(int fd, struct addrinfo* ai_ptr) {
         pollfd_t pollfds[n_fds];
         pollfds[0].fd = fd;
         pollfds[0].events = POLLOUT;
+        // clean errno
+        errno = 0;
         int max_timeout = 6;
         while (--max_timeout) {
-          int rv = poll(pollfds, n_fds, m_connectTimeout);
+          rv = poll(pollfds, n_fds, m_connectTimeout);
           if (rv == 1) {
             if (pollfds[0].revents & (POLLERR | POLLHUP | POLLNVAL)) {
+              log_warn("[I: %p] %s conn poll err", this, m_name);
               return -1;
             } else {
-              // clean errno when success
-              errno = 0;
+              int err = 0;
+              socklen_t errlen = sizeof(err);
+
+              if (::getsockopt(fd, SOL_SOCKET, SO_ERROR, &err, &errlen) == -1) {
+                log_warn("[I: %p] %s getsockopt err", this, m_name);
+                return -1;
+              }
+
+              if (err) {
+                errno = err;
+                log_warn("[I: %p] %s getsockopt indicate connect err", this, m_name);
+                return -1;
+              }
               return 0;
             }
           } else if (rv == -1) {
+            log_warn("[I: %p] %s poll err", this, m_name);
             return -1;
           }
         }
+        log_warn("[I: %p] %s connect timeout after poll retry", this, m_name);
         return -1;
       }
     default:
-      return -1;
+      {
+        log_warn("[I: %p] %s connect err", this, m_name);
+        return -1;
+      }
   }
 }
 
