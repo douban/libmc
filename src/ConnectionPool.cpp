@@ -475,7 +475,8 @@ err_code_t ConnectionPool::waitPoll() {
           // POLLIN recv
           ssize_t nRecv = conn->recv();
           if (nRecv == -1 || nRecv == 0) {
-            log_warn("[I: %p] recv_error, Connection(%p): %s, nRecv: %zd", this, conn, conn->name(), nRecv);
+            log_warn("[I: %p] recv_error, Connection(%p): %s, lastActive: %lu, nRecv: %zd",
+                     this, conn, conn->name(), conn->getLastActive(), nRecv);
             markDeadConn(conn, keywords::kRECV_ERROR, pollfd_ptr);
             ret_code = RET_RECV_ERR;
             m_nActiveConn -= 1;

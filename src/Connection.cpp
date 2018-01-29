@@ -21,7 +21,7 @@ namespace mc {
 
 Connection::Connection()
     : m_counter(0), m_port(0), m_socketFd(-1),
-      m_alive(false), m_hasAlias(false), m_deadUntil(0),
+      m_alive(false), m_hasAlias(false), m_deadUntil(0), m_lastActive(0),
       m_connectTimeout(MC_DEFAULT_CONNECT_TIMEOUT),
       m_retryTimeout(MC_DEFAULT_RETRY_TIMEOUT) {
   m_name[0] = '\0';
@@ -200,6 +200,7 @@ bool Connection::tryReconnect() {
       if (rv == 0) {
         log_info_if(m_deadUntil > 0, "[I: %p] Connection %s is back to live at %lu", this, m_name, now);
         m_deadUntil = 0;
+        m_lastActive = 0;
       } else {
         m_deadUntil = now + m_retryTimeout;
         log_info("[I: %p] %s is still dead", this, m_name);
@@ -274,6 +275,7 @@ ssize_t Connection::send() {
     m_buffer_writer->reset();
     return -1;
   } else {
+    time(&m_lastActive);
     m_buffer_writer->commitRead(nSent);
   }
 
@@ -294,6 +296,7 @@ ssize_t Connection::recv() {
   log_debug("[I: %p] %s recv(%lu)", this, m_name, bufferSizeActual);
   // log_debug("[I: %p] %.*s", (int)bufferSizeActual, writePtr);
   if (bufferSizeActual > 0) {
+    time(&m_lastActive);
     m_buffer_reader->commitWrite(bufferSizeActual);
   }
   return bufferSizeActual;

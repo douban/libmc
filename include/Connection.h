@@ -54,6 +54,7 @@ class Connection {
     void setRetryTimeout(int timeout);
     const int getRetryTimeout();
     void setConnectTimeout(int timeout);
+    const time_t getLastActive();
 
     size_t m_counter;
 
@@ -68,6 +69,7 @@ class Connection {
     bool m_alive;
     bool m_hasAlias;
     time_t m_deadUntil;
+    time_t m_lastActive;
     io::BufferWriter* m_buffer_writer; // for send
     io::BufferReader* m_buffer_reader; // for recv
     PacketParser m_parser;
@@ -94,6 +96,10 @@ inline const char* Connection::host() {
 
 inline const uint32_t Connection::port() {
   return m_port;
+}
+
+inline const time_t Connection::getLastActive() {
+  return m_lastActive;
 }
 
 inline const bool Connection::hasAlias() {
