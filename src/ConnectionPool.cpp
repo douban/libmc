@@ -444,32 +444,6 @@ err_code_t ConnectionPool::waitPoll() {
           goto next_fd;
         }
 
-        // send
-        if (pollfd_ptr->revents & POLLOUT) {
-          // POLLOUT send
-          ssize_t nToSend = conn->send();
-          if (nToSend == -1) {
-            markDeadConn(conn, keywords::kSEND_ERROR, pollfd_ptr);
-            ret_code = RET_SEND_ERR;
-            m_nActiveConn -= 1;
-            goto next_fd;
-          } else {
-            // start to recv if any data is sent
-            if (conn->m_counter > 0) {
-              pollfd_ptr->events |= POLLIN;
-            }
-
-            if (nToSend == 0) {
-              // log_debug("[%d] all sent", pollfd_ptr->fd);
-              pollfd_ptr->events &= ~POLLOUT;
-              if (conn->m_counter == 0) {
-                // just send, no recv for noreply
-                --this->m_nActiveConn;
-              }
-            }
-          }
-        }
-
         // recv
         if (pollfd_ptr->revents & POLLIN) {
           // POLLIN recv
@@ -507,6 +481,32 @@ err_code_t ConnectionPool::waitPoll() {
             default:
               NOT_REACHED();
               break;
+          }
+        }
+
+        // send
+        if (pollfd_ptr->revents & POLLOUT) {
+          // POLLOUT send
+          ssize_t nToSend = conn->send();
+          if (nToSend == -1) {
+            markDeadConn(conn, keywords::kSEND_ERROR, pollfd_ptr);
+            ret_code = RET_SEND_ERR;
+            m_nActiveConn -= 1;
+            goto next_fd;
+          } else {
+            // start to recv if any data is sent
+            if (conn->m_counter > 0) {
+              pollfd_ptr->events |= POLLIN;
+            }
+
+            if (nToSend == 0) {
+              // log_debug("[%d] all sent", pollfd_ptr->fd);
+              pollfd_ptr->events &= ~POLLOUT;
+              if (conn->m_counter == 0) {
+                // just send, no recv for noreply
+                --this->m_nActiveConn;
+              }
+            }
           }
         }
 
