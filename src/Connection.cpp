@@ -275,6 +275,7 @@ ssize_t Connection::send() {
     m_buffer_writer->reset();
     return -1;
   } else {
+    log_debug("[I: %p] %s sendmsg(%lu)", this, m_name, nSent);
     time(&m_lastActive);
     m_buffer_writer->commitRead(nSent);
   }
@@ -292,14 +293,14 @@ ssize_t Connection::recv() {
   size_t bufferSize = m_buffer_reader->getNextPreferedDataBlockSize();
   size_t bufferSizeAvailable = m_buffer_reader->prepareWriteBlock(bufferSize);
   char* writePtr = m_buffer_reader->getWritePtr();
-  ssize_t bufferSizeActual = ::recv(m_socketFd, writePtr, bufferSizeAvailable, 0);
-  log_debug("[I: %p] %s recv(%lu)", this, m_name, bufferSizeActual);
-  // log_debug("[I: %p] %.*s", (int)bufferSizeActual, writePtr);
-  if (bufferSizeActual > 0) {
+  ssize_t nRecv = ::recv(m_socketFd, writePtr, bufferSizeAvailable, 0);
+  log_debug("[I: %p] %s recv(%lu)", this, m_name, nRecv);
+  // log_debug("[I: %p] %.*s", (int)nRecv, writePtr);
+  if (nRecv > 0) {
     time(&m_lastActive);
-    m_buffer_reader->commitWrite(bufferSizeActual);
+    m_buffer_reader->commitWrite(nRecv);
   }
-  return bufferSizeActual;
+  return nRecv;
 }
 
 void Connection::process(err_code_t& err) {
