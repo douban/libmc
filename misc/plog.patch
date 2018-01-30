@@ -1,0 +1,294 @@
+From 54c854e6be2e771ed14a21f6bb8b99116aaf3239 Mon Sep 17 00:00:00 2001
+From: MOON_CLJ <lijunli2598@gmail.com>
+Date: Sat, 20 Jan 2018 00:21:13 +0800
+Subject: [PATCH] rm plog unused code
+
+---
+ include/plog/Appenders/ConsoleAppender.h |   1 -
+ include/plog/Init.h                      |  44 -------------
+ include/plog/Log.h                       |  66 +------------------
+ include/plog/Util.h                      | 107 -------------------------------
+ 4 files changed, 1 insertion(+), 217 deletions(-)
+
+diff --git a/include/plog/Appenders/ConsoleAppender.h b/include/plog/Appenders/ConsoleAppender.h
+index 0d438c9..2980010 100644
+--- a/include/plog/Appenders/ConsoleAppender.h
++++ b/include/plog/Appenders/ConsoleAppender.h
+@@ -1,7 +1,6 @@
+ #pragma once
+ #include <plog/Appenders/IAppender.h>
+ #include <plog/Util.h>
+-#include <plog/WinApi.h>
+ #include <iostream>
+ 
+ namespace plog
+diff --git a/include/plog/Init.h b/include/plog/Init.h
+index d303853..3472b8b 100644
+--- a/include/plog/Init.h
++++ b/include/plog/Init.h
+@@ -1,24 +1,10 @@
+ #pragma once
+ #include <plog/Logger.h>
+-#include <plog/Formatters/CsvFormatter.h>
+ #include <plog/Formatters/TxtFormatter.h>
+-#include <plog/Appenders/RollingFileAppender.h>
+ #include <cstring>
+ 
+ namespace plog
+ {
+-    namespace
+-    {
+-        bool isCsv(const util::nchar* fileName)
+-        {
+-            const util::nchar* dot = util::findExtensionDot(fileName);
+-#ifdef _WIN32
+-#else
+-            return dot && 0 == std::strcmp(dot, ".csv");
+-#endif
+-        }
+-    }
+-
+     //////////////////////////////////////////////////////////////////////////
+     // Empty initializer / one appender
+ 
+@@ -34,36 +20,6 @@ namespace plog
+         return init<PLOG_DEFAULT_INSTANCE>(maxSeverity, appender);
+     }
+ 
+-    //////////////////////////////////////////////////////////////////////////
+-    // RollingFileAppender with any Formatter
+-
+-    template<class Formatter, int instance>
+-    inline Logger<instance>& init(Severity maxSeverity, const util::nchar* fileName, size_t maxFileSize = 0, int maxFiles = 0)
+-    {
+-        static RollingFileAppender<Formatter> rollingFileAppender(fileName, maxFileSize, maxFiles);
+-        return init<instance>(maxSeverity, &rollingFileAppender);
+-    }
+-
+-    template<class Formatter>
+-    inline Logger<PLOG_DEFAULT_INSTANCE>& init(Severity maxSeverity, const util::nchar* fileName, size_t maxFileSize = 0, int maxFiles = 0)
+-    {
+-        return init<Formatter, PLOG_DEFAULT_INSTANCE>(maxSeverity, fileName, maxFileSize, maxFiles);
+-    }
+-
+-    //////////////////////////////////////////////////////////////////////////
+-    // RollingFileAppender with TXT/CSV chosen by file extension
+-
+-    template<int instance>
+-    inline Logger<instance>& init(Severity maxSeverity, const util::nchar* fileName, size_t maxFileSize = 0, int maxFiles = 0)
+-    {
+-        return isCsv(fileName) ? init<CsvFormatter, instance>(maxSeverity, fileName, maxFileSize, maxFiles) : init<TxtFormatter, instance>(maxSeverity, fileName, maxFileSize, maxFiles);
+-    }
+-
+-    inline Logger<PLOG_DEFAULT_INSTANCE>& init(Severity maxSeverity, const util::nchar* fileName, size_t maxFileSize = 0, int maxFiles = 0)
+-    {
+-        return init<PLOG_DEFAULT_INSTANCE>(maxSeverity, fileName, maxFileSize, maxFiles);
+-    }
+-
+     //////////////////////////////////////////////////////////////////////////
+     // CHAR variants for Windows
+ 
+diff --git a/include/plog/Log.h b/include/plog/Log.h
+index b36de3c..2a89ddc 100644
+--- a/include/plog/Log.h
++++ b/include/plog/Log.h
+@@ -42,72 +42,8 @@
+ #define LOG_(instance, severity)        IF_LOG_(instance, severity) (*plog::get<instance>()) += plog::Record(severity, PLOG_GET_FUNC(), __LINE__, PLOG_GET_FILE(), PLOG_GET_THIS())
+ #define LOG(severity)                   LOG_(PLOG_DEFAULT_INSTANCE, severity)
+ 
+-#define LOG_VERBOSE                     LOG(plog::verbose)
+-#define LOG_DEBUG                       LOG(plog::debug)
+-#define LOG_INFO                        LOG(plog::info)
+-#define LOG_WARNING                     LOG(plog::warning)
+-#define LOG_ERROR                       LOG(plog::error)
+-#define LOG_FATAL                       LOG(plog::fatal)
+-#define LOG_NONE                        LOG(plog::none)
+-
+-#define LOG_VERBOSE_(instance)          LOG_(instance, plog::verbose)
+-#define LOG_DEBUG_(instance)            LOG_(instance, plog::debug)
+-#define LOG_INFO_(instance)             LOG_(instance, plog::info)
+-#define LOG_WARNING_(instance)          LOG_(instance, plog::warning)
+-#define LOG_ERROR_(instance)            LOG_(instance, plog::error)
+-#define LOG_FATAL_(instance)            LOG_(instance, plog::fatal)
+-#define LOG_NONE_(instance)             LOG_(instance, plog::none)
+-
+-#define LOGV                            LOG_VERBOSE
+-#define LOGD                            LOG_DEBUG
+-#define LOGI                            LOG_INFO
+-#define LOGW                            LOG_WARNING
+-#define LOGE                            LOG_ERROR
+-#define LOGF                            LOG_FATAL
+-#define LOGN                            LOG_NONE
+-
+-#define LOGV_(instance)                 LOG_VERBOSE_(instance)
+-#define LOGD_(instance)                 LOG_DEBUG_(instance)
+-#define LOGI_(instance)                 LOG_INFO_(instance)
+-#define LOGW_(instance)                 LOG_WARNING_(instance)
+-#define LOGE_(instance)                 LOG_ERROR_(instance)
+-#define LOGF_(instance)                 LOG_FATAL_(instance)
+-#define LOGN_(instance)                 LOG_NONE_(instance)
+-
+ //////////////////////////////////////////////////////////////////////////
+ // Conditional logging macros
+ 
+ #define LOG_IF_(instance, severity, condition)  if (!(condition)) {;} else LOG_(instance, severity)
+-#define LOG_IF(severity, condition)             LOG_IF_(PLOG_DEFAULT_INSTANCE, severity, condition)
+-
+-#define LOG_VERBOSE_IF(condition)               LOG_IF(plog::verbose, condition)
+-#define LOG_DEBUG_IF(condition)                 LOG_IF(plog::debug, condition)
+-#define LOG_INFO_IF(condition)                  LOG_IF(plog::info, condition)
+-#define LOG_WARNING_IF(condition)               LOG_IF(plog::warning, condition)
+-#define LOG_ERROR_IF(condition)                 LOG_IF(plog::error, condition)
+-#define LOG_FATAL_IF(condition)                 LOG_IF(plog::fatal, condition)
+-#define LOG_NONE_IF(condition)                  LOG_IF(plog::none, condition)
+-
+-#define LOG_VERBOSE_IF_(instance, condition)    LOG_IF_(instance, plog::verbose, condition)
+-#define LOG_DEBUG_IF_(instance, condition)      LOG_IF_(instance, plog::debug, condition)
+-#define LOG_INFO_IF_(instance, condition)       LOG_IF_(instance, plog::info, condition)
+-#define LOG_WARNING_IF_(instance, condition)    LOG_IF_(instance, plog::warning, condition)
+-#define LOG_ERROR_IF_(instance, condition)      LOG_IF_(instance, plog::error, condition)
+-#define LOG_FATAL_IF_(instance, condition)      LOG_IF_(instance, plog::fatal, condition)
+-#define LOG_NONE_IF_(instance, condition)       LOG_IF_(instance, plog::none, condition)
+-
+-#define LOGV_IF(condition)                      LOG_VERBOSE_IF(condition)
+-#define LOGD_IF(condition)                      LOG_DEBUG_IF(condition)
+-#define LOGI_IF(condition)                      LOG_INFO_IF(condition)
+-#define LOGW_IF(condition)                      LOG_WARNING_IF(condition)
+-#define LOGE_IF(condition)                      LOG_ERROR_IF(condition)
+-#define LOGF_IF(condition)                      LOG_FATAL_IF(condition)
+-#define LOGN_IF(condition)                      LOG_NONE_IF(condition)
+-
+-#define LOGV_IF_(instance, condition)           LOG_VERBOSE_IF_(instance, condition)
+-#define LOGD_IF_(instance, condition)           LOG_DEBUG_IF_(instance, condition)
+-#define LOGI_IF_(instance, condition)           LOG_INFO_IF_(instance, condition)
+-#define LOGW_IF_(instance, condition)           LOG_WARNING_IF_(instance, condition)
+-#define LOGE_IF_(instance, condition)           LOG_ERROR_IF_(instance, condition)
+-#define LOGF_IF_(instance, condition)           LOG_FATAL_IF_(instance, condition)
+-#define LOGN_IF_(instance, condition)           LOG_NONE_IF_(instance, condition)
++#define LOG_IF(severity, condition)             LOG_IF_(PLOG_DEFAULT_INSTANCE, severity, condition)
+\ No newline at end of file
+diff --git a/include/plog/Util.h b/include/plog/Util.h
+index 1e04c26..a371de2 100644
+--- a/include/plog/Util.h
++++ b/include/plog/Util.h
+@@ -137,30 +137,6 @@ namespace plog
+ #endif
+         }
+ 
+-        inline const nchar* findExtensionDot(const nchar* fileName)
+-        {
+-#ifdef _WIN32
+-#else
+-            return std::strrchr(fileName, '.');
+-#endif
+-        }
+-
+-        inline void splitFileName(const nchar* fileName, nstring& fileNameNoExt, nstring& fileExt)
+-        {
+-            const nchar* dot = findExtensionDot(fileName);
+-
+-            if (dot)
+-            {
+-                fileNameNoExt.assign(fileName, dot);
+-                fileExt.assign(dot + 1);
+-            }
+-            else
+-            {
+-                fileNameNoExt.assign(fileName);
+-                fileExt.clear();
+-            }
+-        }
+-
+         class NonCopyable
+         {
+         protected:
+@@ -173,89 +149,6 @@ namespace plog
+             NonCopyable& operator=(const NonCopyable&);
+         };
+ 
+-        class File : NonCopyable
+-        {
+-        public:
+-            File() : m_file(-1)
+-            {
+-            }
+-
+-            File(const nchar* fileName) : m_file(-1)
+-            {
+-                open(fileName);
+-            }
+-
+-            ~File()
+-            {
+-                close();
+-            }
+-
+-            off_t open(const nchar* fileName)
+-            {
+-#if defined(_WIN32) && (defined(__BORLANDC__) || defined(__MINGW32__))
+-                m_file = ::_wsopen(fileName, _O_CREAT | _O_WRONLY | _O_BINARY, SH_DENYWR, _S_IREAD | _S_IWRITE);
+-#elif defined(_WIN32)
+-                ::_wsopen_s(&m_file, fileName, _O_CREAT | _O_WRONLY | _O_BINARY, _SH_DENYWR, _S_IREAD | _S_IWRITE);
+-#else
+-                m_file = ::open(fileName, O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+-#endif
+-                return seek(0, SEEK_END);
+-            }
+-
+-            int write(const void* buf, size_t count)
+-            {
+-#ifdef _WIN32
+-#else
+-                return m_file != -1 ? static_cast<int>(::write(m_file, buf, count)) : -1;
+-#endif
+-            }
+-
+-            template<class CharType>
+-            int write(const std::basic_string<CharType>& str)
+-            {
+-                return write(str.data(), str.size() * sizeof(CharType));
+-            }
+-
+-            off_t seek(off_t offset, int whence)
+-            {
+-#ifdef _WIN32
+-#else
+-                return m_file != -1 ? ::lseek(m_file, offset, whence) : -1;
+-#endif
+-            }
+-
+-            void close()
+-            {
+-                if (m_file != -1)
+-                {
+-#ifdef _WIN32
+-#else
+-                    ::close(m_file);
+-#endif
+-                    m_file = -1;
+-                }
+-            }
+-
+-            static int unlink(const nchar* fileName)
+-            {
+-#ifdef _WIN32
+-#else
+-                return ::unlink(fileName);
+-#endif
+-            }
+-
+-            static int rename(const nchar* oldFilename, const nchar* newFilename)
+-            {
+-#ifdef _WIN32
+-#else
+-                return ::rename(oldFilename, newFilename);
+-#endif
+-            }
+-
+-        private:
+-            int m_file;
+-        };
+-
+         class Mutex : NonCopyable
+         {
+         public:

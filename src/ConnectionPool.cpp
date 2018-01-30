@@ -1,10 +1,14 @@
 #include <sys/socket.h>
 #include <poll.h>
 #include <errno.h>
-#include <stdlib.h>
+
+#include <cstdlib>
 #include <list>
 #include <vector>
 #include <algorithm>
+
+#include <plog/Appenders/ConsoleAppender.h>
+#include <plog/Severity.h>
 
 #include "ConnectionPool.h"
 #include "Utility.h"
@@ -67,6 +71,17 @@ int ConnectionPool::init(const char* const * hosts, const uint32_t* ports, const
     rv += m_conns[i].init(hosts[i], ports[i], aliases == NULL ? NULL : aliases[i]);
   }
   m_connSelector.addServers(m_conns, m_nConns);
+
+  // init plog
+  static plog::util::Mutex m_mutex;
+  plog::util::MutexLock lock(m_mutex);
+  if (plog::get() == NULL) {
+    plog::Severity log_level = static_cast<plog::Severity>(MC_LOG_LEVEL);
+    static plog::ConsoleAppender<plog::TxtFormatter> consoleAppender;
+    plog::init(log_level, &consoleAppender);
+    log_debug("[I: %p] perform init log with level %s", this, plog::severityToString(log_level));
+  }
+  log_info("[I: %p] init with %zu Connection", this, m_nConns);
   return rv;
 }
 
