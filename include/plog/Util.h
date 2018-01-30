@@ -137,6 +137,30 @@ namespace plog
 #endif
         }
 
+        inline const nchar* findExtensionDot(const nchar* fileName)
+        {
+#ifdef _WIN32
+#else
+            return std::strrchr(fileName, '.');
+#endif
+        }
+
+        inline void splitFileName(const nchar* fileName, nstring& fileNameNoExt, nstring& fileExt)
+        {
+            const nchar* dot = findExtensionDot(fileName);
+
+            if (dot)
+            {
+                fileNameNoExt.assign(fileName, dot);
+                fileExt.assign(dot + 1);
+            }
+            else
+            {
+                fileNameNoExt.assign(fileName);
+                fileExt.clear();
+            }
+        }
+
         class NonCopyable
         {
         protected:
@@ -147,6 +171,89 @@ namespace plog
         private:
             NonCopyable(const NonCopyable&);
             NonCopyable& operator=(const NonCopyable&);
+        };
+
+        class File : NonCopyable
+        {
+        public:
+            File() : m_file(-1)
+            {
+            }
+
+            File(const nchar* fileName) : m_file(-1)
+            {
+                open(fileName);
+            }
+
+            ~File()
+            {
+                close();
+            }
+
+            off_t open(const nchar* fileName)
+            {
+#if defined(_WIN32) && (defined(__BORLANDC__) || defined(__MINGW32__))
+                m_file = ::_wsopen(fileName, _O_CREAT | _O_WRONLY | _O_BINARY, SH_DENYWR, _S_IREAD | _S_IWRITE);
+#elif defined(_WIN32)
+                ::_wsopen_s(&m_file, fileName, _O_CREAT | _O_WRONLY | _O_BINARY, _SH_DENYWR, _S_IREAD | _S_IWRITE);
+#else
+                m_file = ::open(fileName, O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+#endif
+                return seek(0, SEEK_END);
+            }
+
+            int write(const void* buf, size_t count)
+            {
+#ifdef _WIN32
+#else
+                return m_file != -1 ? static_cast<int>(::write(m_file, buf, count)) : -1;
+#endif
+            }
+
+            template<class CharType>
+            int write(const std::basic_string<CharType>& str)
+            {
+                return write(str.data(), str.size() * sizeof(CharType));
+            }
+
+            off_t seek(off_t offset, int whence)
+            {
+#ifdef _WIN32
+#else
+                return m_file != -1 ? ::lseek(m_file, offset, whence) : -1;
+#endif
+            }
+
+            void close()
+            {
+                if (m_file != -1)
+                {
+#ifdef _WIN32
+#else
+                    ::close(m_file);
+#endif
+                    m_file = -1;
+                }
+            }
+
+            static int unlink(const nchar* fileName)
+            {
+#ifdef _WIN32
+#else
+                return ::unlink(fileName);
+#endif
+            }
+
+            static int rename(const nchar* oldFilename, const nchar* newFilename)
+            {
+#ifdef _WIN32
+#else
+                return ::rename(oldFilename, newFilename);
+#endif
+            }
+
+        private:
+            int m_file;
         };
 
         class Mutex : NonCopyable
