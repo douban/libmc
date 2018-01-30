@@ -415,7 +415,7 @@ err_code_t ConnectionPool::waitPoll() {
     Connection* conn = *it;
     pollfd_ptr = &pollfds[fd_idx];
     pollfd_ptr->fd = conn->socketFd();
-    pollfd_ptr->events = POLLOUT;
+    pollfd_ptr->events = POLLIN | POLLOUT;
     fd2conn[fd_idx] = conn;
   }
 
@@ -494,11 +494,6 @@ err_code_t ConnectionPool::waitPoll() {
             m_nActiveConn -= 1;
             goto next_fd;
           } else {
-            // start to recv if any data is sent
-            if (conn->m_counter > 0) {
-              pollfd_ptr->events |= POLLIN;
-            }
-
             if (nToSend == 0) {
               // log_debug("[%d] all sent", pollfd_ptr->fd);
               pollfd_ptr->events &= ~POLLOUT;
