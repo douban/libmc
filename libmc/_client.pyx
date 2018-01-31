@@ -943,9 +943,7 @@ cdef class PyClient:
         with nogil:
             self.last_error = self._imp.quit()
             self._imp.destroyBroadcastResult()
-        if self.last_error in {RET_CONN_POLL_ERR, RET_RECV_ERR}:
-            return True
-        return False
+        return self.last_error in {RET_CONN_POLL_ERR, RET_OK}
 
     def stats(self):
         self._record_thread_ident()

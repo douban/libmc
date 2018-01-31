@@ -828,13 +828,22 @@ func testQuit(mc, mc2 *Client, t *testing.T) {
 		t.Errorf("Error in Quit: %s", err)
 	}
 
-	st2, err := mc2.Stats()
-	if err != nil {
-		t.Error(err)
-	}
-	nc2, err = strconv.Atoi(st2[LocalMC]["curr_connections"])
-	if err != nil {
-		t.Error(err)
+	for i := 0; i < 3; i++ {
+		st2, err := mc2.Stats()
+		if err != nil {
+			t.Error(err)
+			break
+		}
+		nc2, err = strconv.Atoi(st2[LocalMC]["curr_connections"])
+		if err != nil {
+			t.Error(err)
+			break
+		}
+		if nc1-1 == nc2 {
+			break
+		} else {
+			time.Sleep(time.Second)
+		}
 	}
 
 	if nc1-1 != nc2 {

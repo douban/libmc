@@ -354,7 +354,7 @@ void ConnectionPool::dispatchIncrDecr(op_code_t op, const char* key, const size_
 }
 
 
-void ConnectionPool::broadcastCommand(const char * const cmd, const size_t cmdLens) {
+void ConnectionPool::broadcastCommand(const char * const cmd, const size_t cmdLens, const bool noreply) {
   for (size_t idx = 0; idx < m_nConns; ++idx) {
     Connection* conn = m_conns + idx;
     if (!conn->alive()) {
@@ -363,7 +363,9 @@ void ConnectionPool::broadcastCommand(const char * const cmd, const size_t cmdLe
       }
     }
     conn->takeBuffer(cmd, cmdLens);
-    ++conn->m_counter;
+    if (!noreply) {
+      ++conn->m_counter;
+    }
     conn->takeBuffer(kCRLF, 2);
     conn->setParserMode(MODE_END_STATE);
     m_nActiveConn += 1;
@@ -597,15 +599,18 @@ void ConnectionPool::setRetryTimeout(int timeout) {
 
 
 void ConnectionPool::markDeadAll(pollfd_t* pollfds, const char* reason) {
-
   nfds_t fd_idx = 0;
   for (std::vector<Connection*>::iterator it = m_activeConns.begin();
       it != m_activeConns.end();
       ++it, ++fd_idx) {
     Connection* conn = *it;
-    pollfd_t* pollfd_ptr = &pollfds[fd_idx];
-    if (pollfd_ptr->events & (POLLOUT | POLLIN)) {
+    if (pollfds == NULL) {
       conn->markDead(reason);
+    } else {
+      pollfd_t* pollfd_ptr = &pollfds[fd_idx];
+      if (pollfd_ptr->events & (POLLOUT | POLLIN)) {
+        conn->markDead(reason);
+      }
     }
   }
 }
@@ -613,7 +618,7 @@ void ConnectionPool::markDeadAll(pollfd_t* pollfds, const char* reason) {
 
 void ConnectionPool::markDeadConn(Connection* conn, const char* reason, pollfd_t* fd_ptr) {
   conn->markDead(reason);
-  fd_ptr->events = ~POLLOUT & ~POLLIN;
+  fd_ptr->events &= ~POLLOUT & ~POLLIN;
   fd_ptr->fd = conn->socketFd();
 }
 

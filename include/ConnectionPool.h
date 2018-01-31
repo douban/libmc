@@ -33,7 +33,7 @@ class ConnectionPool {
                      const exptime_t exptime, const bool noreply, size_t nItems);
   void dispatchIncrDecr(op_code_t op, const char* key, const size_t keyLen,
                         const uint64_t delta, const bool noreply);
-  void broadcastCommand(const char * const cmd, const size_t cmdLens);
+  void broadcastCommand(const char * const cmd, const size_t cmdLens, const bool noreply=false);
 
   err_code_t waitPoll();
 
@@ -47,7 +47,7 @@ class ConnectionPool {
   void setRetryTimeout(int timeout);
 
  protected:
-  void markDeadAll(pollfd_t* pollfds, const char*);
+  void markDeadAll(pollfd_t* pollfds, const char* reason);
   void markDeadConn(Connection* conn, const char* reason, pollfd_t* fd_ptr);
 
   uint32_t m_nActiveConn; // wait for poll
