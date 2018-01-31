@@ -56,20 +56,17 @@
 # define __VOID_CAST (void)
 #endif
 
-#ifndef _GNU_SOURCE
-int asprintf(char **s, const char *fmt, ...);
-#endif
-
 void printBacktrace();
 
 #define _mc_clean_errno() (errno == 0 ? "None" : strerror(errno))
 
+#define MAX_LOG_LENGTH 300
+
 #define _mc_log(LEVEL, FORMAT, ...) do { \
-  char* str; \
-  if (asprintf(&str, FORMAT "\n", ##__VA_ARGS__) > 0 ) { \
-    LOG(LEVEL) << str; \
+  char buf[MAX_LOG_LENGTH]; \
+  if ((snprintf(buf, MAX_LOG_LENGTH, FORMAT "\n", ##__VA_ARGS__)) > 0) { \
+    LOG(LEVEL) << buf; \
   } \
-  delete[] str; \
 } while (0)
 
 #define _mc_log_if(LEVEL, COND, FORMAT, ...) do { \

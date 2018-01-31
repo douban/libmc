@@ -1,8 +1,4 @@
-#include <cstdarg>
-
 #include "Common.h"
-
-
 #ifdef __GLIBC__
 #include <execinfo.h>
 #include <cstdlib>
@@ -19,27 +15,4 @@ void printBacktrace() {
 }
 #else
 void printBacktrace() {}
-#endif
-
-// Credits to:
-// https://github.com/yandex/ClickHouse/blob/master/libs/libglibc-compatibility/musl/vasprintf.c
-#ifndef _GNU_SOURCE
-int asprintf(char **s, const char *fmt, ...) {
-    va_list ap;
-    va_start(ap, fmt);
-    int l = vasprintf(s, fmt, ap);
-    va_end(ap);
-    return l;
-}
-
-int vasprintf(char **s, const char *fmt, va_list ap)
-{
-    va_list ap2;
-    va_copy(ap2, ap);
-    int l = vsnprintf(0, 0, fmt, ap2);
-    va_end(ap2);
-
-    if (l<0 || !(*s=(char *)malloc(l+1U))) return -1;
-    return vsnprintf(*s, l+1U, fmt, ap);
-}
 #endif
