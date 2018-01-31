@@ -20,6 +20,14 @@ namespace plog
         }
 
 #ifdef _WIN32
+        RollingFileAppender(const char* fileName, size_t maxFileSize = 0, int maxFiles = 0)
+            : m_fileSize()
+            , m_maxFileSize((std::max)(static_cast<off_t>(maxFileSize), static_cast<off_t>(1000))) // set a lower limit for the maxFileSize
+            , m_lastFileNumber((std::max)(maxFiles - 1, 0))
+            , m_firstWrite(true)
+        {
+            util::splitFileName(util::toWide(fileName).c_str(), m_fileNameNoExt, m_fileExt);
+        }
 #endif
 
         virtual void write(const Record& record)

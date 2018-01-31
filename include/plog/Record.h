@@ -37,6 +37,7 @@ namespace plog
             data = data ? data : L"(null)";
 
 #ifdef _WIN32
+            std::operator<<(stream, data);
 #else
             std::operator<<(stream, util::toNarrow(data));
 #endif
@@ -76,6 +77,7 @@ namespace plog
 #endif
 
 #ifdef _WIN32
+        Record& operator<<(std::wostream& (*data)(std::wostream&))
 #else
         Record& operator<<(std::ostream& (*data)(std::ostream&))
 #endif
@@ -88,6 +90,7 @@ namespace plog
         Record& operator<<(const QString& data)
         {
 #ifdef _WIN32
+            return *this << data.toStdWString();
 #else
             return *this << data.toStdString();
 #endif

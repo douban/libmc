@@ -11,6 +11,13 @@ namespace plog
     {
     public:
 #ifdef _WIN32
+        ConsoleAppender() : m_isatty(!!_isatty(_fileno(stdout))), m_stdoutHandle()
+        {
+            if (m_isatty)
+            {
+                m_stdoutHandle = GetStdHandle(stdHandle::kOutput);
+            }
+        }
 #else
         ConsoleAppender() : m_isatty(!!::isatty(::fileno(stdout))) {}
 #endif
@@ -27,6 +34,14 @@ namespace plog
         void writestr(const util::nstring& str)
         {
 #ifdef _WIN32
+            if (m_isatty)
+            {
+                WriteConsoleW(m_stdoutHandle, str.c_str(), static_cast<DWORD>(str.size()), NULL, NULL);
+            }
+            else
+            {
+                std::cout << util::toNarrow(str, codePage::kActive) << std::flush;
+            }
 #else
             std::cout << str << std::flush;
 #endif
@@ -41,6 +56,7 @@ namespace plog
         util::Mutex m_mutex;
         const bool  m_isatty;
 #ifdef _WIN32
+        HANDLE      m_stdoutHandle;
 #endif
     };
 }

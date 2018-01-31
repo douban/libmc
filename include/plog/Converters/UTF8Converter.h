@@ -14,6 +14,10 @@ namespace plog
         }
 
 #ifdef _WIN32
+        static std::string convert(const util::nstring& str)
+        {
+            return util::toNarrow(str, codePage::kUTF8);
+        }
 #else
         static const std::string& convert(const util::nstring& str)
         {
