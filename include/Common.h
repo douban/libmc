@@ -9,7 +9,9 @@
 #include <cstdlib>
 #include <cerrno>
 
+#ifdef MC_USE_PLOG
 #include <plog/Log.h>
+#endif
 
 #define PROJECT_NAME "libmc"
 #define MC_DEFAULT_PORT 11211
@@ -60,18 +62,25 @@ void printBacktrace();
 
 #define _mc_clean_errno() (errno == 0 ? "None" : strerror(errno))
 
-#define MAX_LOG_LENGTH 300
-
+#ifdef MC_USE_PLOG
+#ifndef MC_MAX_LOG_LENGTH
+#define MC_MAX_LOG_LENGTH 250
+#endif
 #define _mc_log(LEVEL, FORMAT, ...) do { \
-  char buf[MAX_LOG_LENGTH]; \
-  if ((snprintf(buf, MAX_LOG_LENGTH, FORMAT "\n", ##__VA_ARGS__)) > 0) { \
+  char buf[MC_MAX_LOG_LENGTH]; \
+  if ((snprintf(buf, MC_MAX_LOG_LENGTH, FORMAT "\n", ##__VA_ARGS__)) > 0) { \
     LOG(LEVEL) << buf; \
   } \
 } while (0)
-
-#define _mc_log_if(LEVEL, COND, FORMAT, ...) do { \
-  if (COND) _mc_log(LEVEL, FORMAT, ##__VA_ARGS__); \
+#else
+#define _mc_log(LEVEL, FORMAT, ...) do { \
+  fprintf( \
+    stderr, \
+    "[" PROJECT_NAME "] [" #LEVEL "] [%s:%d] " FORMAT "\n", \
+    __FILE__, __LINE__, ##__VA_ARGS__ \
+  ); \
 } while (0)
+#endif // MC_USE_PLOG
 
 // consistent with plog/include/Serverity.h
 #define MC_LOG_LEVEL_ERROR 2
@@ -79,40 +88,100 @@ void printBacktrace();
 #define MC_LOG_LEVEL_INFO 4
 #define MC_LOG_LEVEL_DEBUG 5
 
-#define MC_LOG_LEVEL MC_LOG_LEVEL_INFO
+#define MC_LOG_LEVEL MC_LOG_LEVEL_ERROR
+
 
 #ifdef NDEBUG
-#define log_debug_if(COND, M, ...) __VOID_CAST(0)
+
+#define log_debug_if(cond, M, ...) __VOID_CAST(0)
 #define log_debug(M, ...) __VOID_CAST(0)
 
-#define _ASSERTION_FAILED(cond) { \
+#ifdef MC_USE_PLOG
+#define _ASSERTION_FAILED(cond) do { \
   _mc_log(plog::fatal, "failed assertion `%s'" , #cond); \
   printBacktrace(); \
 } while (0)
 #else
+#define _ASSERTION_FAILED(cond) do { \
+  _mc_log(FATAL, "failed assertion `%s'" , #cond); \
+  printBacktrace(); \
+} while (0)
+#endif // MC_USE_PLOG
 
-#define log_debug_if(COND, M, ...) _mc_log_if(plog::debug, COND, "[E: %s] " M, _mc_clean_errno(), ##__VA_ARGS__)
-#define log_debug(M, ...) log_debug_if(MC_LOG_LEVEL >= MC_LOG_LEVEL_DEBUG, M, ##__VA_ARGS__)
+#else
 
+#ifdef MC_USE_PLOG
+#define log_debug(M, ...) _mc_log(plog::debug, "[E: %s] " M, _mc_clean_errno(), ##__VA_ARGS__)
 #define _ASSERTION_FAILED(cond) do { \
   _mc_log(plog::fatal, "failed assertion `%s'" , #cond); \
   printBacktrace(); \
   abort(); \
 } while (0)
+#else
+#if MC_LOG_LEVEL >= MC_LOG_LEVEL_DEBUG
+#define log_debug(M, ...) _mc_log(DEBUG, "[E: %s] " M, _mc_clean_errno(), ##__VA_ARGS__)
+#else
+#define log_debug(M, ...) __VOID_CAST(0)
 #endif
+#define _ASSERTION_FAILED(cond) do { \
+  _mc_log(FATAL, "failed assertion `%s'" , #cond); \
+  printBacktrace(); \
+  abort(); \
+} while (0)
+#endif // MC_USE_PLOG
+
+#define log_debug_if(cond, M, ...) do { \
+  if (cond) log_debug(M, ##__VA_ARGS__); \
+} while (0)
+
+#endif // NDEBUG
 
 #define ASSERT(cond) if (!(cond)) _ASSERTION_FAILED(cond)
 
 #define NOT_REACHED() ASSERT(0)
 
-#define log_info_if(COND, M, ...) _mc_log_if(plog::info, COND, M, ##__VA_ARGS__)
-#define log_info(M, ...) log_info_if(MC_LOG_LEVEL >= MC_LOG_LEVEL_INFO, M, ##__VA_ARGS__)
+#ifdef MC_USE_PLOG
+#define log_info(M, ...) _mc_log(plog::info, M, ##__VA_ARGS__)
+#else
+#if MC_LOG_LEVEL >= MC_LOG_LEVEL_INFO
+#define log_info(M, ...) _mc_log(INFO, M, ##__VA_ARGS__)
+#else
+#define log_info(M, ...) __VOID_CAST(0)
+#endif
+#endif // MC_USE_PLOG
 
-#define log_warn_if(COND, M, ...) _mc_log_if(plog::warning, COND, "[E: %s] " M, _mc_clean_errno(), ##__VA_ARGS__)
-#define log_warn(M, ...) log_warn_if(MC_LOG_LEVEL >= MC_LOG_LEVEL_WARNING, M, ##__VA_ARGS__)
+#define log_info_if(cond, M, ...) do { \
+  if (cond) log_info(M, ##__VA_ARGS__); \
+} while (0)
 
-#define log_err_if(COND, M, ...) _mc_log_if(plog::error, COND, "[E: %s] " M, _mc_clean_errno(), ##__VA_ARGS__)
-#define log_err(M, ...) log_err_if(MC_LOG_LEVEL >= MC_LOG_LEVEL_ERROR, M, ##__VA_ARGS__)
+#ifdef MC_USE_PLOG
+#define log_warn(M, ...) _mc_log(plog::warning, "[E: %s] " M, _mc_clean_errno(), ##__VA_ARGS__)
+#else
+#if MC_LOG_LEVEL >= MC_LOG_LEVEL_WARNING
+#define log_warn(M, ...) _mc_log(WARN, "[E: %s] " M, _mc_clean_errno(), ##__VA_ARGS__)
+#else
+#define log_warn(M, ...) __VOID_CAST(0)
+#endif
+#endif // MC_USE_PLOG
+
+#define log_warn_if(cond, M, ...) do { \
+  if (cond) log_warn(M, ##__VA_ARGS__); \
+} while (0)
+
+#ifdef MC_USE_PLOG
+#define log_err(M, ...) _mc_log(plog::error, "[E: %s] " M, _mc_clean_errno(), ##__VA_ARGS__)
+#else
+#if MC_LOG_LEVEL >= MC_LOG_LEVEL_ERROR
+#define log_err(M, ...) _mc_log(ERROR, "[E: %s] " M, _mc_clean_errno(), ##__VA_ARGS__)
+#else
+#define log_err(M, ...) __VOID_CAST(0)
+#endif
+#endif // MC_USE_PLOG
+
+#define log_err_if(cond, M, ...) do { \
+  if (cond) log_err(M, ##__VA_ARGS__); \
+} while (0)
+
 
 namespace douban {
 namespace mc {

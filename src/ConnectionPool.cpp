@@ -7,8 +7,10 @@
 #include <vector>
 #include <algorithm>
 
+#ifdef MC_USE_PLOG
 #include <plog/Appenders/ConsoleAppender.h>
 #include <plog/Severity.h>
+#endif
 
 #include "ConnectionPool.h"
 #include "Utility.h"
@@ -72,6 +74,7 @@ int ConnectionPool::init(const char* const * hosts, const uint32_t* ports, const
   }
   m_connSelector.addServers(m_conns, m_nConns);
 
+#ifdef MC_USE_PLOG
   // init plog
   static plog::util::Mutex m_mutex;
   plog::util::MutexLock lock(m_mutex);
@@ -81,6 +84,7 @@ int ConnectionPool::init(const char* const * hosts, const uint32_t* ports, const
     plog::init(log_level, &consoleAppender);
     log_debug("[I: %p] perform init log with level %s", this, plog::severityToString(log_level));
   }
+#endif
   log_info("[I: %p] init with %zu Connection", this, m_nConns);
   return rv;
 }

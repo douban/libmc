@@ -13,10 +13,14 @@ cache:
 env:
   matrix:
   - TEST_SUITE=cppcheck
-  - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Release PRJ_COMPILER=clang
-  - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Debug PRJ_COMPILER=clang
-  - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Release PRJ_COMPILER=gcc
-  - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Debug PRJ_COMPILER=gcc
+  - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Release PRJ_COMPILER=clang MC_USE_PLOG=false
+  - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Debug PRJ_COMPILER=clang MC_USE_PLOG=false
+  - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Release PRJ_COMPILER=gcc MC_USE_PLOG=false
+  - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Debug PRJ_COMPILER=gcc MC_USE_PLOG=false
+  - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Release PRJ_COMPILER=clang MC_USE_PLOG=true
+  - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Debug PRJ_COMPILER=clang MC_USE_PLOG=true
+  - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Release PRJ_COMPILER=gcc MC_USE_PLOG=true
+  - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Debug PRJ_COMPILER=gcc MC_USE_PLOG=true
   - TEST_SUITE=benchmark
 
 addons:

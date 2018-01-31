@@ -6,7 +6,12 @@ go version
 python misc/generate_hash_dataset.py tests/resources/keys.txt
 mkdir -p build
 cd build
-cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DWITH_TESTING=ON  ..
+if [[ $MC_USE_PLOG = "true" ]]
+then
+cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DWITH_TESTING=ON -DMC_USE_PLOG ..
+else
+cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DWITH_TESTING=ON ..
+fi
 make -j8
 valgrind --leak-check=full make test
 cd ..
