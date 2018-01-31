@@ -22,10 +22,8 @@ BufferReader::BufferReader()
 BufferReader::~BufferReader() {
   for (DataBlockListIterator it = m_dataBlockList.begin();
        it != m_dataBlockList.end(); ++it) {
-    if (!it->reusable()) {
-      log_warn("delete a DataBlock(%p) in use. nBytes: %lu.\n---\n%s\n---\n",
-               &*it, it->nBytesRef(), (*it)[0]);
-    }
+    log_warn_if(!it->reusable(), "delete a DataBlock(%p) in use. nBytes: %lu.\n---\n%s\n---\n",
+             &*it, it->nBytesRef(), (*it)[0]);
   }
   m_dataBlockList.clear();
   m_capacity = 0;

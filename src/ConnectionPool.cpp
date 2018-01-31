@@ -1,12 +1,15 @@
 #include <sys/socket.h>
 #include <poll.h>
 #include <errno.h>
-#include <stdlib.h>
+
+#include <cstdlib>
+#include <ctime>
 #include <list>
 #include <vector>
 #include <algorithm>
 
 #include <plog/Appenders/ConsoleAppender.h>
+#include <plog/Severity.h>
 
 #include "ConnectionPool.h"
 #include "Utility.h"
@@ -60,11 +63,7 @@ void ConnectionPool::setHashFunction(hash_function_options_t fn_opt) {
 
 
 int ConnectionPool::init(const char* const * hosts, const uint32_t* ports, const size_t n,
-                         const char* const * aliases) {
-  // init plog
-  static plog::ConsoleAppender<plog::TxtFormatter> consoleAppender;
-  plog::init(plog::debug, &consoleAppender);
-
+                         const char* const * aliases, int log_sample_percent) {
   delete[] m_conns;
   m_connSelector.reset();
   int rv = 0;
@@ -74,6 +73,19 @@ int ConnectionPool::init(const char* const * hosts, const uint32_t* ports, const
     rv += m_conns[i].init(hosts[i], ports[i], aliases == NULL ? NULL : aliases[i]);
   }
   m_connSelector.addServers(m_conns, m_nConns);
+
+  // init plog
+  static plog::util::Mutex m_mutex;
+
+  plog::util::MutexLock lock(m_mutex);
+  if (plog::get() == NULL) {
+    srand(time(NULL));
+    plog::Severity log_level = (rand() % 100 < log_sample_percent) ? static_cast<plog::Severity>(MC_LOG_LEVEL) : plog::none;
+    static plog::ConsoleAppender<plog::TxtFormatter> consoleAppender;
+    plog::init(log_level, &consoleAppender);
+    log_debug("[I: %p] perform init log with level %s", this, plog::severityToString(log_level));
+  }
+  log_info("[I: %p] init with %zu Connection", this, m_nConns);
   return rv;
 }
 
@@ -185,6 +197,7 @@ void ConnectionPool::dispatchStorage(op_code_t op,
       conn->getMessageResults()->reserve(conn->m_counter);
     }
   }
+  log_debug("[I: %p] after dispatchStorage, m_nActiveConn: %d", this, m_nActiveConn);
 }
 
 
@@ -202,7 +215,7 @@ void ConnectionPool::dispatchRetrieval(op_code_t op, const char* const* keys,
     if (conn == NULL) {
       continue;
     }
-    // debug("hash %s => %d (%p)", key, idx % m_nConns, conn);
+    // log_debug("hash %s => %d (%p)", key, idx % m_nConns, conn);
     if (++conn->m_counter == 1) {
       switch (op) {
         case GET_OP:
@@ -229,7 +242,7 @@ void ConnectionPool::dispatchRetrieval(op_code_t op, const char* const* keys,
       conn->getRetrievalResults()->reserve(conn->m_counter);
     }
   }
-  // debug("after dispatchRetrieval: m_nActiveConn: %d", this->m_nActiveConn);
+  log_debug("[I: %p] after dispatchRetrieval, m_nActiveConn: %d", this, m_nActiveConn);
 }
 
 
@@ -355,9 +368,9 @@ void ConnectionPool::dispatchIncrDecr(op_code_t op, const char* key, const size_
   m_activeConns.push_back(conn);
 
   // for ignore noreply
-  // before the below line, conn->m_counter is a counter regarding how many packet to *send*
+  // before the below line, conn->m_counter is a counter regarding how many requests to *send*
   conn->m_counter = conn->requestKeyCount();
-  // after the upper line, conn->m_counter is a counter regarding how many packet to *recv*
+  // after the upper line, conn->m_counter is a counter regarding how many responses to *recv*
 }
 
 
@@ -385,7 +398,7 @@ err_code_t ConnectionPool::waitPoll() {
     if (m_nInvalidKey > 0) {
       return RET_INVALID_KEY_ERR;
     } else {
-      // hard server error
+      log_debug("[I: %p] hard server error", this);
       return RET_MC_SERVER_ERR;
     }
   }
@@ -414,9 +427,8 @@ err_code_t ConnectionPool::waitPoll() {
       ret_code = RET_POLL_ERR;
       break;
     } else if (rv == 0) {
-      log_warn("poll timeout. (m_nActiveConn: %d)", m_nActiveConn);
       // NOTE: MUST reset all active TCP connections after timeout.
-      markDeadAll(pollfds, keywords::kPOLL_TIMEOUT);
+      markDeadAll(pollfds, keywords::kPOLL_TIMEOUT_ERROR);
       ret_code = RET_POLL_TIMEOUT_ERR;
       break;
     } else {
@@ -443,10 +455,12 @@ err_code_t ConnectionPool::waitPoll() {
             goto next_fd;
           } else {
             // start to recv if any data is sent
-            pollfd_ptr->events |= POLLIN;
+            if (conn->m_counter > 0) {
+              pollfd_ptr->events |= POLLIN;
+            }
 
             if (nToSend == 0) {
-              // debug("[%d] all sent", pollfd_ptr->fd);
+              // log_debug("[%d] all sent", pollfd_ptr->fd);
               pollfd_ptr->events &= ~POLLOUT;
               if (conn->m_counter == 0) {
                 // just send, no recv for noreply
@@ -461,6 +475,7 @@ err_code_t ConnectionPool::waitPoll() {
           // POLLIN recv
           ssize_t nRecv = conn->recv();
           if (nRecv == -1 || nRecv == 0) {
+            log_warn("[I: %p] recv_error, Connection(%p): %s, nRecv: %zd", this, conn, conn->name(), nRecv);
             markDeadConn(conn, keywords::kRECV_ERROR, pollfd_ptr);
             ret_code = RET_RECV_ERR;
             m_nActiveConn -= 1;
@@ -606,6 +621,7 @@ void ConnectionPool::setRetryTimeout(int timeout) {
 
 
 void ConnectionPool::markDeadAll(pollfd_t* pollfds, const char* reason) {
+  log_warn_if(reason != NULL, "[I: %p] markDeadAll(reason: %s), m_nActiveConn: %d", this, reason, m_nActiveConn);
   nfds_t fd_idx = 0;
   for (std::vector<Connection*>::iterator it = m_activeConns.begin();
       it != m_activeConns.end();
@@ -624,6 +640,7 @@ void ConnectionPool::markDeadAll(pollfd_t* pollfds, const char* reason) {
 
 
 void ConnectionPool::markDeadConn(Connection* conn, const char* reason, pollfd_t* fd_ptr) {
+  log_warn("[I: %p] markDeadConn(reason: %s), Connection(%p): %s", this, reason, conn, conn->name());
   conn->markDead(reason);
   fd_ptr->events &= ~POLLOUT & ~POLLIN;
   fd_ptr->fd = conn->socketFd();

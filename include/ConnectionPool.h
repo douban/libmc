@@ -14,7 +14,7 @@ class ConnectionPool {
   ~ConnectionPool();
   void setHashFunction(hash_function_options_t fn_opt);
   int init(const char* const * hosts, const uint32_t* ports, const size_t n,
-           const char* const * aliases = NULL);
+           const char* const * aliases = NULL, int log_sample_percent=100);
   const char* getServerAddressByKey(const char* key, size_t keyLen);
   const char* getRealtimeServerAddressByKey(const char* key, size_t keyLen);
   void enableConsistentFailover();

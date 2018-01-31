@@ -853,7 +853,7 @@ func testQuit(mc, mc2 *Client, t *testing.T) {
 	// back to life immediately
 	// itemsGot, err := mc.GetMulti(keys)
 	// if err != nil || len(itemsGot) != nItems {
-	// 	t.Error(err)
+	//	t.Error(err)
 	// }
 }
 

@@ -38,7 +38,7 @@ DataBlock::~DataBlock() {
 
 void DataBlock::init(size_t len) {
   if (m_data != NULL) {
-    log_err("DataBlock(%p)::init should only be called once", this);
+    log_err("[I: %p] DataBlock::init should only be called once", this);
     return;
   }
   this->m_data = new char[len];

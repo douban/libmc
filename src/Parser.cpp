@@ -63,7 +63,6 @@ void PacketParser::setBufferReader(BufferReader* reader) {
 
 
 void PacketParser::addRequestKey(const char* const key, const size_t len) {
-  // log_info("add request key: %.*s", static_cast<int>(len), key);
   struct ::iovec iov = {const_cast<char*>(key), len};
   m_requestKeys.push(iov);
 }
@@ -187,7 +186,7 @@ void PacketParser::process_packets(err_code_t& err) {
             SKIP_BYTES(2); // "\r\n"
 #ifndef NDEBUG
             char* _k = parseTokenData(mt_kvPtr->key, mt_kvPtr->key_len);
-            // debug("got %.*s", static_cast<int>(mt_kvPtr->key_len), _k);
+            // log_debug("got %.*s", static_cast<int>(mt_kvPtr->key_len), _k);
             if (mt_kvPtr->key.size() > 1) {
               delete[] _k;
             }
@@ -254,7 +253,7 @@ int PacketParser::start_state(err_code_t& err) {
   if (err != RET_OK) {
     return 0;
   }
-  // log_info("start_state with %c", c1);
+  // log_debug("start_state with %c", c1);
 
 #ifndef NDEBUG
 #define EXPECT_BYTES(S, N) \
@@ -311,7 +310,7 @@ int PacketParser::start_state(err_code_t& err) {
           m_buffer_reader->skipBytes(err, 1); // '\n'
           assert(err == RET_OK);
           char* ptr = parseTokenData(err_td, n);
-          log_err("error: [%.*s]", static_cast<int>(n - 1), ptr); // -1 to ignore '\r'
+          log_err("[I: %p] error: [%.*s]", this, static_cast<int>(n - 1), ptr); // -1 to ignore '\r'
           freeTokenData(err_td);
           err = RET_PROGRAMMING_ERR;
           m_state = FSM_ERROR;
@@ -364,7 +363,7 @@ int PacketParser::start_state(err_code_t& err) {
           m_buffer_reader->skipBytes(err, 1); // '\n'
           assert(err == RET_OK);
           char* ptr = parseTokenData(err_td, n);
-          log_err("server_error: [%.*s]", static_cast<int>(n - 1), ptr); // -1 to ignore '/r'
+          log_err("[I: %p] server_error: [%.*s]", this, static_cast<int>(n - 1), ptr); // -1 to ignore '/r'
           freeTokenData(err_td);
           err = RET_MC_SERVER_ERR;
           m_state = FSM_ERROR;
@@ -415,7 +414,7 @@ int PacketParser::start_state(err_code_t& err) {
         m_buffer_reader->skipBytes(err, 1); // '\n'
         assert(err == RET_OK);
         char* ptr = parseTokenData(err_td, n);
-        log_err("client_error: [%.*s]", static_cast<int>(n - 1), ptr); // -1 to ignore '/r'
+        log_err("[I: %p] client_error: [%.*s]", this, static_cast<int>(n - 1), ptr); // -1 to ignore '/r'
         freeTokenData(err_td);
         err = RET_PROGRAMMING_ERR;
         m_state = FSM_ERROR;
@@ -438,7 +437,7 @@ int PacketParser::start_state(err_code_t& err) {
       break;
     default:
       err = RET_PROGRAMMING_ERR;
-      log_err("programming error: unexpected leading char '%c' found", c1);
+      log_err("[I: %p] programming error: unexpected leading char '%c' found", this, c1);
       break;
   }
   return 0;

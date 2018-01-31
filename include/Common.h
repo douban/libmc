@@ -63,6 +63,7 @@ int asprintf(char **s, const char *fmt, ...);
 void printBacktrace();
 
 #define _mc_clean_errno() (errno == 0 ? "None" : strerror(errno))
+
 #define _mc_log(LEVEL, FORMAT, ...) do { \
   char* str; \
   if (asprintf(&str, FORMAT "\n", ##__VA_ARGS__) > 0 ) { \
@@ -71,14 +72,20 @@ void printBacktrace();
   delete[] str; \
 } while (0)
 
-#define MC_LOG_LEVEL_ERROR 1
-#define MC_LOG_LEVEL_WARNING 2
-#define MC_LOG_LEVEL_INFO 3
-#define MC_LOG_LEVEL_DEBUG 4
+#define _mc_log_if(LEVEL, COND, FORMAT, ...) do { \
+  if (COND) _mc_log(LEVEL, FORMAT, ##__VA_ARGS__); \
+} while (0)
+
+// consistent with plog/include/Serverity.h
+#define MC_LOG_LEVEL_ERROR 2
+#define MC_LOG_LEVEL_WARNING 3
+#define MC_LOG_LEVEL_INFO 4
+#define MC_LOG_LEVEL_DEBUG 5
 
 #define MC_LOG_LEVEL MC_LOG_LEVEL_ERROR
 
 #ifdef NDEBUG
+#define log_debug_if(COND, M, ...) __VOID_CAST(0)
 #define log_debug(M, ...) __VOID_CAST(0)
 
 #define _ASSERTION_FAILED(cond) { \
@@ -87,13 +94,8 @@ void printBacktrace();
 } while (0)
 #else
 
-#if MC_LOG_LEVEL >= MC_LOG_LEVEL_DEBUG
-#define log_debug(M, ...) do { \
-  _mc_log(plog::debug, "[E: %s] " M, _mc_clean_errno(), ##__VA_ARGS__); \
-} while (0)
-#else
-#define log_debug(M, ...) __VOID_CAST(0)
-#endif
+#define log_debug_if(COND, M, ...) _mc_log_if(plog::debug, COND, "[E: %s] " M, _mc_clean_errno(), ##__VA_ARGS__)
+#define log_debug(M, ...) log_debug_if(MC_LOG_LEVEL >= MC_LOG_LEVEL_DEBUG, M, ##__VA_ARGS__)
 
 #define _ASSERTION_FAILED(cond) do { \
   _mc_log(plog::fatal, "failed assertion `%s'" , #cond); \
@@ -106,29 +108,14 @@ void printBacktrace();
 
 #define NOT_REACHED() ASSERT(0)
 
-#if MC_LOG_LEVEL >= MC_LOG_LEVEL_INFO
-#define log_info(M, ...) do { \
-  _mc_log(plog::info, M, ##__VA_ARGS__); \
-} while (0)
-#else
-#define log_info(M, ...) __VOID_CAST(0)
-#endif
+#define log_info_if(COND, M, ...) _mc_log_if(plog::info, COND, M, ##__VA_ARGS__)
+#define log_info(M, ...) log_info_if(MC_LOG_LEVEL >= MC_LOG_LEVEL_INFO, M, ##__VA_ARGS__)
 
-#if MC_LOG_LEVEL >= MC_LOG_LEVEL_WARNING
-#define log_warn(M, ...) do { \
-  _mc_log(plog::warning, "[E: %s] " M, _mc_clean_errno(), ##__VA_ARGS__); \
-} while (0)
-#else
-#define log_warn(M, ...) __VOID_CAST(0)
-#endif
+#define log_warn_if(COND, M, ...) _mc_log_if(plog::warning, COND, "[E: %s] " M, _mc_clean_errno(), ##__VA_ARGS__)
+#define log_warn(M, ...) log_warn_if(MC_LOG_LEVEL >= MC_LOG_LEVEL_WARNING, M, ##__VA_ARGS__)
 
-#if MC_LOG_LEVEL >= MC_LOG_LEVEL_ERROR
-#define log_err(M, ...) do { \
-  _mc_log(plog::error, "[E: %s] " M, _mc_clean_errno(), ##__VA_ARGS__); \
-} while (0)
-#else
-#define log_err(M, ...) __VOID_CAST(0)
-#endif
+#define log_err_if(COND, M, ...) _mc_log_if(plog::error, COND, "[E: %s] " M, _mc_clean_errno(), ##__VA_ARGS__)
+#define log_err(M, ...) log_err_if(MC_LOG_LEVEL >= MC_LOG_LEVEL_ERROR, M, ##__VA_ARGS__)
 
 namespace douban {
 namespace mc {

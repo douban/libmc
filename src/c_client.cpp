@@ -3,6 +3,7 @@
 
 
 using douban::mc::Client;
+using douban::mc::errCodeToString;
 
 
 void* client_create() {
@@ -145,4 +146,8 @@ int client_stats(void* client, broadcast_result_t** results, size_t* n_servers) 
 int client_quit(void* client) {
   douban::mc::Client* c = static_cast<Client*>(client);
   return c->quit();
+}
+
+const char* err_code_to_string(err_code_t err) {
+  return douban::mc::errCodeToString(err);
 }
