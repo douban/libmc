@@ -1,8 +1,8 @@
 package golibmc
 
 /*
-#cgo CFLAGS: -I ./../include
-#cgo CXXFLAGS: -I ./../include
+#cgo CFLAGS: -I ./../include -I ./../3rd_party
+#cgo CXXFLAGS: -I ./../include -I ./../3rd_party
 #include "c_client.h"
 */
 import "C"

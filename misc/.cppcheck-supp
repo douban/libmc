@@ -1,15 +1,3 @@
-*:include/llvm/SmallVector.h:55
-*:include/llvm/SmallVector.h:88
-*:include/llvm/SmallVector.h:134
-*:include/llvm/SmallVector.h:162
-*:include/llvm/SmallVector.h:214
-*:include/llvm/SmallVector.h:515
-*:include/llvm/SmallVector.h:516
-*:include/llvm/SmallVector.h:715
-*:include/llvm/SmallVector.h:718
-*:include/llvm/SmallVector.h:726
-*:include/llvm/SmallVector.h:735
-*:include/llvm/SmallVector.h:796
 unusedFunction:src/Client.cpp:216
 unusedFunction:src/c_client.cpp:90
 unusedFunction:src/c_client.cpp:92

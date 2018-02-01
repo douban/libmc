@@ -5,7 +5,7 @@ URL="https://github.com/SergiusTheBest/plog/archive/${VER}.tar.gz"
 echo "Downloading $URL"
 curl $URL -L -o /tmp/plog.tar.gz
 
-cd include
+cd 3rd_party
 tar xvf /tmp/plog.tar.gz
 rm -rf plog
 cp -r plog-${VER}/include/plog plog
