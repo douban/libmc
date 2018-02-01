@@ -42,7 +42,7 @@ constStatement:src/BufferReader.cpp:48
 constStatement:src/Connection.cpp:180
 constStatement:src/Connection.cpp:199
 constStatement:src/Connection.cpp:204
-constStatement:src/ConnectionPool.cpp:410
+constStatement:src/ConnectionPool.cpp:429
 constStatement:src/DataBlock.cpp:52
 constStatement:src/HashkitKetama.cpp:136
 constStatement:src/Utility.cpp:17
