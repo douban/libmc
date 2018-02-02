@@ -6,9 +6,9 @@ go version
 python misc/generate_hash_dataset.py tests/resources/keys.txt
 mkdir -p build
 cd build
-if [[ $MC_USE_PLOG = "true" ]]
+if [ "$MC_USE_PLOG" = "true" ]
 then
-cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DWITH_TESTING=ON -DMC_USE_PLOG ..
+cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DWITH_TESTING=ON -DMC_USE_PLOG=1 ..
 else
 cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DWITH_TESTING=ON ..
 fi
