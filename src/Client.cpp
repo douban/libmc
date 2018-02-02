@@ -156,7 +156,7 @@ err_code_t Client::version(broadcast_result_t** results, size_t* nHosts) {
 err_code_t Client::quit() {
   broadcastCommand(keywords::kQUIT, 4, true);
   err_code_t rv = waitPoll();
-  markDeadAll(NULL, keywords::kCONN_QUIT);
+  markDeadAll(NULL, keywords::kCONN_EOF);
   log_info_if(rv != RET_OK, "[I: %p], err code %s", this, errCodeToString(rv));
   return rv;
 }

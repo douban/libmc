@@ -215,7 +215,7 @@ void Connection::markDead(const char* reason, int delay) {
     time(&m_deadUntil);
     m_deadUntil += delay; // check after `delay` seconds, default 0
     this->close();
-    if (strcmp(reason, keywords::kCONN_QUIT) != 0) {
+    if (strcmp(reason, keywords::kCONN_EOF) != 0) {
       log_warn("[I: %p] %s is dead(reason: %s, delay: %d), next check at %lu",
                this, m_name, reason, delay, m_deadUntil);
 #ifndef NDEBUG
@@ -292,6 +292,7 @@ ssize_t Connection::send() {
 ssize_t Connection::recv() {
   size_t bufferSize = m_buffer_reader->getNextPreferedDataBlockSize();
   size_t bufferSizeAvailable = m_buffer_reader->prepareWriteBlock(bufferSize);
+  assert(bufferSizeAvailable > 0);
   char* writePtr = m_buffer_reader->getWritePtr();
   ssize_t nRecv = ::recv(m_socketFd, writePtr, bufferSizeAvailable, 0);
   log_debug("[I: %p] %s recv(%lu)", this, m_name, nRecv);

@@ -46,7 +46,7 @@ static const char kPROGRAMMING_ERROR[] = "programming_error";
 static const char kINVALID_KEY_ERROR[] = "invalid_key_error";
 static const char kINCOMPLETE_BUFFER_ERROR[] = "incomplete_buffer_error";
 
-static const char kCONN_QUIT[] = "conn_quit";
+static const char kCONN_EOF[] = "conn_eof";
 
 } // namespace keywords
 } // namespace mc
