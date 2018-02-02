@@ -1035,4 +1035,4 @@ cdef class PyClient:
         return self.last_error
 
     def get_last_strerror(self):
-        return <bytes>errCodeToString(<err_code_t>self.last_error)
+        return errCodeToString(<err_code_t>self.last_error)

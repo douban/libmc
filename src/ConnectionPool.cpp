@@ -617,7 +617,7 @@ void ConnectionPool::setRetryTimeout(int timeout) {
 
 
 void ConnectionPool::markDeadAll(pollfd_t* pollfds, const char* reason) {
-  log_warn_if(reason != NULL, "[I: %p] markDeadAll(reason: %s), m_nActiveConn: %d", this, reason, m_nActiveConn);
+  log_warn("[I: %p] markDeadAll(reason: %s), m_nActiveConn: %d", this, reason, m_nActiveConn);
   nfds_t fd_idx = 0;
   for (std::vector<Connection*>::iterator it = m_activeConns.begin();
       it != m_activeConns.end();

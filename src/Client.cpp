@@ -228,10 +228,8 @@ void Client::_sleep(uint32_t seconds) {
 }
 
 
-const char* errCodeToString(err_code_t err)
-{
-  switch (err)
-  {
+const char* errCodeToString(err_code_t err) {
+  switch (err) {
     case RET_SEND_ERR:
       return keywords::kSEND_ERROR;
     case RET_RECV_ERR:
