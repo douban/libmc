@@ -448,12 +448,24 @@ err_code_t ConnectionPool::waitPoll() {
         if (pollfd_ptr->revents & POLLIN) {
           // POLLIN recv
           ssize_t nRecv = conn->recv();
-          if (nRecv == -1 || nRecv == 0) {
+          if (nRecv == 0) {
+            markDeadConn(conn, keywords::kCONN_EOF, pollfd_ptr);
+            if (conn->tryReconnect()) {
+              pollfd_ptr->fd = conn->socketFd();
+              pollfd_ptr->events = POLLIN | POLLOUT;
+              goto next_fd;
+            }
+
             log_warn("[I: %p] recv_error, Connection(%p): %s, lastActive: %lu, nRecv: %zd",
                      this, conn, conn->name(), conn->getLastActive(), nRecv);
             markDeadConn(conn, keywords::kRECV_ERROR, pollfd_ptr);
             ret_code = RET_RECV_ERR;
-            m_nActiveConn -= 1;
+            --m_nActiveConn;
+            goto next_fd;
+          } else if (nRecv == -1) {
+            markDeadConn(conn, keywords::kRECV_ERROR, pollfd_ptr);
+            ret_code = RET_RECV_ERR;
+            --m_nActiveConn;
             goto next_fd;
           }
 
