@@ -193,8 +193,7 @@ void Connection::close() {
 
 bool Connection::tryReconnect() {
   if (!m_alive) {
-    time_t now;
-    time(&now);
+    time_t now = time(NULL);
     if (now >= m_deadUntil) {
       int rv = this->connect();
       if (rv == 0) {
