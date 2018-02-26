@@ -71,6 +71,32 @@ int ConnectionPool::init(const char* const * hosts, const uint32_t* ports, const
 }
 
 
+int ConnectionPool::updateServers(const char* const* hosts, const uint32_t* ports, const size_t n,
+                                  const char* const* aliases) {
+  int rv = 0;
+  if (m_nConns != n) {
+    return 1;
+  }
+  if (aliases != NULL) {
+    for (size_t i = 0; i < m_nConns; i++) {
+      if (m_conns[i].hasAlias() && (strcmp(m_conns[i].name(), aliases[i]) != 0)) {
+        return 2;
+      }
+    }
+  }
+  for (size_t i = 0; i < m_nConns; i++) {
+    if ((strcmp(m_conns[i].host(), hosts[i]) == 0) && (m_conns[i].port() == ports[i])) {
+      --rv;
+    } else {
+      rv += m_conns[i].init(hosts[i], ports[i], aliases == NULL ? NULL : aliases[i]);
+      m_conns[i].markDead(keywords::kUPDATE_SERVER, 0);
+      m_conns[i].reset();
+    }
+  }
+  return rv;
+}
+
+
 const char* ConnectionPool::getServerAddressByKey(const char* key, size_t keyLen) {
   bool check_alive = false;
   Connection* conn = m_connSelector.getConn(key, keyLen, check_alive);

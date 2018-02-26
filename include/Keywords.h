@@ -44,6 +44,8 @@ static const char kPOLL_TIMEOUT[] = "poll_timeout";
 static const char kPOLL_ERROR[] = "poll_error";
 static const char kPROGRAMMING_ERROR[] = "programming_error";
 
+static const char kUPDATE_SERVER[] = "update_server";
+
 static const char kCONN_QUIT[] = "conn_quit";
 
 } // namespace keywords

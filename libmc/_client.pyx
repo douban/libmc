@@ -114,6 +114,8 @@ cdef extern from "Client.h" namespace "douban::mc":
         void config(config_options_t opt, int val) nogil
         int init(const char* const * hosts, const uint32_t* ports, size_t n,
                  const char* const * aliases) nogil
+        int updateServers(const char* const * hosts, const uint32_t* ports, size_t n,
+                          const char* const * aliases) nogil
         char* getServerAddressByKey(const char* key, size_t keyLen) nogil
         char* getRealtimeServerAddressByKey(const char* key, size_t keyLen) nogil
         void enableConsistentFailover() nogil
@@ -346,10 +348,36 @@ cdef class PyClient:
                   basestring prefix=None, hash_function_options_t hash_fn=OPT_HASH_MD5, failover=False,
                   encoding='utf8'):
         self.servers = servers
+        self._imp = new Client()
+        self._imp.config(CFG_HASH_FUNCTION, hash_fn)
+        rv = self._update_servers(servers, True)
+        if failover:
+            self._imp.enableConsistentFailover()
+        else:
+            self._imp.disableConsistentFailover()
+
+        self.do_split = do_split
+        self.comp_threshold = comp_threshold
+        self.noreply = noreply
+        self.hash_fn = hash_fn
+        self.failover = failover
+        self.encoding = encoding
+        if prefix:
+            self.prefix = bytes(prefix) if isinstance(prefix, bytes) else prefix.encode(self.encoding)
+        else:
+            self.prefix = None
+
+        self.last_error = 0
+        self._thread_ident = None
+        self._created_stack = traceback.extract_stack()
+
+    cdef _update_servers(self, list servers, bool_t init):
+        cdef int rv = 0
         cdef size_t n = len(servers)
         cdef char** c_hosts = <char**>PyMem_Malloc(n * sizeof(char*))
         cdef uint32_t* c_ports = <uint32_t*>PyMem_Malloc(n * sizeof(uint32_t))
         cdef char** c_aliases = <char**>PyMem_Malloc(n * sizeof(char*))
+
         servers_ = []
         for srv in servers:
             addr_alias = srv.split(' ')
@@ -380,33 +408,18 @@ cdef class PyClient:
             else:
                 c_aliases[i] = PyString_AsString(alias)
 
-        cdef int rv = 0
-        self._imp = new Client()
-        self._imp.config(CFG_HASH_FUNCTION, hash_fn)
-        rv = self._imp.init(c_hosts, c_ports, n, c_aliases)
-        if failover:
-            self._imp.enableConsistentFailover()
+        if init:
+            rv = self._imp.init(c_hosts, c_ports, n, c_aliases)
         else:
-            self._imp.disableConsistentFailover()
+            rv = self._imp.updateServers(c_hosts, c_ports, n, c_aliases)
 
         PyMem_Free(c_hosts)
         PyMem_Free(c_ports)
         PyMem_Free(c_aliases)
-        self.do_split = do_split
-        self.comp_threshold = comp_threshold
-        self.noreply = noreply
-        self.hash_fn = hash_fn
-        self.failover = failover
-        self.encoding = encoding
-        if prefix:
-            self.prefix = bytes(prefix) if isinstance(prefix, bytes) else prefix.encode(self.encoding)
-        else:
-            self.prefix = None
+
         Py_DECREF(servers_)
 
-        self.last_error = 0
-        self._thread_ident = None
-        self._created_stack = traceback.extract_stack()
+        return rv
 
     def __dealloc__(self):
         del self._imp
@@ -1045,6 +1058,13 @@ cdef class PyClient:
 
     def get_last_error(self):
         return self.last_error
+
+    def update_servers(self, servers):
+        rv = self._update_servers(servers, False)
+        if rv + len(servers) == 0:
+            self.servers = servers
+            return True
+        return False
 
     def get_last_strerror(self):
         return ERROR_CODE_TO_STR.get(self.last_error, '')
