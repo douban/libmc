@@ -62,7 +62,6 @@ cdef extern from "Export.h":
     ctypedef uint64_t cas_unique_t
 
     ctypedef struct retrieval_result_t:
-        retrieval_result_t()
         char* key
         uint8_t key_len
         flags_t flags
@@ -116,8 +115,8 @@ cdef extern from "Client.h" namespace "douban::mc":
                  const char* const * aliases) nogil
         int updateServers(const char* const * hosts, const uint32_t* ports, size_t n,
                           const char* const * aliases) nogil
-        char* getServerAddressByKey(const char* key, size_t keyLen) nogil
-        char* getRealtimeServerAddressByKey(const char* key, size_t keyLen) nogil
+        char* getServerAddressByKey(const char* key, const size_t keyLen) nogil
+        char* getRealtimeServerAddressByKey(const char* key, const size_t keyLen) nogil
         void enableConsistentFailover() nogil
         void disableConsistentFailover() nogil
         err_code_t get(
@@ -200,7 +199,7 @@ cdef extern from "Client.h" namespace "douban::mc":
             size_t* nResults
         ) nogil
         void destroyUnsignedResult() nogil
-        void _sleep(uint32_t ms) nogil
+        void _sleep(uint32_t seconds) nogil
 
 cdef uint32_t MC_DEFAULT_PORT = 11211
 cdef flags_t _FLAG_EMPTY = 0
@@ -458,7 +457,7 @@ cdef class PyClient:
             c_server_addr = c_addr
             return c_server_addr
 
-    cdef normalize_key(self, basestring raw_key):
+    cpdef normalize_key(self, basestring raw_key):
         cdef bytes key
         if isinstance(raw_key, unicode):
             key = raw_key.encode(self.encoding)
@@ -1040,7 +1039,6 @@ cdef class PyClient:
 
     def clear_thread_ident(self):
         self._thread_ident = None
-        self._thread_ident_stack = None
 
     def _record_thread_ident(self):
         if self._thread_ident is None:
