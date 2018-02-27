@@ -63,7 +63,7 @@ int Connection::connect() {
   hints.ai_family = AF_INET;
   hints.ai_socktype = SOCK_STREAM;
   hints.ai_protocol = IPPROTO_TCP;
-  char str_port[MC_NI_MAXSERV] = "\0";
+  char str_port[MC_NI_MAXSERV] = "";
   snprintf(str_port, MC_NI_MAXSERV, "%u", m_port);
   if (getaddrinfo(m_host, str_port, &hints, &server_addrinfo) != 0) {
     if (server_addrinfo) {
@@ -80,21 +80,14 @@ int Connection::connect() {
     }
 
     // non blocking
-    int flags = -1;
-    do {
-      flags = fcntl(fd, F_GETFL, 0);
-    } while (flags == -1 && (errno == EINTR || errno == EAGAIN));
-    if (flags == -1) {
+    int flags;
+
+    if ((flags = fcntl(fd, F_GETFL)) == -1) {
       goto try_next_ai;
     }
 
     if ((flags & O_NONBLOCK) == 0) {
-      int rv = -1;
-      do {
-        rv = fcntl(fd, F_SETFL, flags | O_NONBLOCK);
-      } while (rv == -1 && (errno == EINTR || errno == EAGAIN));
-
-      if (rv == -1) {
+      if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1) {
         goto try_next_ai;
       }
     }

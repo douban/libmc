@@ -24,8 +24,6 @@ unusedFunction:src/c_client.cpp:106
 unusedFunction:src/c_client.cpp:72
 unusedFunction:src/c_client.cpp:135
 unusedFunction:src/c_client.cpp:67
-unusedFunction:src/c_client.cpp:43
-unusedFunction:src/c_client.cpp:37
 unusedFunction:src/c_client.cpp:68
 unusedFunction:src/c_client.cpp:120
 unusedFunction:src/c_client.cpp:13
@@ -39,9 +37,9 @@ unusedFunction:src/c_client.cpp:50
 unusedFunction:src/Utility.cpp:43
 constStatement:src/BufferReader.cpp:27
 constStatement:src/BufferReader.cpp:48
-constStatement:src/Connection.cpp:180
-constStatement:src/Connection.cpp:199
-constStatement:src/Connection.cpp:204
+constStatement:src/Connection.cpp:173
+constStatement:src/Connection.cpp:192
+constStatement:src/Connection.cpp:197
 constStatement:src/ConnectionPool.cpp:436
 constStatement:src/DataBlock.cpp:52
 constStatement:src/HashkitKetama.cpp:136

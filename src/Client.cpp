@@ -1,7 +1,6 @@
 #include <unistd.h>
 #include <vector>
 
-#include "Export.h"
 #include "Common.h"
 #include "Client.h"
 #include "Keywords.h"
@@ -30,6 +29,7 @@ void Client::config(config_options_t opt, int val) {
       break;
     case CFG_HASH_FUNCTION:
       ConnectionPool::setHashFunction(static_cast<hash_function_options_t>(val));
+      break;
     default:
       break;
   }
