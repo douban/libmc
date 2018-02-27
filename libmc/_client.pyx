@@ -18,10 +18,12 @@ else:
     import pickle
 
 import os
+import sys
 import traceback
 import threading
 import zlib
 import marshal
+import warnings
 
 
 cdef extern from "Common.h" namespace "douban::mc":
@@ -62,7 +64,6 @@ cdef extern from "Export.h":
     ctypedef uint64_t cas_unique_t
 
     ctypedef struct retrieval_result_t:
-        retrieval_result_t()
         char* key
         uint8_t key_len
         flags_t flags
@@ -116,8 +117,8 @@ cdef extern from "Client.h" namespace "douban::mc":
                  const char* const * aliases) nogil
         int updateServers(const char* const * hosts, const uint32_t* ports, size_t n,
                           const char* const * aliases) nogil
-        char* getServerAddressByKey(const char* key, size_t keyLen) nogil
-        char* getRealtimeServerAddressByKey(const char* key, size_t keyLen) nogil
+        char* getServerAddressByKey(const char* key, const size_t keyLen) nogil
+        char* getRealtimeServerAddressByKey(const char* key, const size_t keyLen) nogil
         void enableConsistentFailover() nogil
         void disableConsistentFailover() nogil
         err_code_t get(
@@ -200,7 +201,7 @@ cdef extern from "Client.h" namespace "douban::mc":
             size_t* nResults
         ) nogil
         void destroyUnsignedResult() nogil
-        void _sleep(uint32_t ms) nogil
+        void _sleep(uint32_t seconds) nogil
 
 cdef uint32_t MC_DEFAULT_PORT = 11211
 cdef flags_t _FLAG_EMPTY = 0
@@ -281,8 +282,8 @@ cdef bytes _encode_value(object val, int comp_threshold, flags_t *flags):
             try:
                 enc_val = pickle.dumps(val, 2)
                 flags[0] = _FLAG_PICKLE
-            except:
-                pass
+            except Exception as err:
+                warnings.warn("[libmc] encode value failed, err type: %s, val type: %s %s" % (type(err), type(val), ''.join(traceback.format_stack())))
 
     if comp_threshold > 0 and enc_val is not None and len(enc_val) > comp_threshold:
         enc_val = zlib.compress(enc_val)
@@ -316,12 +317,14 @@ cpdef object decode_value(bytes val, flags_t flags):
     elif flags & _FLAG_MARSHAL:
         try:
             dec_val = marshal.loads(dec_val)
-        except:
+        except Exception as err:
+            warnings.warn("[libmc] unmarshal failed, err type: %s %s" % (type(err), ''.join(traceback.format_stack())))
             dec_val = None
     elif flags & _FLAG_PICKLE:
         try:
             dec_val = pickle.loads(dec_val)
-        except:
+        except Exception as err:
+            warnings.warn("[libmc] unpickle failed, err type: %s %s" % (type(err), ''.join(traceback.format_stack())))
             dec_val = None
     return dec_val
 
@@ -439,9 +442,9 @@ cdef class PyClient:
         PyString_AsStringAndSize(key2, &c_key, <Py_ssize_t*>&c_key_len)
         with nogil:
             c_addr = self._imp.getServerAddressByKey(c_key, c_key_len)
-        cdef basestring c_server_addr = c_addr
+        cdef basestring server_addr = c_addr
         Py_DECREF(key2)
-        return c_server_addr
+        return server_addr
 
     def get_realtime_host_by_key(self, basestring key):
         cdef bytes key2 = self.normalize_key(key)
@@ -453,12 +456,12 @@ cdef class PyClient:
         with nogil:
             c_addr = self._imp.getRealtimeServerAddressByKey(c_key, c_key_len)
         Py_DECREF(key2)
-        cdef basestring c_server_addr
+        cdef basestring server_addr
         if c_addr != NULL:
-            c_server_addr = c_addr
-            return c_server_addr
+            server_addr = c_addr
+            return server_addr
 
-    cdef normalize_key(self, basestring raw_key):
+    cpdef normalize_key(self, basestring raw_key):
         cdef bytes key
         if isinstance(raw_key, unicode):
             key = raw_key.encode(self.encoding)
@@ -1040,7 +1043,6 @@ cdef class PyClient:
 
     def clear_thread_ident(self):
         self._thread_ident = None
-        self._thread_ident_stack = None
 
     def _record_thread_ident(self):
         if self._thread_ident is None:
