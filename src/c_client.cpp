@@ -34,14 +34,14 @@ void client_destroy(void* client) {
 }
 
 
-const char* client_get_server_address_by_key(void* client, const char* key, size_t key_len) {
+const char* client_get_server_address_by_key(void* client, const char* key, const size_t key_len) {
   douban::mc::Client* c = static_cast<Client*>(client);
   return c->getServerAddressByKey(key, key_len);
 }
 
 
 const char* client_get_realtime_server_address_by_key(void* client, const char* key,
-                                                      size_t key_len) {
+                                                      const size_t key_len) {
   douban::mc::Client* c = static_cast<Client*>(client);
   return c->getRealtimeServerAddressByKey(key, key_len);
 }

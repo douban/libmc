@@ -97,7 +97,7 @@ int ConnectionPool::updateServers(const char* const* hosts, const uint32_t* port
 }
 
 
-const char* ConnectionPool::getServerAddressByKey(const char* key, size_t keyLen) {
+const char* ConnectionPool::getServerAddressByKey(const char *key, const size_t keyLen) {
   bool check_alive = false;
   Connection* conn = m_connSelector.getConn(key, keyLen, check_alive);
   if (conn == NULL) {
@@ -107,7 +107,7 @@ const char* ConnectionPool::getServerAddressByKey(const char* key, size_t keyLen
 }
 
 
-const char* ConnectionPool::getRealtimeServerAddressByKey(const char* key, size_t keyLen) {
+const char* ConnectionPool::getRealtimeServerAddressByKey(const char *key, const size_t keyLen) {
   bool check_alive = true;
   Connection* conn = m_connSelector.getConn(key, keyLen, check_alive);
   if (conn == NULL) {
@@ -380,7 +380,7 @@ void ConnectionPool::dispatchIncrDecr(op_code_t op, const char* key, const size_
 }
 
 
-void ConnectionPool::broadcastCommand(const char * const cmd, const size_t cmdLens, const bool noreply) {
+void ConnectionPool::broadcastCommand(const char * const cmd, const size_t cmdLen, const bool noreply) {
   for (size_t idx = 0; idx < m_nConns; ++idx) {
     Connection* conn = m_conns + idx;
     if (!conn->alive()) {
@@ -388,7 +388,7 @@ void ConnectionPool::broadcastCommand(const char * const cmd, const size_t cmdLe
         continue;
       }
     }
-    conn->takeBuffer(cmd, cmdLens);
+    conn->takeBuffer(cmd, cmdLen);
     if (!noreply) {
       ++conn->m_counter;
     }
