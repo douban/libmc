@@ -17,8 +17,8 @@ class ConnectionPool {
            const char* const * aliases = NULL);
   int updateServers(const char* const * hosts, const uint32_t* ports, const size_t n,
                     const char* const * aliases = NULL);
-  const char* getServerAddressByKey(const char* key, size_t keyLen);
-  const char* getRealtimeServerAddressByKey(const char* key, size_t keyLen);
+  const char* getServerAddressByKey(const char* key, const size_t keyLen);
+  const char* getRealtimeServerAddressByKey(const char* key, const size_t keyLen);
   void enableConsistentFailover();
   void disableConsistentFailover();
   void dispatchRetrieval(op_code_t op, const char* const* keys, const size_t* keyLens,
@@ -35,7 +35,7 @@ class ConnectionPool {
                      const exptime_t exptime, const bool noreply, size_t nItems);
   void dispatchIncrDecr(op_code_t op, const char* key, const size_t keyLen,
                         const uint64_t delta, const bool noreply);
-  void broadcastCommand(const char * const cmd, const size_t cmdLens, const bool noreply=false);
+  void broadcastCommand(const char * const cmd, const size_t cmdLen, const bool noreply=false);
 
   err_code_t waitPoll();
 

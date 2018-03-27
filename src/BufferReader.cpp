@@ -92,7 +92,7 @@ size_t BufferReader::prepareWriteBlock(size_t len) {
     dbPtr = &*m_blockWriteIterator;
   }
 
-  // init read cursor when the first data block is created
+  // init read cursor
   if (m_readLeft == 0) {
     m_blockReadCursor.iterator = m_blockWriteIterator;
     m_blockReadCursor.offset = dbPtr->size();
@@ -112,7 +112,7 @@ char* BufferReader::getWritePtr() {
 
 void BufferReader::commitWrite(size_t len) {
   assert(m_blockWriteIterator->size() + len <= m_blockWriteIterator->capacity());
-  m_blockWriteIterator->push(len);
+  m_blockWriteIterator->occupy(len);
   if (m_blockWriteIterator->size() + len == m_blockWriteIterator->capacity()) {
     ++m_blockWriteIterator;
   }
@@ -353,7 +353,7 @@ void BufferReader::readBytes(err_code_t& err, size_t len, TokenData& tokenData) 
       dbs.size = len;
       m_blockReadCursor.offset += len;
       len = 0;
-    } else { // len == maxToRead
+    } else {
       dbs.size = maxToRead;
       len -= maxToRead;
       ++m_blockReadCursor.iterator;
@@ -388,7 +388,7 @@ void BufferReader::expectBytes(err_code_t& err, const char* str, size_t len) {
       dbPtr->release(len);
       m_blockReadCursor.offset += len;
       len = 0;
-    } else { // len == maxToRead
+    } else {
       if (strncmp(dbPtr->at(m_blockReadCursor.offset), str + pos, maxToRead) != 0) {
         err = RET_PROGRAMMING_ERR;
         return;
@@ -420,7 +420,7 @@ void BufferReader::skipBytes(err_code_t& err, size_t len) {
       dbPtr->release(len);
       m_blockReadCursor.offset += len;
       len = 0;
-    } else { // len == maxToRead
+    } else {
       dbPtr->release(maxToRead);
       len -= maxToRead;
       ++m_blockReadCursor.iterator;
