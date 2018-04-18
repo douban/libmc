@@ -187,7 +187,7 @@ void PacketParser::process_packets(err_code_t& err) {
             SKIP_BYTES(2); // "\r\n"
 #ifndef NDEBUG
             char* _k = parseTokenData(mt_kvPtr->key, mt_kvPtr->key_len);
-            // debug("got %.*s", static_cast<int>(mt_kvPtr->key_len), _k);
+            // log_debug("got %.*s", static_cast<int>(mt_kvPtr->key_len), _k);
             if (mt_kvPtr->key.size() > 1) {
               delete[] _k;
             }
