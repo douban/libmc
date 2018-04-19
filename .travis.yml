@@ -4,11 +4,7 @@ python:
   - "3.5"
 
 cache:
-  directories:
-    - $HOME/.cache/pip
-    - $HOME/.pip-cache/
-    - $HOME/virtualenv/python2.7/lib/python2.7/site-packages
-    - $HOME/virtualenv/python3.5/lib/python3.5/site-packages
+  pip: true
 
 env:
   matrix:
