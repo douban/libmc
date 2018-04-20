@@ -248,7 +248,7 @@ void ConnectionPool::dispatchRetrieval(op_code_t op, const char* const* keys,
       conn->getRetrievalResults()->reserve(conn->m_counter);
     }
   }
-  // debug("after dispatchRetrieval: m_nActiveConn: %d", this->m_nActiveConn);
+  // log_debug("after dispatchRetrieval: m_nActiveConn: %d", this->m_nActiveConn);
 }
 
 
@@ -465,7 +465,7 @@ err_code_t ConnectionPool::waitPoll() {
             pollfd_ptr->events |= POLLIN;
 
             if (nToSend == 0) {
-              // debug("[%d] all sent", pollfd_ptr->fd);
+              // log_debug("[%d] all sent", pollfd_ptr->fd);
               pollfd_ptr->events &= ~POLLOUT;
               if (conn->m_counter == 0) {
                 // just send, no recv for noreply

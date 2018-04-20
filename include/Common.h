@@ -9,6 +9,7 @@
 #include <cstdlib>
 #include <cerrno>
 
+
 #define PROJECT_NAME "libmc"
 #define MC_DEFAULT_PORT 11211
 #define MC_DEFAULT_POLL_TIMEOUT 300
@@ -54,18 +55,17 @@
 # define __VOID_CAST (void)
 #endif
 
+void printBacktrace();
 
 #define _mc_clean_errno() (errno == 0 ? "None" : strerror(errno))
-#define _mc_output_stderr(LEVEL, FORMAT, ...) ( \
+
+#define _mc_output_stderr(LEVEL, FORMAT, ...) \
   fprintf( \
     stderr, \
     "[" PROJECT_NAME "] [" #LEVEL "] [%s:%d] " FORMAT "\n", \
     __FILE__, __LINE__, ##__VA_ARGS__ \
-  ), \
-  __VOID_CAST(0) \
-)
+  )
 
-void printBacktrace();
 
 #define MC_LOG_LEVEL_ERROR 1
 #define MC_LOG_LEVEL_WARNING 2
@@ -74,66 +74,70 @@ void printBacktrace();
 
 #define MC_LOG_LEVEL MC_LOG_LEVEL_ERROR
 
-#ifdef NDEBUG
-#define debug(M, ...) __VOID_CAST(0)
 
-#define _ASSERTION_FAILED(cond) ( \
-  _mc_output_stderr(PANIC, "failed assertion `%s'" , #cond), \
-  printBacktrace(), \
-  __VOID_CAST(0) \
-)
+#ifdef NDEBUG
+
+#define log_debug_if(cond, M, ...) __VOID_CAST(0)
+#define log_debug(M, ...) __VOID_CAST(0)
+
+#define _ASSERTION_FAILED(cond) do { \
+  _mc_output_stderr(FATAL, "failed assertion `%s'" , #cond); \
+  printBacktrace(); \
+} while (0)
+
 #else
 
 #if MC_LOG_LEVEL >= MC_LOG_LEVEL_DEBUG
-#define debug(M, ...) ( \
-  _mc_output_stderr(DEBUG, "[E: %s] " M, _mc_clean_errno(), ##__VA_ARGS__), \
-  __VOID_CAST(0) \
-)
+#define log_debug(M, ...) _mc_output_stderr(DEBUG, "[E: %s] " M, _mc_clean_errno(), ##__VA_ARGS__)
 #else
-#define debug(M, ...) __VOID_CAST(0)
+#define log_debug(M, ...) __VOID_CAST(0)
 #endif
+#define _ASSERTION_FAILED(cond) do { \
+  _mc_output_stderr(FATAL, "failed assertion `%s'" , #cond); \
+  printBacktrace(); \
+  abort(); \
+} while (0)
 
-#define _ASSERTION_FAILED(cond) ( \
-  _mc_output_stderr(PANIC, "failed assertion `%s'" , #cond), \
-  printBacktrace(), \
-  abort() \
-)
-#endif
+#define log_debug_if(cond, M, ...) do { \
+  if (cond) log_debug(M, ##__VA_ARGS__); \
+} while (0)
 
-#define ASSERT(cond) ( \
-  (cond) ? \
-  __VOID_CAST(0) : \
-  _ASSERTION_FAILED(cond) \
-)
+#endif // NDEBUG
+
+#define ASSERT(cond) if (!(cond)) _ASSERTION_FAILED(cond)
 
 #define NOT_REACHED() ASSERT(0)
 
 #if MC_LOG_LEVEL >= MC_LOG_LEVEL_INFO
-#define log_info(M, ...) ( \
-  _mc_output_stderr(INFO, M, ##__VA_ARGS__), \
-  __VOID_CAST(0) \
-)
+#define log_info(M, ...) _mc_output_stderr(INFO, M, ##__VA_ARGS__)
 #else
 #define log_info(M, ...) __VOID_CAST(0)
 #endif
 
+#define log_info_if(cond, M, ...) do { \
+  if (cond) log_info(M, ##__VA_ARGS__); \
+} while (0)
+
 #if MC_LOG_LEVEL >= MC_LOG_LEVEL_WARNING
-#define log_warn(M, ...) ( \
-  _mc_output_stderr(WARN, "[E: %s] " M, _mc_clean_errno(), ##__VA_ARGS__), \
-  __VOID_CAST(0) \
-)
+#define log_warn(M, ...) _mc_output_stderr(WARN, "[E: %s] " M, _mc_clean_errno(), ##__VA_ARGS__)
 #else
 #define log_warn(M, ...) __VOID_CAST(0)
 #endif
 
+#define log_warn_if(cond, M, ...) do { \
+  if (cond) log_warn(M, ##__VA_ARGS__); \
+} while (0)
+
 #if MC_LOG_LEVEL >= MC_LOG_LEVEL_ERROR
-#define log_err(M, ...) ( \
-  _mc_output_stderr(ERROR, "[E: %s] " M, _mc_clean_errno(), ##__VA_ARGS__), \
-  __VOID_CAST(0) \
-)
+#define log_err(M, ...) _mc_output_stderr(ERROR, "[E: %s] " M, _mc_clean_errno(), ##__VA_ARGS__)
 #else
 #define log_err(M, ...) __VOID_CAST(0)
 #endif
+
+#define log_err_if(cond, M, ...) do { \
+  if (cond) log_err(M, ##__VA_ARGS__); \
+} while (0)
+
 
 namespace douban {
 namespace mc {
