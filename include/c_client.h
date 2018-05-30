@@ -64,6 +64,8 @@ extern "C" {
 
   int client_stats(void* client, broadcast_result_t** results, size_t* n_servers);
   int client_quit(void* client);
+
+  const char* err_code_to_string(err_code_t err);
 #ifdef __cplusplus
 }
 #endif

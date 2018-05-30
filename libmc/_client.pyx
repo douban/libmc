@@ -203,6 +203,8 @@ cdef extern from "Client.h" namespace "douban::mc":
         void destroyUnsignedResult() nogil
         void _sleep(uint32_t seconds) nogil
 
+    const char* errCodeToString(err_code_t err) nogil
+
 cdef uint32_t MC_DEFAULT_PORT = 11211
 cdef flags_t _FLAG_EMPTY = 0
 cdef flags_t _FLAG_PICKLE = 1 << 0
@@ -241,19 +243,6 @@ MC_RETURN_INVALID_KEY_ERR = PyInt_FromLong(RET_INVALID_KEY_ERR)
 MC_RETURN_INCOMPLETE_BUFFER_ERR = PyInt_FromLong(RET_INCOMPLETE_BUFFER_ERR)
 MC_RETURN_OK = PyInt_FromLong(RET_OK)
 
-
-cdef dict ERROR_CODE_TO_STR = {
-    MC_RETURN_SEND_ERR: 'send_error',
-    MC_RETURN_RECV_ERR: 'recv_error',
-    MC_RETURN_CONN_POLL_ERR: 'conn_poll_error',
-    MC_RETURN_POLL_TIMEOUT_ERR: 'poll_timeout_error',
-    MC_RETURN_POLL_ERR: 'poll_error',
-    MC_RETURN_MC_SERVER_ERR: 'server_error',
-    MC_RETURN_PROGRAMMING_ERR: 'programming_error',
-    MC_RETURN_INVALID_KEY_ERR: 'invalid_key_error',
-    MC_RETURN_INCOMPLETE_BUFFER_ERR: 'incomplete_buffer_error',
-    MC_RETURN_OK: 'ok'
-}
 
 
 cdef bytes _encode_value(object val, int comp_threshold, flags_t *flags):
@@ -1069,4 +1058,4 @@ cdef class PyClient:
         return False
 
     def get_last_strerror(self):
-        return ERROR_CODE_TO_STR.get(self.last_error, '')
+        return errCodeToString(<err_code_t>self.last_error)

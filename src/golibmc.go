@@ -43,19 +43,6 @@ var hashFunctionMapping = map[int]C.hash_function_options_t{
 	HashCRC32:   C.OPT_HASH_CRC_32,
 }
 
-var errorMessage = map[C.int]string{
-	C.RET_SEND_ERR:         "send_error",
-	C.RET_RECV_ERR:         "recv_error",
-	C.RET_CONN_POLL_ERR:    "conn_poll_error",
-	C.RET_POLL_TIMEOUT_ERR: "poll_timeout_error",
-	C.RET_POLL_ERR:         "poll_error",
-	C.RET_MC_SERVER_ERR:    "server_error",
-
-	C.RET_PROGRAMMING_ERR:       "programming_error",
-	C.RET_INVALID_KEY_ERR:       "invalid_key_error",
-	C.RET_INCOMPLETE_BUFFER_ERR: "incomplete_buffer_error",
-	C.RET_OK:                    "ok",
-}
 
 // Credits to:
 // https://github.com/bradfitz/gomemcache/blob/master/memcache/memcache.go
@@ -92,11 +79,15 @@ var (
 
 func init() {
 	badConnErrors = []error{
-		networkError(errorMessage[C.RET_MC_SERVER_ERR]),
-		networkError(errorMessage[C.RET_SEND_ERR]),
-		networkError(errorMessage[C.RET_CONN_POLL_ERR]),
-		networkError(errorMessage[C.RET_RECV_ERR]),
+		networkError(errorMessage(C.RET_MC_SERVER_ERR)),
+		networkError(errorMessage(C.RET_SEND_ERR)),
+		networkError(errorMessage(C.RET_CONN_POLL_ERR)),
+		networkError(errorMessage(C.RET_RECV_ERR)),
 	}
+}
+
+func errorMessage(err C.int) string {
+	return C.GoString(C.err_code_to_string(C.err_code_t(err)))
 }
 
 func networkError(msg string) error {
@@ -759,7 +750,7 @@ func (client *Client) store(cmd string, item *Item) error {
 		return ErrMalformedKey
 	}
 
-	return networkError(errorMessage[errCode])
+	return networkError(errorMessage(errCode))
 }
 
 // Add is a storage command, return without error only when the key is empty
@@ -853,7 +844,7 @@ func (client *Client) SetMulti(items []*Item) (failedKeys []string, err error) {
 	if errCode == C.RET_INVALID_KEY_ERR {
 		err = ErrMalformedKey
 	} else {
-		err = networkError(errorMessage[errCode])
+		err = networkError(errorMessage(errCode))
 	}
 
 	sr := unsafe.Sizeof(*results)
@@ -924,7 +915,7 @@ func (client *Client) Delete(key string) error {
 		return ErrMalformedKey
 	}
 
-	return networkError(errorMessage[errCode])
+	return networkError(errorMessage(errCode))
 }
 
 // DeleteMulti will delete multi keys at once
@@ -978,7 +969,7 @@ func (client *Client) DeleteMulti(keys []string) (failedKeys []string, err error
 	case C.RET_INVALID_KEY_ERR:
 		err = ErrMalformedKey
 	default:
-		err = networkError(errorMessage[errCode])
+		err = networkError(errorMessage(errCode))
 	}
 
 	if client.noreply {
@@ -998,7 +989,7 @@ func (client *Client) DeleteMulti(keys []string) (failedKeys []string, err error
 			unsafe.Pointer(uintptr(unsafe.Pointer(results)) + sr),
 		)
 	}
-	err = networkError(errorMessage[errCode])
+	err = networkError(errorMessage(errCode))
 	failedKeys = make([]string, len(rawKeys)-len(deletedKeySet))
 
 	i := 0
@@ -1043,7 +1034,7 @@ func (client *Client) getOrGets(cmd string, key string) (item *Item, err error) 
 		if errCode == C.RET_INVALID_KEY_ERR {
 			err = ErrMalformedKey
 		} else {
-			err = networkError(errorMessage[errCode])
+			err = networkError(errorMessage(errCode))
 		}
 		return
 	}
@@ -1121,7 +1112,7 @@ func (client *Client) GetMulti(keys []string) (rv map[string]*Item, err error) {
 	case C.RET_INVALID_KEY_ERR:
 		err = ErrMalformedKey
 	default:
-		err = networkError(errorMessage[errCode])
+		err = networkError(errorMessage(errCode))
 	}
 
 	if err == nil && len(keys) != int(n) {
@@ -1186,7 +1177,7 @@ func (client *Client) Touch(key string, expiration int64) error {
 	case C.RET_INVALID_KEY_ERR:
 		return ErrMalformedKey
 	}
-	return networkError(errorMessage[errCode])
+	return networkError(errorMessage(errCode))
 }
 
 func (client *Client) incrOrDecr(cmd string, key string, delta uint64) (uint64, error) {
@@ -1239,7 +1230,7 @@ func (client *Client) incrOrDecr(cmd string, key string, delta uint64) (uint64, 
 		return 0, ErrMalformedKey
 	}
 
-	return 0, networkError(errorMessage[errCode])
+	return 0, networkError(errorMessage(errCode))
 }
 
 // Incr will increase the value in key by delta
@@ -1282,7 +1273,7 @@ func (client *Client) Version() (map[string]string, error) {
 	}
 
 	if errCode != 0 {
-		return rv, networkError(errorMessage[errCode])
+		return rv, networkError(errorMessage(errCode))
 	}
 
 	return rv, nil
@@ -1334,7 +1325,7 @@ func (client *Client) Stats() (map[string](map[string]string), error) {
 	}
 
 	if errCode != 0 {
-		return rv, networkError(errorMessage[errCode])
+		return rv, networkError(errorMessage(errCode))
 	}
 
 	return rv, nil
@@ -1394,7 +1385,7 @@ func (cn *conn) quit() error {
 		cn.client.maybeOpenNewConnections()
 		return nil
 	}
-	return networkError(errorMessage[errCode])
+	return networkError(errorMessage(errCode))
 }
 
 func isBadConnErr(err error) (r bool) {
