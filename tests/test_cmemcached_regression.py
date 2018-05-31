@@ -1,6 +1,8 @@
 # coding: utf-8
 import time
 import threading
+import warnings
+
 from libmc import Client, ThreadUnsafe
 import unittest
 import pytest
@@ -249,7 +251,9 @@ class CmemcachedRegressionCase(unittest.TestCase):
 
     def test_no_pickle(self):
         v = NoPickle()
-        self.assertEqual(self.mc.set("nopickle", v), None)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            self.assertEqual(self.mc.set("nopickle", v), None)
         self.assertEqual(self.mc.get("nopickle"), None)
 
     def test_marshal(self):
