@@ -332,7 +332,7 @@ cdef class PyClient:
     cdef hash_function_options_t hash_fn
     cdef bool_t failover
     cdef basestring encoding
-    cdef int last_error
+    cdef err_code_t last_error
     cdef object _thread_ident
     cdef object _created_stack
 
@@ -359,7 +359,7 @@ cdef class PyClient:
         else:
             self.prefix = None
 
-        self.last_error = 0
+        self.last_error = RET_OK
         self._thread_ident = None
         self._created_stack = traceback.extract_stack()
 
@@ -632,7 +632,7 @@ cdef class PyClient:
             else:
                 pass
 
-        rv = self.last_error == 0 and (self.noreply or (n_res == 1 and results[0][0].type_ == MSG_STORED))
+        rv = self.last_error == RET_OK and (self.noreply or (n_res == 1 and results[0][0].type_ == MSG_STORED))
 
         with nogil:
             self._imp.destroyMessageResult()
@@ -773,7 +773,7 @@ cdef class PyClient:
                                    self.noreply, c_vals, c_val_lens, n, &results, &n_rst)
             else:
                 pass
-        is_succeed = self.last_error == 0 and (self.noreply or n_rst == n)
+        is_succeed = self.last_error == RET_OK and (self.noreply or n_rst == n)
         cdef list failed_keys = []
         if not is_succeed and return_failure:
             succeed_keys = [results[i][0].key[:results[i][0].key_len] for i in range(n_rst) if results[i][0].type_ == MSG_STORED]
@@ -855,7 +855,7 @@ cdef class PyClient:
         with nogil:
             self.last_error = self._imp._delete(&c_key, &c_key_len, self.noreply, n, &results, &n_res)
 
-        rv = self.last_error == 0 and (self.noreply or (n_res == 1 and (results[0][0].type_ == MSG_DELETED or results[0][0].type_ == MSG_NOT_FOUND)))
+        rv = self.last_error == RET_OK and (self.noreply or (n_res == 1 and (results[0][0].type_ == MSG_DELETED or results[0][0].type_ == MSG_NOT_FOUND)))
 
         with nogil:
             self._imp.destroyMessageResult()
@@ -881,7 +881,7 @@ cdef class PyClient:
         with nogil:
             self.last_error = self._imp._delete(c_keys, c_key_lens, self.noreply, n, &results, &n_res)
 
-        is_succeed = self.last_error == 0 and (self.noreply or n_res == n)
+        is_succeed = self.last_error == RET_OK and (self.noreply or n_res == n)
         cdef list failed_keys = []
 
         if not is_succeed and return_failure:
@@ -915,7 +915,7 @@ cdef class PyClient:
         with nogil:
             self.last_error = self._imp.touch(&c_key, &c_key_len, exptime, self.noreply, n, &results, &n_res)
 
-        rv = self.last_error == 0 and (self.noreply or (n_res == 1 and results[0][0].type_ == MSG_TOUCHED))
+        rv = self.last_error == RET_OK and (self.noreply or (n_res == 1 and results[0][0].type_ == MSG_TOUCHED))
         with nogil:
             self._imp.destroyMessageResult()
         Py_DECREF(key)
@@ -1058,4 +1058,4 @@ cdef class PyClient:
         return False
 
     def get_last_strerror(self):
-        return errCodeToString(<err_code_t>self.last_error)
+        return errCodeToString(self.last_error)

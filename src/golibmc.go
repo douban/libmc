@@ -86,8 +86,8 @@ func init() {
 	}
 }
 
-func errorMessage(err C.int) string {
-	return C.GoString(C.err_code_to_string(C.err_code_t(err)))
+func errorMessage(err C.err_code_t) string {
+	return C.GoString(C.err_code_to_string(err))
 }
 
 func networkError(msg string) error {
@@ -686,7 +686,7 @@ func (client *Client) store(cmd string, item *Item) error {
 	var rst **C.message_result_t
 	var n C.size_t
 
-	var errCode C.int
+	var errCode C.err_code_t
 
 	cn, err := client.conn(context.Background())
 	if err != nil {
@@ -731,7 +731,7 @@ func (client *Client) store(cmd string, item *Item) error {
 	}
 	defer C.client_destroy_message_result(cn._imp)
 
-	if errCode == 0 {
+	if errCode == C.RET_OK {
 		if client.noreply {
 			return nil
 		} else if int(n) == 1 {
@@ -837,7 +837,7 @@ func (client *Client) SetMulti(items []*Item) (failedKeys []string, err error) {
 		&results, &n,
 	)
 	defer C.client_destroy_message_result(cn._imp)
-	if errCode == 0 {
+	if errCode == C.RET_OK {
 		return []string{}, nil
 	}
 
@@ -901,7 +901,7 @@ func (client *Client) Delete(key string) error {
 	)
 	defer C.client_destroy_message_result(cn._imp)
 
-	if errCode == 0 {
+	if errCode == C.RET_OK {
 		if client.noreply {
 			return nil
 		} else if int(n) == 1 {
@@ -963,7 +963,7 @@ func (client *Client) DeleteMulti(keys []string) (failedKeys []string, err error
 	defer C.client_destroy_message_result(cn._imp)
 
 	switch errCode {
-	case 0:
+	case C.RET_OK:
 		err = nil
 		return
 	case C.RET_INVALID_KEY_ERR:
@@ -1020,7 +1020,7 @@ func (client *Client) getOrGets(cmd string, key string) (item *Item, err error) 
 	var rst **C.retrieval_result_t
 	var n C.size_t
 
-	var errCode C.int
+	var errCode C.err_code_t
 	switch cmd {
 	case "get":
 		errCode = C.client_get(cn._imp, &cKey, &cKeyLen, 1, &rst, &n)
@@ -1030,7 +1030,7 @@ func (client *Client) getOrGets(cmd string, key string) (item *Item, err error) 
 
 	defer C.client_destroy_retrieval_result(cn._imp)
 
-	if errCode != 0 {
+	if errCode != C.RET_OK {
 		if errCode == C.RET_INVALID_KEY_ERR {
 			err = ErrMalformedKey
 		} else {
@@ -1107,7 +1107,7 @@ func (client *Client) GetMulti(keys []string) (rv map[string]*Item, err error) {
 	defer C.client_destroy_retrieval_result(cn._imp)
 
 	switch errCode {
-	case 0:
+	case C.RET_OK:
 		err = nil
 	case C.RET_INVALID_KEY_ERR:
 		err = ErrMalformedKey
@@ -1164,7 +1164,7 @@ func (client *Client) Touch(key string, expiration int64) error {
 	defer C.client_destroy_message_result(cn._imp)
 
 	switch errCode {
-	case 0:
+	case C.RET_OK:
 		if client.noreply {
 			return nil
 		} else if int(n) == 1 {
@@ -1191,7 +1191,7 @@ func (client *Client) incrOrDecr(cmd string, key string, delta uint64) (uint64, 
 	var rst *C.unsigned_result_t
 	var n C.size_t
 
-	var errCode C.int
+	var errCode C.err_code_t
 
 	cn, err := client.conn(context.Background())
 	if err != nil {
@@ -1217,7 +1217,7 @@ func (client *Client) incrOrDecr(cmd string, key string, delta uint64) (uint64, 
 
 	defer C.client_destroy_unsigned_result(cn._imp)
 
-	if errCode == 0 {
+	if errCode == C.RET_OK {
 		if client.noreply {
 			return 0, nil
 		} else if int(n) == 1 {
@@ -1272,7 +1272,7 @@ func (client *Client) Version() (map[string]string, error) {
 		rst = (*C.broadcast_result_t)(unsafe.Pointer(uintptr(unsafe.Pointer(rst)) + sr))
 	}
 
-	if errCode != 0 {
+	if errCode != C.RET_OK {
 		return rv, networkError(errorMessage(errCode))
 	}
 
@@ -1324,7 +1324,7 @@ func (client *Client) Stats() (map[string](map[string]string), error) {
 		rst = (*C.broadcast_result_t)(unsafe.Pointer(uintptr(unsafe.Pointer(rst)) + sr))
 	}
 
-	if errCode != 0 {
+	if errCode != C.RET_OK {
 		return rv, networkError(errorMessage(errCode))
 	}
 
