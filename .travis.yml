@@ -45,6 +45,7 @@ after_script:
 
 deploy:
   provider: pypi
+  skip_existing: true
   user: yangxiufeng
   password:
     secure: Oc2qdGCFGP5W51RcdD25q0hJx1mUOWf65ph8/T7hW2N4bjz2TJPsLvf37MNi5aHum0Kvqxo6HNEn3Ea+nqL9KgjxhnjmqSezwqxpXJrHgnqPMAH7prfpPpJW9R0h3PJDutMNmhsL2xn9NJeb6LQ+y38j44n1pN2JW3t2Z3CJavA=
