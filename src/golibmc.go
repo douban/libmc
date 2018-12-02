@@ -127,13 +127,6 @@ type Client struct {
 	maxOpen        int           // maximum amount of connection num. maxOpen <= 0 means unlimited.
 	cleanerCh      chan struct{}
 	closed         bool
-
-	// notWaitForRetryTimeout is used when you want to set MC_RETRY_TIMEOUT to 0.
-	// When retryTimeout is not set (= 0) and notWaitForRetryTimeout is true,
-	// MC_RETRY_TIMEOUT is set to 0.
-	// If retryTimeout is less than 1 second and notWaitForRetryTimeout is false,
-	// MC_RETRY_TIMEOUT is set to the default setting of 5 seconds.
-	notWaitForRetryTimeout bool
 }
 
 type connRequest struct {
@@ -353,7 +346,7 @@ func (client *Client) newConn() (*conn, error) {
 	)
 
 	cn.configHashFunction(int(hashFunctionMapping[client.hashFunc]))
-	if client.retryTimeout > 0 || client.notWaitForRetryTimeout {
+	if client.retryTimeout > 0 {
 		C.client_config(cn._imp, RetryTimeout, client.retryTimeout)
 	}
 	if client.pollTimeout > 0 {
@@ -605,13 +598,6 @@ func (client *Client) ConfigTimeout(cCfgKey C.config_options_t, timeout time.Dur
 	case ConnectTimeout:
 		client.connectTimeout = C.int(timeout / time.Microsecond)
 	}
-}
-
-// ConfigNotWaitForRetryTimeout can set notWaitForRetryTimeout
-func (client *Client) ConfigNotWaitForRetryTimeout(notWaitForRetryTimeout bool) {
-	client.lk.Lock()
-	defer client.lk.Unlock()
-	client.notWaitForRetryTimeout = notWaitForRetryTimeout
 }
 
 // GetServerAddressByKey will return the address of the memcached
