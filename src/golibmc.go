@@ -208,6 +208,10 @@ func New(servers []string, noreply bool, prefix string, hashFunc int, failover b
 	client.connRequests = make(map[uint64]chan connRequest)
 	client.maxOpen = 1 // default value
 
+	client.retryTimeout = 5 // MC_DEFAULT_RETRY_TIMEOUT
+	client.pollTimeout = 300 // MC_DEFAULT_POLL_TIMEOUT
+	client.connectTimeout = 10 // MC_DEFAULT_CONNECT_TIMEOUT
+
 	go client.opener()
 
 	return
@@ -346,13 +350,13 @@ func (client *Client) newConn() (*conn, error) {
 	)
 
 	cn.configHashFunction(int(hashFunctionMapping[client.hashFunc]))
-	if client.retryTimeout > 0 {
+	if client.retryTimeout >= 0 {
 		C.client_config(cn._imp, RetryTimeout, client.retryTimeout)
 	}
-	if client.pollTimeout > 0 {
+	if client.pollTimeout >= 0 {
 		C.client_config(cn._imp, PollTimeout, client.pollTimeout)
 	}
-	if client.connectTimeout > 0 {
+	if client.connectTimeout >= 0 {
 		C.client_config(cn._imp, ConnectTimeout, client.connectTimeout)
 	}
 	return &cn, nil
