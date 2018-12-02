@@ -22,13 +22,13 @@ set(CMAKE_INSTALL_INCLUDE include CACHE PATH "Output directory for header files"
 set(CMAKE_INSTALL_LIBDIR lib CACHE PATH "Output directory for libraries")
 
 include_directories(include)
+include_directories(3rd_party)
 
 FILE(
     GLOB mc_HEADERS
     include/*.h
     include/hashkit/*.h
-    include/llvm/*.h
-    include/rapidjson/*.h
+    3rd_party/rapidjson/*.h
 )
 FILE(
     GLOB mc_SOURCES
