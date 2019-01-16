@@ -15,7 +15,6 @@ bench_venv/
 _client.cpp
 _client.so
 .tox/
-Testing/
 
 .cache/
 .clang_complete
