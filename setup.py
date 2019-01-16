@@ -100,5 +100,6 @@ setup(
     tests_require=[
         "pytest",
         "future",
+        "numpy",
     ]
 )
