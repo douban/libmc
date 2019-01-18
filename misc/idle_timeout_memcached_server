@@ -1,0 +1,82 @@
+#!/bin/bash
+# based on http://serverfault.com/a/360230/105615
+
+set -e
+
+PORTS="21211 21212 21213 21214 21215 21216 21217 21218 21219 21220 21221 21222 21223 21224 21225 21226 21227 21228 21229 21230"
+USER=memcached
+basedir="/tmp/env_mc_dev"
+mkdir -p "$basedir/var/log"
+mkdir -p "$basedir/var/run"
+
+RETVAL=0
+prog="memcached"
+cmd="`which memcached`"
+ip="127.0.0.1"
+memory=64
+threads=4
+
+
+function start()
+{
+    port="$1"
+    if [ `ps -ef | grep "$cmd" | grep -c $port` -ge 1 ]; then
+        echo "Starting the memcached server on port '$port'... "
+    else
+        if [ ! -f $basedir/var/log/${port}.log ]; then
+            mkdir -p $basedir/var/log
+            touch $basedir/var/log/${port}.log
+        fi
+        $cmd -d -u $USER -l $ip -t $threads -m ${memory} -p $port -P $basedir/var/run/${port}.pid -o idle_timeout=1 > $basedir/var/log/${port}.log 2>&1
+        echo "Starting the memcached server on port '$port'... "
+    fi
+}
+
+function stop()
+{
+    port="$1"
+    if [ `ps -ef | grep "$cmd" | grep -c $port` -eq 0 ]; then
+        echo $"Stopped the memcached server on port '$port'... "
+    else
+        kill -TERM `ps -ef | grep "$cmd" | grep $port | grep -v grep | awk '{ print $2 }'`
+        echo "Stopping the memcached server on port '$port'... "
+    fi
+    rm -rf $basedir
+}
+
+case "$1" in
+    start)
+        if [ -n "$2" ]; then
+            start $2
+        else
+            for port in $PORTS; do
+                start $port &
+            done
+        fi
+        ;;
+    stop)
+        if [ -n "$2" ]; then
+            port="$2"
+            stop $port
+        else
+            for port in $PORTS; do
+                stop $port
+            done
+        fi
+        ;;
+    restart)
+        if [ -n "$2" ]; then
+            stop $2
+            start $2
+        else
+            for port in $PORTS; do
+                stop $port
+                start $port
+            done
+        fi
+        ;;
+    *)
+        printf 'Usage: %s {start|stop|restart} <port>\n' "$prog"
+        exit 1
+        ;;
+esac
