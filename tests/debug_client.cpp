@@ -1,3 +1,4 @@
+#include <unistd.h>
 #include <iostream>
 #include "Common.h"
 #include "Client.h"
@@ -31,8 +32,9 @@ void get_(Client* client, const char* const * keys, const size_t* key_lens, size
 
 
 int main() {
+	Client* client = newClient(20);
+
 	while (true) {
-		Client* client = newClient(20);
 
 		const char* key = "hello";
 		const size_t key_len = 5;
@@ -42,19 +44,24 @@ int main() {
 
 		flags_t flags = 0;
 		set_(client, &key, &key_len, &flags, &val, &val_len, 1);
+		usleep(30000000);
 
 		// get_(client, &key, &key_len, 1);
 
 		retrieval_result_t** r_results = NULL;
-  		size_t nResults = 0;
+		size_t nResults = 0;
 
-  		client->get(&key, &key_len, 1, &r_results, &nResults);
-  		client->destroyRetrievalResult();
+		err_code_t rv = client->get(&key, &key_len, 1, &r_results, &nResults);
+		client->destroyRetrievalResult();
 
-		std::cout << r_results[0]->data_block << std::endl;
+		if (r_results!=NULL) {
+			std::cout << r_results[0]->data_block;
+		}
 
-		delete client;
+		std::cout << rv << std::endl;
+
 	}
+	delete client;
 
 	return 0;
 }
