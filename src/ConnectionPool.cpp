@@ -445,9 +445,16 @@ err_code_t ConnectionPool::waitPoll() {
         Connection* conn = fd2conn[fd_idx];
 
         if (pollfd_ptr->revents & (POLLERR | POLLHUP | POLLNVAL)) {
+          // TODO: add max_retries for conn?
           markDeadConn(conn, keywords::kCONN_POLL_ERROR, pollfd_ptr);
-          ret_code = RET_CONN_POLL_ERR;
-          --m_nActiveConn;
+          if (conn->tryReconnect()) {
+            conn->rewind();
+            pollfd_ptr->fd = conn->socketFd();
+            pollfd_ptr->events = POLLOUT;
+          } else {
+            ret_code = RET_CONN_POLL_ERR;
+            --m_nActiveConn;
+          }
           goto next_fd;
         }
 
@@ -457,8 +464,14 @@ err_code_t ConnectionPool::waitPoll() {
           ssize_t nToSend = conn->send();
           if (nToSend == -1) {
             markDeadConn(conn, keywords::kSEND_ERROR, pollfd_ptr);
-            ret_code = RET_SEND_ERR;
-            --m_nActiveConn;
+            if (conn->tryReconnect()) {
+              conn->rewind();
+              pollfd_ptr->fd = conn->socketFd();
+              pollfd_ptr->events = POLLOUT;
+            } else {
+              ret_code = RET_SEND_ERR;
+              --m_nActiveConn;
+            }
             goto next_fd;
           } else {
             // start to recv if any data is sent
@@ -481,8 +494,14 @@ err_code_t ConnectionPool::waitPoll() {
           ssize_t nRecv = conn->recv();
           if (nRecv == -1 || nRecv == 0) {
             markDeadConn(conn, keywords::kRECV_ERROR, pollfd_ptr);
-            ret_code = RET_RECV_ERR;
-            --m_nActiveConn;
+            if (conn->tryReconnect()) {
+              conn->rewind();
+              pollfd_ptr->fd = conn->socketFd();
+              pollfd_ptr->events = POLLOUT;
+            } else {
+              ret_code = RET_RECV_ERR;
+              --m_nActiveConn;
+            }
             goto next_fd;
           }
 

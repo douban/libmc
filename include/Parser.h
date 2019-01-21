@@ -30,6 +30,7 @@ class PacketParser {
   size_t requestKeyCount();
   void process_packets(err_code_t &err);
   void reset();
+  void rewind();
 
   types::RetrievalResultList* getRetrievalResults();
   types::MessageResultList* getMessageResults();

@@ -249,7 +249,6 @@ ssize_t Connection::send() {
 
   size_t msgLeft = m_buffer_writer->msgIovlen();
   if (msgLeft == 0) {
-    m_buffer_writer->reset();
     return 0;
   } else {
     return msgLeft;
@@ -297,6 +296,12 @@ void Connection::reset() {
   m_parser.reset();
   m_buffer_reader->reset();
   m_buffer_writer->reset(); // flush data dispatched but not sent
+}
+
+void Connection::rewind() {
+  m_parser.rewind();
+  m_buffer_reader->reset(); // flush received data
+  m_buffer_writer->rewind(); // rewind for resending data
 }
 
 void Connection::setRetryTimeout(int timeout) {

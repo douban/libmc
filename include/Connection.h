@@ -51,6 +51,7 @@ class Connection {
 
 
     void reset();
+    void rewind();
     void setRetryTimeout(int timeout);
     const int getRetryTimeout();
     void setConnectTimeout(int timeout);

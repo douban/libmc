@@ -44,7 +44,7 @@ int main() {
 
 		flags_t flags = 0;
 		set_(client, &key, &key_len, &flags, &val, &val_len, 1);
-		usleep(30000000);
+		usleep(2000000);
 
 		// get_(client, &key, &key_len, 1);
 

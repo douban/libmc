@@ -51,6 +51,7 @@ case "$1" in
         else
             for port in $PORTS; do
                 start $port &
+                wait
             done
         fi
         ;;

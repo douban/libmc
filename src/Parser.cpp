@@ -463,6 +463,16 @@ void PacketParser::reset() {
 }
 
 
+void PacketParser::rewind() {
+  m_retrievalResults.clear();
+  m_messageResults.clear();
+  m_lineResults.clear();
+  m_unsignedResults.clear();
+
+  m_state = FSM_START;
+}
+
+
 types::RetrievalResultList* PacketParser::getRetrievalResults() {
   return &m_retrievalResults;
 }

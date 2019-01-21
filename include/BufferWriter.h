@@ -25,13 +25,17 @@ class BufferWriter {
   void takeNumber(int64_t val);
   const struct iovec* const getReadPtr(size_t &n);
   void commitRead(size_t nSent);
+  void rewind();
   size_t msgIovlen();
 
  protected:
   std::vector<struct iovec> m_iovec;
   std::vector<char*>  m_unsignedStringList;
+
+  // the index of iovec vector we'll read next
   size_t m_readIdx;
 
+  // the number of iovec left to read
   size_t m_msgIovlen;
 };
 
