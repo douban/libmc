@@ -117,7 +117,7 @@ std::vector<continuum_item_t>::iterator KetamaSelector::getServerIt(const char* 
 
   bool is_alive = true;
   if (check_alive && origin_conn != NULL) {
-     is_alive = origin_conn->tryReconnect();
+     is_alive = origin_conn->tryReconnect(false);
   }
 
   if (!is_alive) {
@@ -128,7 +128,7 @@ std::vector<continuum_item_t>::iterator KetamaSelector::getServerIt(const char* 
         if (it == m_continuum.end()) {
           it = m_continuum.begin();
         }
-        if (it->conn != origin_conn && it->conn->tryReconnect()) {
+        if (it->conn != origin_conn && it->conn->tryReconnect(false)) {
           break;
         }
       } while (--max_iter);

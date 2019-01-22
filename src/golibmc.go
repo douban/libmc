@@ -24,6 +24,7 @@ const (
 	PollTimeout    = C.CFG_POLL_TIMEOUT
 	ConnectTimeout = C.CFG_CONNECT_TIMEOUT
 	RetryTimeout   = C.CFG_RETRY_TIMEOUT
+	MaxRetries     = C.CFG_MAX_RETRIES
 )
 
 // Hash functions
@@ -108,6 +109,7 @@ type Client struct {
 	connectTimeout C.int
 	pollTimeout    C.int
 	retryTimeout   C.int
+	maxRetries     C.int
 	lk             sync.Mutex
 	freeConns      []*conn
 	numOpen        int
@@ -352,6 +354,9 @@ func (client *Client) newConn() (*conn, error) {
 	}
 	if client.connectTimeout > 0 {
 		C.client_config(cn._imp, ConnectTimeout, client.connectTimeout)
+	}
+	if client.maxRetries > 0 {
+		C.client_config(cn._imp, MaxRetries, client.maxRetries)
 	}
 	return &cn, nil
 }

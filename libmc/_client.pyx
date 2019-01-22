@@ -52,6 +52,7 @@ cdef extern from "Export.h":
         CFG_CONNECT_TIMEOUT
         CFG_RETRY_TIMEOUT
         CFG_HASH_FUNCTION
+        CFG_MAX_RETRIES
 
     ctypedef enum hash_function_options_t:
         OPT_HASH_MD5
@@ -224,6 +225,7 @@ MC_DEFAULT_EXPTIME = PyInt_FromLong(DEFAULT_EXPTIME)
 MC_POLL_TIMEOUT = PyInt_FromLong(CFG_POLL_TIMEOUT)
 MC_CONNECT_TIMEOUT = PyInt_FromLong(CFG_CONNECT_TIMEOUT)
 MC_RETRY_TIMEOUT = PyInt_FromLong(CFG_RETRY_TIMEOUT)
+MC_MAX_RETRIES = PyInt_FromLong(CFG_MAX_RETRIES)
 
 
 MC_HASH_MD5 = PyInt_FromLong(OPT_HASH_MD5)

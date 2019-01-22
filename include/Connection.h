@@ -25,7 +25,7 @@ class Connection {
     int connect();
     void close();
     const bool alive();
-    bool tryReconnect();
+    bool tryReconnect(bool check_retries = true);
     void markDead(const char* reason, int delay = 0);
     int socketFd() const;
 
@@ -55,6 +55,7 @@ class Connection {
     void setRetryTimeout(int timeout);
     const int getRetryTimeout();
     void setConnectTimeout(int timeout);
+    void setMaxRetries(int max_retries);
 
     size_t m_counter;
 
@@ -75,6 +76,9 @@ class Connection {
 
     int m_connectTimeout;
     int m_retryTimeout;
+
+    int m_maxRetires; // max reconnect tries during one command
+    int m_retires;
 
  private:
     Connection(const Connection& conn);

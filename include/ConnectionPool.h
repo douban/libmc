@@ -47,6 +47,7 @@ class ConnectionPool {
   void setPollTimeout(int timeout);
   void setConnectTimeout(int timeout);
   void setRetryTimeout(int timeout);
+  void setMaxRetries(int max_retries);
 
  protected:
   void markDeadAll(pollfd_t* pollfds, const char* reason);

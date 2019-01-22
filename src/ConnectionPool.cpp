@@ -384,7 +384,7 @@ void ConnectionPool::broadcastCommand(const char * const cmd, const size_t cmdLe
   for (size_t idx = 0; idx < m_nConns; ++idx) {
     Connection* conn = m_conns + idx;
     if (!conn->alive()) {
-      if (!conn->tryReconnect()) {
+      if (!conn->tryReconnect(false)) {
         continue;
       }
     }
@@ -445,7 +445,6 @@ err_code_t ConnectionPool::waitPoll() {
         Connection* conn = fd2conn[fd_idx];
 
         if (pollfd_ptr->revents & (POLLERR | POLLHUP | POLLNVAL)) {
-          // TODO: add max_retries for conn?
           markDeadConn(conn, keywords::kCONN_POLL_ERROR, pollfd_ptr);
           if (conn->tryReconnect()) {
             conn->rewind();
@@ -639,6 +638,14 @@ void ConnectionPool::setRetryTimeout(int timeout) {
   for (size_t idx = 0; idx < m_nConns; ++idx) {
     Connection* conn = m_conns + idx;
     conn->setRetryTimeout(timeout);
+  }
+}
+
+
+void ConnectionPool::setMaxRetries(int max_retries) {
+  for (size_t idx = 0; idx < m_nConns; ++idx) {
+    Connection* conn = m_conns + idx;
+    conn->setMaxRetries(max_retries);
   }
 }
 

@@ -30,6 +30,9 @@ void Client::config(config_options_t opt, int val) {
     case CFG_HASH_FUNCTION:
       ConnectionPool::setHashFunction(static_cast<hash_function_options_t>(val));
       break;
+    case CFG_MAX_RETRIES:
+      setMaxRetries(val);
+      break;
     default:
       break;
   }

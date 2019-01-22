@@ -23,7 +23,8 @@ Connection::Connection()
     : m_counter(0), m_port(0), m_socketFd(-1),
       m_alive(false), m_hasAlias(false), m_deadUntil(0),
       m_connectTimeout(MC_DEFAULT_CONNECT_TIMEOUT),
-      m_retryTimeout(MC_DEFAULT_RETRY_TIMEOUT) {
+      m_retryTimeout(MC_DEFAULT_RETRY_TIMEOUT),
+      m_maxRetires(MC_DEFAULT_MAX_RETRIES), m_retires(0) {
   m_name[0] = '\0';
   m_host[0] = '\0';
   m_buffer_writer = new BufferWriter();
@@ -162,8 +163,14 @@ void Connection::close() {
   }
 }
 
-bool Connection::tryReconnect() {
+bool Connection::tryReconnect(bool check_retries) {
   if (!m_alive) {
+    if (check_retries) {
+      m_retires += 1;
+      if (m_retires > m_maxRetires) {
+        return m_alive;
+      }
+    }
     time_t now;
     time(&now);
     if (now >= m_deadUntil) {
@@ -293,6 +300,7 @@ std::queue<struct iovec>* Connection::getRequestKeys() {
 
 void Connection::reset() {
   m_counter = 0;
+  m_retires = 0;
   m_parser.reset();
   m_buffer_reader->reset();
   m_buffer_writer->reset(); // flush data dispatched but not sent
@@ -310,6 +318,10 @@ void Connection::setRetryTimeout(int timeout) {
 
 void Connection::setConnectTimeout(int timeout) {
   m_connectTimeout = timeout;
+}
+
+void Connection::setMaxRetries(int max_retries) {
+  m_maxRetires = max_retries;
 }
 
 } // namespace mc
