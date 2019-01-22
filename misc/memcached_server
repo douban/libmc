@@ -50,8 +50,9 @@ case "$1" in
             start $2
         else
             for port in $PORTS; do
-                start $port
+                start $port &
             done
+            wait
         fi
         ;;
     stop)   
@@ -60,8 +61,9 @@ case "$1" in
             stop $port
         else
             for port in $PORTS; do
-                stop $port
+                stop $port &
             done
+            wait
         fi
         ;;
     restart)
@@ -70,9 +72,10 @@ case "$1" in
             start $2
         else
             for port in $PORTS; do
-                stop $port
-                start $port
+                stop $port &
+                start $port &
             done
+            wait
         fi
         ;;
     *)
