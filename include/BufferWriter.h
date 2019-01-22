@@ -30,6 +30,7 @@ class BufferWriter {
 
  protected:
   std::vector<struct iovec> m_iovec;
+  std::vector<struct iovec> m_originalIovec;
   std::vector<char*>  m_unsignedStringList;
 
   // the index of iovec vector we'll read next

@@ -20,6 +20,7 @@ BufferWriter::~BufferWriter() {
 
 void BufferWriter::reset() {
   m_iovec.clear();
+  m_originalIovec.clear();
   for (std::vector<char*>::const_iterator it = m_unsignedStringList.begin();
        it != m_unsignedStringList.end(); ++it) {
     delete[] *it;
@@ -72,8 +73,10 @@ void BufferWriter::commitRead(size_t nSent) {
     --m_msgIovlen;
   }
 
-  // FIXME:
   if (nSent > 0) {
+    if (m_originalIovec.empty()) {
+      m_originalIovec = m_iovec;
+    }
     struct iovec* iovPtr = &m_iovec[m_readIdx];
     iovPtr->iov_base = static_cast<char*>(iovPtr->iov_base) + nSent;
     iovPtr->iov_len -= nSent;
@@ -84,6 +87,9 @@ void BufferWriter::commitRead(size_t nSent) {
 void BufferWriter::rewind() {
   m_readIdx = 0;
   m_msgIovlen = m_iovec.size();
+  if (!m_originalIovec.empty()) {
+    m_iovec = m_originalIovec;
+  }
 }
 
 
