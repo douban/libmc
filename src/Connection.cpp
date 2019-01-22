@@ -248,7 +248,6 @@ ssize_t Connection::send() {
   ssize_t nSent = ::sendmsg(m_socketFd, &msg, flags);
 
   if (nSent == -1) {
-    m_buffer_writer->reset();
     return -1;
   } else {
     m_buffer_writer->commitRead(nSent);
