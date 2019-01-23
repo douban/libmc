@@ -6,13 +6,33 @@ python:
 cache:
   pip: true
 
+matrix:
+  include:
+    - os: linux
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-4.9
+      env:
+         - MATRIX_EVAL="CC=gcc-4.9 && CXX=g++-4.9"
+
+    - os: linux
+      addons:
+        apt:
+          sources:
+            - llvm-toolchain-trusty-5.0
+          packages:
+            - clang-5.0
+      env:
+        - MATRIX_EVAL="CC=clang-5.0 && CXX=clang++-5.0"
+
 env:
   matrix:
   - TEST_SUITE=cppcheck
-  - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Release PRJ_COMPILER=clang
-  - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Debug PRJ_COMPILER=clang
-  - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Release PRJ_COMPILER=gcc
-  - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Debug PRJ_COMPILER=gcc
+  - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Release
+  - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Debug
   - TEST_SUITE=benchmark
 
 addons:
@@ -26,6 +46,9 @@ addons:
       - libmemcached10
       - golang
 
+before_install:
+    - eval "${MATRIX_EVAL}"
+
 install:
   - if [[ $TEST_SUITE != "cppcheck" ]]; then pip install --upgrade pip setuptools; fi
   - if [[ $TEST_SUITE != "cppcheck" ]]; then pip install future; fi
@@ -36,8 +59,6 @@ before_script:
   - if [[ $TEST_SUITE != "cppcheck" ]]; then ./misc/memcached_server start; fi
 
 script:
-  - if [[ $PRJ_COMPILER = "gcc" ]]; then export CC=gcc CXX=g++; fi
-  - if [[ $PRJ_COMPILER = "clang" ]]; then export CC=clang CXX=clang++; fi
   - ./misc/travis/$TEST_SUITE.sh
 
 after_script:
