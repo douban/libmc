@@ -24,7 +24,7 @@ Connection::Connection()
       m_alive(false), m_hasAlias(false), m_deadUntil(0),
       m_connectTimeout(MC_DEFAULT_CONNECT_TIMEOUT),
       m_retryTimeout(MC_DEFAULT_RETRY_TIMEOUT),
-      m_maxRetires(MC_DEFAULT_MAX_RETRIES), m_retires(0) {
+      m_maxRetries(MC_DEFAULT_MAX_RETRIES), m_retires(0) {
   m_name[0] = '\0';
   m_host[0] = '\0';
   m_buffer_writer = new BufferWriter();
@@ -167,7 +167,7 @@ bool Connection::tryReconnect(bool check_retries) {
   if (!m_alive) {
     if (check_retries) {
       m_retires += 1;
-      if (m_retires > m_maxRetires) {
+      if (m_retires > m_maxRetries) {
         return m_alive;
       }
     }
@@ -320,7 +320,7 @@ void Connection::setConnectTimeout(int timeout) {
 }
 
 void Connection::setMaxRetries(int max_retries) {
-  m_maxRetires = max_retries;
+  m_maxRetries = max_retries;
 }
 
 } // namespace mc

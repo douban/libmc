@@ -77,7 +77,7 @@ class Connection {
     int m_connectTimeout;
     int m_retryTimeout;
 
-    int m_maxRetires; // max reconnect tries during one command
+    int m_maxRetries; // max reconnect tries during one command
     int m_retires;
 
  private:
