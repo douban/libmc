@@ -52,6 +52,7 @@ class ConnectionPool {
  protected:
   void markDeadAll(pollfd_t* pollfds, const char* reason);
   void markDeadConn(Connection* conn, const char* reason, pollfd_t* fd_ptr);
+  void rewindConn(Connection* conn, pollfd_t* fd_ptr);
 
   uint32_t m_nActiveConn; // wait for poll
   uint32_t m_nInvalidKey;
