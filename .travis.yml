@@ -1,4 +1,5 @@
 language: python
+dist: xenial
 python:
   - "2.7"
   - "3.5"
@@ -8,12 +9,15 @@ cache:
 
 env:
   matrix:
-  - TEST_SUITE=cppcheck
-  - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Release PRJ_COMPILER=clang
-  - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Debug PRJ_COMPILER=clang
-  - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Release PRJ_COMPILER=gcc
-  - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Debug PRJ_COMPILER=gcc
+  - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Release CMAKE_C_COMPILER=clang CMAKE_CXX_COMPILER=clang++
+  - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Debug CMAKE_C_COMPILER=clang CMAKE_CXX_COMPILER=clang++
+  - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Release CMAKE_C_COMPILER=gcc CMAKE_CXX_COMPILER=g++
+  - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Debug CMAKE_C_COMPILER=gcc CMAKE_CXX_COMPILER=g++
   - TEST_SUITE=benchmark
+
+matrix:
+  include:
+    - env: TEST_SUITE=cppcheck
 
 addons:
   apt:
@@ -23,7 +27,7 @@ addons:
       - valgrind
       - cppcheck
       - memcached
-      - libmemcached10
+      - libmemcached11
       - golang
 
 install:
@@ -36,8 +40,8 @@ before_script:
   - if [[ $TEST_SUITE != "cppcheck" ]]; then ./misc/memcached_server start; fi
 
 script:
-  - if [[ $PRJ_COMPILER = "gcc" ]]; then export CC=gcc CXX=g++; fi
-  - if [[ $PRJ_COMPILER = "clang" ]]; then export CC=clang CXX=clang++; fi
+  - if [[ $CMAKE_C_COMPILER = "gcc" ]]; then export CC=gcc CXX=g++; fi
+  - if [[ $CMAKE_C_COMPILER = "clang" ]]; then export CC=clang CXX=clang++; fi
   - ./misc/travis/$TEST_SUITE.sh
 
 after_script:
