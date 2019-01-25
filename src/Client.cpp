@@ -238,8 +238,10 @@ const char* errCodeToString(err_code_t err) {
       return keywords::kINVALID_KEY_ERROR;
     case RET_INCOMPLETE_BUFFER_ERR:
       return keywords::kINCOMPLETE_BUFFER_ERROR;
-    default:
+    case RET_OK:
       return "ok";
+    default:
+      return "unknown";
   }
 }
 
