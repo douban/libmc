@@ -8,20 +8,16 @@ python:
 cache:
   pip: true
 
-compiler:
-  - clang
-  - gcc
-
 env:
-  - TEST_SUITE=cppcheck
-  - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Release
-  - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Debug
+  - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Release PRJ_COMPILER=clang
+  - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Debug PRJ_COMPILER=clang
+  - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Release PRJ_COMPILER=gcc
+  - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Debug PRJ_COMPILER=gcc
   - TEST_SUITE=benchmark
 
 matrix:
-  exclude:
+  include:
   - env: TEST_SUITE=cppcheck
-    compiler: clang
 
 addons:
   apt:
@@ -33,7 +29,7 @@ addons:
       - valgrind
       - cppcheck
       - memcached
-      - libmemcached10
+      - libmemcached11
       - golang
       - g++-7
 
@@ -47,7 +43,8 @@ before_script:
   - if [[ $TEST_SUITE != "cppcheck" ]]; then ./misc/memcached_server start; fi
 
 script:
-  - if [[ $CC = "gcc" ]]; then export CC=gcc-7 CXX=g++-7; fi
+  - if [[ $PRJ_COMPILER = "gcc" ]]; then export CC=gcc-7 CXX=g++-7; fi
+  - if [[ $PRJ_COMPILER = "clang" ]]; then export CC=clang CXX=clang++; fi
   - ./misc/travis/$TEST_SUITE.sh
 
 after_script:
