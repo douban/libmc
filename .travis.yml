@@ -1,3 +1,5 @@
+dist: xenial
+
 language: python
 python:
   - "2.7"
@@ -6,17 +8,25 @@ python:
 cache:
   pip: true
 
+compiler:
+  - clang
+  - gcc
+
 env:
-  matrix:
   - TEST_SUITE=cppcheck
-  - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Release PRJ_COMPILER=clang
-  - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Debug PRJ_COMPILER=clang
-  - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Release PRJ_COMPILER=gcc
-  - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Debug PRJ_COMPILER=gcc
+  - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Release
+  - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Debug
   - TEST_SUITE=benchmark
+
+matrix:
+  exclude:
+  - env: TEST_SUITE=cppcheck
+    compiler: clang
 
 addons:
   apt:
+    sources:
+      - ubuntu-toolchain-r-test
     packages:
       - python-dev
       - python-numpy
@@ -25,6 +35,7 @@ addons:
       - memcached
       - libmemcached10
       - golang
+      - g++-7
 
 install:
   - if [[ $TEST_SUITE != "cppcheck" ]]; then pip install --upgrade pip setuptools; fi
@@ -36,8 +47,7 @@ before_script:
   - if [[ $TEST_SUITE != "cppcheck" ]]; then ./misc/memcached_server start; fi
 
 script:
-  - if [[ $PRJ_COMPILER = "gcc" ]]; then export CC=gcc CXX=g++; fi
-  - if [[ $PRJ_COMPILER = "clang" ]]; then export CC=clang CXX=clang++; fi
+  - if [[ $CC = "gcc" ]]; then export CC=gcc-7 CXX=g++-7; fi
   - ./misc/travis/$TEST_SUITE.sh
 
 after_script:
