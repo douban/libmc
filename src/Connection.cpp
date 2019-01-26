@@ -164,18 +164,15 @@ void Connection::close() {
 
 bool Connection::tryReconnect() {
   if (!m_alive) {
-    time_t now;
-    time(&now);
+    time_t now = time(NULL);
     if (now >= m_deadUntil) {
       int rv = this->connect();
       if (rv == 0) {
-        if (m_deadUntil > 0) {
-          log_info("Connection %s is back to live at %lu", m_name, now);
-        }
+        log_info_if(m_deadUntil > 0, "[I: %p] %s is back to live at %lu", this, m_name, now);
         m_deadUntil = 0;
       } else {
         m_deadUntil = now + m_retryTimeout;
-        // log_info("%s is still dead", m_name);
+        log_info("[I: %p] %s is still dead", this, m_name);
       }
     }
   }
@@ -188,14 +185,16 @@ void Connection::markDead(const char* reason, int delay) {
     m_deadUntil += delay; // check after `delay` seconds, default 0
     this->close();
     if (strcmp(reason, keywords::kCONN_QUIT) != 0) {
-      log_warn("Connection %s is dead(reason: %s, delay: %d), next check at %lu",
-               m_name, reason, delay, m_deadUntil);
+      log_warn("[I: %p] %s is dead(reason: %s, delay: %d), next check at %lu",
+               this, m_name, reason, delay, m_deadUntil);
+#ifndef NDEBUG
       std::queue<struct iovec>* q = m_parser.getRequestKeys();
       if (!q->empty()) {
-        log_warn("%s: first request key: %.*s", m_name,
+        log_debug("[I: %p] %s first request key: %.*s", this, m_name,
                  static_cast<int>(q->front().iov_len),
                  static_cast<char*>(q->front().iov_base));
       }
+#endif
     }
   }
 }
@@ -209,6 +208,7 @@ void Connection::takeBuffer(const char* const buf, size_t buf_len) {
 }
 
 void Connection::addRequestKey(const char* const key, const size_t len) {
+  log_debug("[I: %p] %s add request key: %.*s", this, m_name, static_cast<int>(len), key);
   m_parser.addRequestKey(key, len);
 }
 
@@ -261,7 +261,8 @@ ssize_t Connection::recv() {
   size_t bufferSizeAvailable = m_buffer_reader->prepareWriteBlock(bufferSize);
   char* writePtr = m_buffer_reader->getWritePtr();
   ssize_t bufferSizeActual = ::recv(m_socketFd, writePtr, bufferSizeAvailable, 0);
-  // log_info("%p recv(%lu) %.*s", this, bufferSizeActual, (int)bufferSizeActual, writePtr);
+  log_debug("[I: %p] %s recv(%lu)", this, m_name, bufferSizeActual);
+  // log_debug("[I: %p] %.*s", (int)bufferSizeActual, writePtr);
   if (bufferSizeActual > 0) {
     m_buffer_reader->commitWrite(bufferSizeActual);
   }

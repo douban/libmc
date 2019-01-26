@@ -63,7 +63,6 @@ void PacketParser::setBufferReader(BufferReader* reader) {
 
 
 void PacketParser::addRequestKey(const char* const key, const size_t len) {
-  // log_info("add request key: %.*s", static_cast<int>(len), key);
   struct iovec iov = {const_cast<char*>(key), len};
   m_requestKeys.push(iov);
 }

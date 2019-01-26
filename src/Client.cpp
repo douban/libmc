@@ -41,6 +41,7 @@ err_code_t Client::get(const char* const* keys, const size_t* keyLens, size_t nK
   dispatchRetrieval(GET_OP, keys, keyLens, nKeys);
   err_code_t rv = waitPoll();
   collectRetrievalResult(results, nResults);
+  log_info_if(rv != RET_OK, "[I: %p], err code %s", this, errCodeToString(rv));
   return rv;
 }
 
@@ -50,6 +51,7 @@ err_code_t Client::gets(const char* const* keys, const size_t* keyLens, size_t n
   dispatchRetrieval(GETS_OP, keys, keyLens, nKeys);
   err_code_t rv = waitPoll();
   collectRetrievalResult(results, nResults);
+  log_info_if(rv != RET_OK, "[I: %p], err code %s", this, errCodeToString(rv));
   return rv;
 }
 
@@ -101,6 +103,7 @@ err_code_t Client::M(const char* const* keys, const size_t* keyLens, \
                   valLens, nItems); \
   err_code_t rv = waitPoll(); \
   collectMessageResult(results, nResults); \
+  log_info_if(rv != RET_OK, "[I: %p], err code %s", this, errCodeToString(rv)); \
   return rv;\
 }
 
@@ -118,6 +121,7 @@ err_code_t Client::_delete(const char* const* keys, const size_t* keyLens,
   dispatchDeletion(keys, keyLens, noreply, nItems);
   err_code_t rv = waitPoll();
   collectMessageResult(results, nResults);
+  log_info_if(rv != RET_OK, "[I: %p], err code %s", this, errCodeToString(rv));
   return rv;
 }
 
@@ -144,6 +148,7 @@ err_code_t Client::version(broadcast_result_t** results, size_t* nHosts) {
   broadcastCommand(keywords::kVERSION, 7);
   err_code_t rv = waitPoll();
   collectBroadcastResult(results, nHosts);
+  log_info_if(rv != RET_OK, "[I: %p], err code %s", this, errCodeToString(rv));
   return rv;
 }
 
@@ -152,6 +157,7 @@ err_code_t Client::quit() {
   broadcastCommand(keywords::kQUIT, 4, true);
   err_code_t rv = waitPoll();
   markDeadAll(NULL, keywords::kCONN_QUIT);
+  log_info_if(rv != RET_OK, "[I: %p], err code %s", this, errCodeToString(rv));
   return rv;
 }
 
@@ -160,6 +166,7 @@ err_code_t Client::stats(broadcast_result_t** results, size_t* nHosts) {
   broadcastCommand(keywords::kSTATS, 5);
   err_code_t rv = waitPoll();
   collectBroadcastResult(results, nHosts);
+  log_info_if(rv != RET_OK, "[I: %p], err code %s", this, errCodeToString(rv));
   return rv;
 }
 
@@ -170,6 +177,7 @@ err_code_t Client::touch(const char* const* keys, const size_t* keyLens,
   dispatchTouch(keys, keyLens, exptime, noreply, nItems);
   err_code_t rv = waitPoll();
   collectMessageResult(results, nResults);
+  log_info_if(rv != RET_OK, "[I: %p], err code %s", this, errCodeToString(rv));
   return rv;
 }
 
@@ -193,6 +201,7 @@ err_code_t Client::incr(const char* key, const size_t keyLen, const uint64_t del
   dispatchIncrDecr(INCR_OP, key, keyLen, delta, noreply);
   err_code_t rv = waitPoll();
   collectUnsignedResult(results, nResults);
+  log_info_if(rv != RET_OK, "[I: %p], err code %s", this, errCodeToString(rv));
   return rv;
 }
 
@@ -203,6 +212,7 @@ err_code_t Client::decr(const char* key, const size_t keyLen, const uint64_t del
   dispatchIncrDecr(DECR_OP, key, keyLen, delta, noreply);
   err_code_t rv = waitPoll();
   collectUnsignedResult(results, nResults);
+  log_info_if(rv != RET_OK, "[I: %p], err code %s", this, errCodeToString(rv));
   return rv;
 }
 

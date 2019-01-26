@@ -204,6 +204,7 @@ void ConnectionPool::dispatchStorage(op_code_t op,
       conn->getMessageResults()->reserve(conn->m_counter);
     }
   }
+  log_debug("[I: %p] after dispatchStorage, m_nActiveConn: %d", this, m_nActiveConn);
 }
 
 
@@ -248,7 +249,7 @@ void ConnectionPool::dispatchRetrieval(op_code_t op, const char* const* keys,
       conn->getRetrievalResults()->reserve(conn->m_counter);
     }
   }
-  // log_debug("after dispatchRetrieval: m_nActiveConn: %d", this->m_nActiveConn);
+  log_debug("[I: %p] after dispatchRetrieval, m_nActiveConn: %d", this, m_nActiveConn);
 }
 
 
@@ -404,7 +405,7 @@ err_code_t ConnectionPool::waitPoll() {
     if (m_nInvalidKey > 0) {
       return RET_INVALID_KEY_ERR;
     } else {
-      // hard server error
+      log_debug("[I: %p] hard server error", this);
       return RET_MC_SERVER_ERR;
     }
   }
@@ -480,6 +481,7 @@ err_code_t ConnectionPool::waitPoll() {
           // POLLIN recv
           ssize_t nRecv = conn->recv();
           if (nRecv == -1 || nRecv == 0) {
+            log_warn("[I: %p] recv_error, Connection(%p): %s, nRecv: %zd", this, conn, conn->name(), nRecv);
             markDeadConn(conn, keywords::kRECV_ERROR, pollfd_ptr);
             ret_code = RET_RECV_ERR;
             --m_nActiveConn;
@@ -625,6 +627,7 @@ void ConnectionPool::setRetryTimeout(int timeout) {
 
 
 void ConnectionPool::markDeadAll(pollfd_t* pollfds, const char* reason) {
+  log_warn("[I: %p] markDeadAll(reason: %s), m_nActiveConn: %d", this, reason, m_nActiveConn);
   nfds_t fd_idx = 0;
   for (std::vector<Connection*>::iterator it = m_activeConns.begin();
       it != m_activeConns.end();
@@ -643,6 +646,7 @@ void ConnectionPool::markDeadAll(pollfd_t* pollfds, const char* reason) {
 
 
 void ConnectionPool::markDeadConn(Connection* conn, const char* reason, pollfd_t* fd_ptr) {
+  log_warn("[I: %p] markDeadConn(reason: %s), Connection(%p): %s", this, reason, conn, conn->name());
   conn->markDead(reason);
   fd_ptr->events &= ~POLLOUT & ~POLLIN;
   fd_ptr->fd = conn->socketFd();
