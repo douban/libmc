@@ -79,7 +79,5 @@ DECL_RETRIEVAL_CMD(gets)
   std::vector<unsigned_result_t*> m_outUnsignedResultPtrs;
 };
 
-const char* errCodeToString(err_code_t err);
-
 } // namespace mc
 } // namespace douban

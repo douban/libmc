@@ -35,7 +35,7 @@ static const char kSTATS[] = "stats";
 static const char kQUIT[] = "quit";
 
 
-// error messages for humman
+// error messages for human
 static const char kSEND_ERROR[] = "send_error";
 static const char kRECV_ERROR[] = "recv_error";
 static const char kCONN_POLL_ERROR[] = "conn_poll_error";

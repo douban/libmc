@@ -3,7 +3,6 @@
 
 
 using douban::mc::Client;
-using douban::mc::errCodeToString;
 
 
 void* client_create() {

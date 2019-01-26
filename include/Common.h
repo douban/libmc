@@ -9,6 +9,7 @@
 #include <cstdlib>
 #include <cerrno>
 
+#include "Export.h"
 
 #define PROJECT_NAME "libmc"
 #define MC_DEFAULT_PORT 11211
@@ -223,6 +224,7 @@ typedef enum {
   QUIT_OP,
 } op_code_t;
 
+const char* errCodeToString(err_code_t err);
 
 } // namespace mc
 } // namespace douban
