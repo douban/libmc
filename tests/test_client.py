@@ -285,12 +285,15 @@ class ErrorCodeTestCase(unittest.TestCase):
         self.mc = Client(["127.0.0.1:21211"])
         assert self.mc.version()
         assert self.mc.get_last_error() == MC_RETURN_OK
+        assert self.mc.get_last_strerror() == "ok"
 
     def test_invalid_key(self):
         self.mc.get('invalid key')
         assert self.mc.get_last_error() == MC_RETURN_INVALID_KEY_ERR
+        assert self.mc.get_last_strerror() == "invalid_key_error"
 
     def test_mc_server_err(self):
         mc = Client(["not_exist_host:11211"])
         mc.get('valid_key')
         assert mc.get_last_error() == MC_RETURN_MC_SERVER_ERR
+        assert mc.get_last_strerror() == "server_error"

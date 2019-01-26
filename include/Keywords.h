@@ -35,17 +35,18 @@ static const char kSTATS[] = "stats";
 static const char kQUIT[] = "quit";
 
 
-// error messages for humman
+// error messages for human
 static const char kSEND_ERROR[] = "send_error";
 static const char kRECV_ERROR[] = "recv_error";
-static const char kSERVER_ERROR[] = "server_error";
 static const char kCONN_POLL_ERROR[] = "conn_poll_error";
-static const char kPOLL_TIMEOUT[] = "poll_timeout";
+static const char kPOLL_TIMEOUT_ERROR[] = "poll_timeout_error";
 static const char kPOLL_ERROR[] = "poll_error";
+static const char kSERVER_ERROR[] = "server_error";
 static const char kPROGRAMMING_ERROR[] = "programming_error";
+static const char kINVALID_KEY_ERROR[] = "invalid_key_error";
+static const char kINCOMPLETE_BUFFER_ERROR[] = "incomplete_buffer_error";
 
 static const char kUPDATE_SERVER[] = "update_server";
-
 static const char kCONN_QUIT[] = "conn_quit";
 
 } // namespace keywords

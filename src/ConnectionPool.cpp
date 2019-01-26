@@ -435,7 +435,7 @@ err_code_t ConnectionPool::waitPoll() {
     } else if (rv == 0) {
       log_warn("poll timeout. (m_nActiveConn: %d)", m_nActiveConn);
       // NOTE: MUST reset all active TCP connections after timeout.
-      markDeadAll(pollfds, keywords::kPOLL_TIMEOUT);
+      markDeadAll(pollfds, keywords::kPOLL_TIMEOUT_ERROR);
       ret_code = RET_POLL_TIMEOUT_ERR;
       break;
     } else {
