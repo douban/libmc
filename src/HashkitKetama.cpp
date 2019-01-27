@@ -133,7 +133,7 @@ std::vector<continuum_item_t>::iterator KetamaSelector::getServerIt(const char* 
         }
       } while (--max_iter);
       if (max_iter == 0) {
-        log_warn("no server is avaliable(alive) for key: \"%.*s\"", static_cast<int>(key_len), key);
+        log_warn("no server is available(alive) for key: \"%.*s\"", static_cast<int>(key_len), key);
         return m_continuum.end();
       }
     } else {
