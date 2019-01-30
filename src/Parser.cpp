@@ -473,6 +473,7 @@ void PacketParser::rewind() {
   m_unsignedResults.clear();
 
   m_state = FSM_START;
+  m_requestKeyIdx = 0;
 }
 
 
