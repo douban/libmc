@@ -33,6 +33,7 @@ class Connection {
     const char* host();
     const uint32_t port();
     const bool hasAlias();
+    const bool isSent();
 
     void takeBuffer(const char* const buf, size_t buf_len);
     void addRequestKey(const char* const key, const size_t len);
@@ -103,6 +104,10 @@ inline const uint32_t Connection::port() {
 
 inline const bool Connection::hasAlias() {
   return m_hasAlias;
+}
+
+inline const bool Connection::isSent() {
+  return m_buffer_writer->isRead();
 }
 
 inline const int Connection::getRetryTimeout() {

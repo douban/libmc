@@ -27,6 +27,7 @@ class BufferWriter {
   void commitRead(size_t nSent);
   void rewind();
   size_t msgIovlen();
+  const bool isRead();
 
  protected:
   std::vector<struct iovec> m_iovec;
@@ -40,6 +41,9 @@ class BufferWriter {
   size_t m_msgIovlen;
 };
 
+inline const bool BufferWriter::isRead() {
+  return m_readIdx != 0;
+}
 
 } // namespace io
 } // namespace mc

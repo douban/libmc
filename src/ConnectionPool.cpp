@@ -421,7 +421,7 @@ err_code_t ConnectionPool::waitPoll() {
     Connection* conn = *it;
     pollfd_ptr = &pollfds[fd_idx];
     pollfd_ptr->fd = conn->socketFd();
-    pollfd_ptr->events = POLLOUT;
+    pollfd_ptr->events = POLLOUT | POLLIN;
     fd2conn[fd_idx] = conn;
   }
 
@@ -453,6 +453,22 @@ err_code_t ConnectionPool::waitPoll() {
             --m_nActiveConn;
           }
           goto next_fd;
+        }
+
+        // first recv before send
+        if (pollfd_ptr->revents & POLLIN && !conn->isSent()) {
+          ssize_t nRecv = conn->recv();
+          if (nRecv == -1 || nRecv == 0) {
+            markDeadConn(conn, keywords::kRECV_ERROR, pollfd_ptr);
+            if (conn->tryReconnect(false)) {
+              pollfd_ptr->fd = conn->socketFd();
+              pollfd_ptr->events = POLLOUT;
+            } else {
+              ret_code = RET_RECV_ERR;
+              --m_nActiveConn;
+            }
+            goto next_fd;
+          }
         }
 
         // send
