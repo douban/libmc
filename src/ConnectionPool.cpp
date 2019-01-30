@@ -468,6 +468,9 @@ err_code_t ConnectionPool::waitPoll() {
               --m_nActiveConn;
             }
             goto next_fd;
+          } else {
+            // if we recv some data before we sent (normally impossible)
+            pollfd_ptr->events &= ~POLLIN;
           }
         }
 
