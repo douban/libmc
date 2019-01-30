@@ -41,7 +41,7 @@ class Connection {
     void setParserMode(ParserMode md);
     void takeNumber(int64_t val);
     ssize_t send();
-    ssize_t recv();
+    ssize_t recv(bool peek = false);
     void process(err_code_t& err);
     types::RetrievalResultList* getRetrievalResults();
     types::MessageResultList* getMessageResults();

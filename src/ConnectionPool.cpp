@@ -457,7 +457,7 @@ err_code_t ConnectionPool::waitPoll() {
 
         // first recv before send
         if (pollfd_ptr->revents & POLLIN && !conn->isSent()) {
-          ssize_t nRecv = conn->recv();
+          ssize_t nRecv = conn->recv(true);
           if (nRecv == -1 || nRecv == 0) {
             markDeadConn(conn, keywords::kRECV_ERROR, pollfd_ptr);
             if (conn->tryReconnect(false)) {

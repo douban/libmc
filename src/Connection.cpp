@@ -261,13 +261,17 @@ ssize_t Connection::send() {
   }
 }
 
-ssize_t Connection::recv() {
+ssize_t Connection::recv(bool peek) {
+  int flags = 0;
   size_t bufferSize = m_buffer_reader->getNextPreferedDataBlockSize();
   size_t bufferSizeAvailable = m_buffer_reader->prepareWriteBlock(bufferSize);
   char* writePtr = m_buffer_reader->getWritePtr();
-  ssize_t bufferSizeActual = ::recv(m_socketFd, writePtr, bufferSizeAvailable, 0);
+  if (peek) {
+    flags |= MSG_PEEK;
+  }
+  ssize_t bufferSizeActual = ::recv(m_socketFd, writePtr, bufferSizeAvailable, flags);
   // log_info("%p recv(%lu) %.*s", this, bufferSizeActual, (int)bufferSizeActual, writePtr);
-  if (bufferSizeActual > 0) {
+  if (!peek && bufferSizeActual > 0) {
     m_buffer_reader->commitWrite(bufferSizeActual);
   }
   return bufferSizeActual;
