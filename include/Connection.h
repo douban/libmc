@@ -47,7 +47,7 @@ class Connection {
     types::LineResultList* getLineResults();
     types::UnsignedResultList* getUnsignedResults();
 
-    std::queue<struct iovec>* getRequestKeys();
+    std::vector<struct iovec>* getRequestKeys();
 
 
     void reset();

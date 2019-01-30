@@ -26,7 +26,8 @@ class PacketParser {
   void setBufferReader(io::BufferReader* reader);
   void setMode(ParserMode md);
   void addRequestKey(const char* const key, const size_t len);
-  std::queue<struct iovec>* getRequestKeys();
+  std::vector<struct iovec>* getRequestKeys();
+  struct iovec* currentRequestKey();
   size_t requestKeyCount();
   void process_packets(err_code_t &err);
   void reset();
@@ -44,11 +45,12 @@ class PacketParser {
   void processLineResult(err_code_t& err);
 
 
-  std::queue<struct iovec> m_requestKeys;
+  std::vector<struct iovec> m_requestKeys;
   io::BufferReader* m_buffer_reader;
   parser_state_t m_state;
   ParserMode m_mode;
   size_t m_expectedResultCount;
+  size_t m_requestKeyIdx;
 
   types::RetrievalResultList m_retrievalResults;
   types::MessageResultList m_messageResults;
@@ -62,7 +64,7 @@ class PacketParser {
 
 inline bool PacketParser::canEndParse() {
   assert(m_mode == MODE_END_STATE || m_mode == MODE_COUNTING);
-  return m_mode == MODE_END_STATE ? IS_END_STATE(m_state) : m_requestKeys.empty();
+  return m_mode == MODE_END_STATE ? IS_END_STATE(m_state) : m_requestKeyIdx == m_requestKeys.size();
 }
 
 } // namespace mc

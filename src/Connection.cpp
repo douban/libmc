@@ -197,11 +197,11 @@ void Connection::markDead(const char* reason, int delay) {
     if (strcmp(reason, keywords::kCONN_QUIT) != 0) {
       log_warn("Connection %s is dead(reason: %s, delay: %d), next check at %lu",
                m_name, reason, delay, m_deadUntil);
-      std::queue<struct iovec>* q = m_parser.getRequestKeys();
-      if (!q->empty()) {
+      struct iovec* key = m_parser.currentRequestKey();
+      if (key != NULL) {
         log_warn("%s: first request key: %.*s", m_name,
-                 static_cast<int>(q->front().iov_len),
-                 static_cast<char*>(q->front().iov_base));
+                 static_cast<int>(key->iov_len),
+                 static_cast<char*>(key->iov_base));
       }
     }
   }
@@ -293,7 +293,7 @@ types::UnsignedResultList* Connection::getUnsignedResults() {
   return m_parser.getUnsignedResults();
 }
 
-std::queue<struct iovec>* Connection::getRequestKeys() {
+std::vector<struct iovec>* Connection::getRequestKeys() {
   return m_parser.getRequestKeys();
 }
 
