@@ -76,7 +76,6 @@ mc::Client* newClient(int n) {
   mc::Client* client = new mc::Client();
   client->config(CFG_HASH_FUNCTION, OPT_HASH_MD5);
   client->init(hosts, ports, n, aliases);
-  // client->config(CFG_MAX_RETRIES, 1); // allow resend in waitPoll
   broadcast_result_t* results;
   size_t nHosts;
   int ret = client->version(&results, &nHosts);
