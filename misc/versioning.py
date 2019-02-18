@@ -49,8 +49,8 @@ def main():
     subst_list = {
         "version": "",
         "date": "",
-        "author": "",
-        "email": ""
+        # "author": "",
+        # "email": ""
     }
 
     for line in sys.stdin:
@@ -64,12 +64,12 @@ def main():
                 "date": subprocess.check_output([
                     'git', 'log', '--pretty=format:"%ad"', '-1'
                 ]),
-                "author": subprocess.check_output([
-                    'git', 'log', '--pretty=format:"%an"', '-1'
-                ]),
-                "email": subprocess.check_output([
-                    'git', 'log', '--pretty=format:"%ae"', '-1'
-                ])
+                # "author": subprocess.check_output([
+                #     'git', 'log', '--pretty=format:"%an"', '-1'
+                # ]),
+                # "email": subprocess.check_output([
+                #     'git', 'log', '--pretty=format:"%ae"', '-1'
+                # ])
             }
             for k, v in subst_list.iteritems():
                 v = re.sub(r'[\n\r\t"\']', "", v)
