@@ -25,7 +25,7 @@ class Connection {
     int connect();
     void close();
     const bool alive();
-    bool tryReconnect();
+    bool tryReconnect(bool check_retries = true);
     void markDead(const char* reason, int delay = 0);
     int socketFd() const;
 
@@ -33,6 +33,7 @@ class Connection {
     const char* host();
     const uint32_t port();
     const bool hasAlias();
+    const bool isSent();
 
     void takeBuffer(const char* const buf, size_t buf_len);
     void addRequestKey(const char* const key, const size_t len);
@@ -40,20 +41,22 @@ class Connection {
     void setParserMode(ParserMode md);
     void takeNumber(int64_t val);
     ssize_t send();
-    ssize_t recv();
+    ssize_t recv(bool peek = false);
     void process(err_code_t& err);
     types::RetrievalResultList* getRetrievalResults();
     types::MessageResultList* getMessageResults();
     types::LineResultList* getLineResults();
     types::UnsignedResultList* getUnsignedResults();
 
-    std::queue<struct iovec>* getRequestKeys();
+    std::vector<struct iovec>* getRequestKeys();
 
 
     void reset();
+    void rewind();
     void setRetryTimeout(int timeout);
     const int getRetryTimeout();
     void setConnectTimeout(int timeout);
+    void setMaxRetries(int max_retries);
 
     size_t m_counter;
 
@@ -74,6 +77,9 @@ class Connection {
 
     int m_connectTimeout;
     int m_retryTimeout;
+
+    int m_maxRetries; // max reconnect tries during one command
+    int m_retires;
 
  private:
     Connection(const Connection& conn);
@@ -98,6 +104,10 @@ inline const uint32_t Connection::port() {
 
 inline const bool Connection::hasAlias() {
   return m_hasAlias;
+}
+
+inline const bool Connection::isSent() {
+  return m_buffer_writer->isRead();
 }
 
 inline const int Connection::getRetryTimeout() {

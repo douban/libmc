@@ -384,7 +384,7 @@ void ConnectionPool::broadcastCommand(const char * const cmd, const size_t cmdLe
   for (size_t idx = 0; idx < m_nConns; ++idx) {
     Connection* conn = m_conns + idx;
     if (!conn->alive()) {
-      if (!conn->tryReconnect()) {
+      if (!conn->tryReconnect(false)) {
         continue;
       }
     }
@@ -421,7 +421,7 @@ err_code_t ConnectionPool::waitPoll() {
     Connection* conn = *it;
     pollfd_ptr = &pollfds[fd_idx];
     pollfd_ptr->fd = conn->socketFd();
-    pollfd_ptr->events = POLLOUT;
+    pollfd_ptr->events = POLLOUT | POLLIN;
     fd2conn[fd_idx] = conn;
   }
 
@@ -446,9 +446,32 @@ err_code_t ConnectionPool::waitPoll() {
 
         if (pollfd_ptr->revents & (POLLERR | POLLHUP | POLLNVAL)) {
           markDeadConn(conn, keywords::kCONN_POLL_ERROR, pollfd_ptr);
-          ret_code = RET_CONN_POLL_ERR;
-          --m_nActiveConn;
+          if (conn->tryReconnect()) {
+            rewindConn(conn, pollfd_ptr);
+          } else {
+            ret_code = RET_CONN_POLL_ERR;
+            --m_nActiveConn;
+          }
           goto next_fd;
+        }
+
+        // first recv before send
+        if (pollfd_ptr->revents & POLLIN && !conn->isSent()) {
+          ssize_t nRecv = conn->recv(true);
+          if (nRecv == -1 || nRecv == 0) {
+            markDeadConn(conn, keywords::kRECV_ERROR, pollfd_ptr);
+            if (conn->tryReconnect(false)) {
+              pollfd_ptr->fd = conn->socketFd();
+              pollfd_ptr->events = POLLOUT;
+            } else {
+              ret_code = RET_RECV_ERR;
+              --m_nActiveConn;
+            }
+            goto next_fd;
+          } else {
+            // if we recv some data before we sent (normally impossible)
+            pollfd_ptr->events &= ~POLLIN;
+          }
         }
 
         // send
@@ -457,8 +480,12 @@ err_code_t ConnectionPool::waitPoll() {
           ssize_t nToSend = conn->send();
           if (nToSend == -1) {
             markDeadConn(conn, keywords::kSEND_ERROR, pollfd_ptr);
-            ret_code = RET_SEND_ERR;
-            --m_nActiveConn;
+            if (conn->tryReconnect()) {
+              rewindConn(conn, pollfd_ptr);
+            } else {
+              ret_code = RET_SEND_ERR;
+              --m_nActiveConn;
+            }
             goto next_fd;
           } else {
             // start to recv if any data is sent
@@ -481,8 +508,12 @@ err_code_t ConnectionPool::waitPoll() {
           ssize_t nRecv = conn->recv();
           if (nRecv == -1 || nRecv == 0) {
             markDeadConn(conn, keywords::kRECV_ERROR, pollfd_ptr);
-            ret_code = RET_RECV_ERR;
-            --m_nActiveConn;
+            if (conn->tryReconnect()) {
+              rewindConn(conn, pollfd_ptr);
+            } else {
+              ret_code = RET_RECV_ERR;
+              --m_nActiveConn;
+            }
             goto next_fd;
           }
 
@@ -624,6 +655,14 @@ void ConnectionPool::setRetryTimeout(int timeout) {
 }
 
 
+void ConnectionPool::setMaxRetries(int max_retries) {
+  for (size_t idx = 0; idx < m_nConns; ++idx) {
+    Connection* conn = m_conns + idx;
+    conn->setMaxRetries(max_retries);
+  }
+}
+
+
 void ConnectionPool::markDeadAll(pollfd_t* pollfds, const char* reason) {
   nfds_t fd_idx = 0;
   for (std::vector<Connection*>::iterator it = m_activeConns.begin();
@@ -646,6 +685,13 @@ void ConnectionPool::markDeadConn(Connection* conn, const char* reason, pollfd_t
   conn->markDead(reason);
   fd_ptr->events &= ~POLLOUT & ~POLLIN;
   fd_ptr->fd = conn->socketFd();
+}
+
+
+void ConnectionPool::rewindConn(Connection* conn, pollfd_t* fd_ptr) {
+  conn->rewind();
+  fd_ptr->fd = conn->socketFd();
+  fd_ptr->events = POLLOUT;
 }
 
 

@@ -23,7 +23,8 @@ Connection::Connection()
     : m_counter(0), m_port(0), m_socketFd(-1),
       m_alive(false), m_hasAlias(false), m_deadUntil(0),
       m_connectTimeout(MC_DEFAULT_CONNECT_TIMEOUT),
-      m_retryTimeout(MC_DEFAULT_RETRY_TIMEOUT) {
+      m_retryTimeout(MC_DEFAULT_RETRY_TIMEOUT),
+      m_maxRetries(MC_DEFAULT_MAX_RETRIES), m_retires(0) {
   m_name[0] = '\0';
   m_host[0] = '\0';
   m_buffer_writer = new BufferWriter();
@@ -162,8 +163,14 @@ void Connection::close() {
   }
 }
 
-bool Connection::tryReconnect() {
+bool Connection::tryReconnect(bool check_retries) {
   if (!m_alive) {
+    if (check_retries) {
+      m_retires += 1;
+      if (m_retires > m_maxRetries) {
+        return m_alive;
+      }
+    }
     time_t now;
     time(&now);
     if (now >= m_deadUntil) {
@@ -190,11 +197,11 @@ void Connection::markDead(const char* reason, int delay) {
     if (strcmp(reason, keywords::kCONN_QUIT) != 0) {
       log_warn("Connection %s is dead(reason: %s, delay: %d), next check at %lu",
                m_name, reason, delay, m_deadUntil);
-      std::queue<struct iovec>* q = m_parser.getRequestKeys();
-      if (!q->empty()) {
+      struct iovec* key = m_parser.currentRequestKey();
+      if (key != NULL) {
         log_warn("%s: first request key: %.*s", m_name,
-                 static_cast<int>(q->front().iov_len),
-                 static_cast<char*>(q->front().iov_base));
+                 static_cast<int>(key->iov_len),
+                 static_cast<char*>(key->iov_base));
       }
     }
   }
@@ -241,7 +248,6 @@ ssize_t Connection::send() {
   ssize_t nSent = ::sendmsg(m_socketFd, &msg, flags);
 
   if (nSent == -1) {
-    m_buffer_writer->reset();
     return -1;
   } else {
     m_buffer_writer->commitRead(nSent);
@@ -249,20 +255,23 @@ ssize_t Connection::send() {
 
   size_t msgLeft = m_buffer_writer->msgIovlen();
   if (msgLeft == 0) {
-    m_buffer_writer->reset();
     return 0;
   } else {
     return msgLeft;
   }
 }
 
-ssize_t Connection::recv() {
+ssize_t Connection::recv(bool peek) {
+  int flags = 0;
   size_t bufferSize = m_buffer_reader->getNextPreferedDataBlockSize();
   size_t bufferSizeAvailable = m_buffer_reader->prepareWriteBlock(bufferSize);
   char* writePtr = m_buffer_reader->getWritePtr();
-  ssize_t bufferSizeActual = ::recv(m_socketFd, writePtr, bufferSizeAvailable, 0);
+  if (peek) {
+    flags |= MSG_PEEK;
+  }
+  ssize_t bufferSizeActual = ::recv(m_socketFd, writePtr, bufferSizeAvailable, flags);
   // log_info("%p recv(%lu) %.*s", this, bufferSizeActual, (int)bufferSizeActual, writePtr);
-  if (bufferSizeActual > 0) {
+  if (!peek && bufferSizeActual > 0) {
     m_buffer_reader->commitWrite(bufferSizeActual);
   }
   return bufferSizeActual;
@@ -288,15 +297,22 @@ types::UnsignedResultList* Connection::getUnsignedResults() {
   return m_parser.getUnsignedResults();
 }
 
-std::queue<struct iovec>* Connection::getRequestKeys() {
+std::vector<struct iovec>* Connection::getRequestKeys() {
   return m_parser.getRequestKeys();
 }
 
 void Connection::reset() {
   m_counter = 0;
+  m_retires = 0;
   m_parser.reset();
   m_buffer_reader->reset();
   m_buffer_writer->reset(); // flush data dispatched but not sent
+}
+
+void Connection::rewind() {
+  m_parser.rewind();
+  m_buffer_reader->reset(); // flush received data
+  m_buffer_writer->rewind(); // rewind for resending data
 }
 
 void Connection::setRetryTimeout(int timeout) {
@@ -305,6 +321,10 @@ void Connection::setRetryTimeout(int timeout) {
 
 void Connection::setConnectTimeout(int timeout) {
   m_connectTimeout = timeout;
+}
+
+void Connection::setMaxRetries(int max_retries) {
+  m_maxRetries = max_retries;
 }
 
 } // namespace mc

@@ -24,6 +24,7 @@ const (
 	PollTimeout    = C.CFG_POLL_TIMEOUT
 	ConnectTimeout = C.CFG_CONNECT_TIMEOUT
 	RetryTimeout   = C.CFG_RETRY_TIMEOUT
+	MaxRetries     = C.CFG_MAX_RETRIES
 )
 
 // Hash functions
@@ -108,6 +109,7 @@ type Client struct {
 	connectTimeout C.int
 	pollTimeout    C.int
 	retryTimeout   C.int
+	maxRetries     C.int
 	lk             sync.Mutex
 	freeConns      []*conn
 	numOpen        int
@@ -118,13 +120,6 @@ type Client struct {
 	maxOpen        int           // maximum amount of connection num. maxOpen <= 0 means unlimited.
 	cleanerCh      chan struct{}
 	closed         bool
-
-	// notWaitForRetryTimeout is used when you want to set MC_RETRY_TIMEOUT to 0.
-	// When retryTimeout is not set (= 0) and notWaitForRetryTimeout is true,
-	// MC_RETRY_TIMEOUT is set to 0.
-	// If retryTimeout is less than 1 second and notWaitForRetryTimeout is false,
-	// MC_RETRY_TIMEOUT is set to the default setting of 5 seconds.
-	notWaitForRetryTimeout bool
 }
 
 type connRequest struct {
@@ -205,6 +200,11 @@ func New(servers []string, noreply bool, prefix string, hashFunc int, failover b
 	client.openerCh = make(chan struct{}, connectionRequestQueueSize)
 	client.connRequests = make(map[uint64]chan connRequest)
 	client.maxOpen = 1 // default value
+
+	client.connectTimeout = -1
+	client.pollTimeout = -1
+	client.retryTimeout = -1
+	client.maxRetries = -1
 
 	go client.opener()
 
@@ -344,14 +344,17 @@ func (client *Client) newConn() (*conn, error) {
 	)
 
 	cn.configHashFunction(int(hashFunctionMapping[client.hashFunc]))
-	if client.retryTimeout > 0 || client.notWaitForRetryTimeout {
+	if client.retryTimeout >= 0 {
 		C.client_config(cn._imp, RetryTimeout, client.retryTimeout)
 	}
-	if client.pollTimeout > 0 {
+	if client.pollTimeout >= 0 {
 		C.client_config(cn._imp, PollTimeout, client.pollTimeout)
 	}
-	if client.connectTimeout > 0 {
+	if client.connectTimeout >= 0 {
 		C.client_config(cn._imp, ConnectTimeout, client.connectTimeout)
+	}
+	if client.maxRetries >= 0 {
+		C.client_config(cn._imp, MaxRetries, client.maxRetries)
 	}
 	return &cn, nil
 }
@@ -596,13 +599,6 @@ func (client *Client) ConfigTimeout(cCfgKey C.config_options_t, timeout time.Dur
 	case ConnectTimeout:
 		client.connectTimeout = C.int(timeout / time.Microsecond)
 	}
-}
-
-// ConfigNotWaitForRetryTimeout can set notWaitForRetryTimeout
-func (client *Client) ConfigNotWaitForRetryTimeout(notWaitForRetryTimeout bool) {
-	client.lk.Lock()
-	defer client.lk.Unlock()
-	client.notWaitForRetryTimeout = notWaitForRetryTimeout
 }
 
 // GetServerAddressByKey will return the address of the memcached

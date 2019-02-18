@@ -14,13 +14,13 @@ namespace mc {
 
 PacketParser::PacketParser(BufferReader* reader)
   : m_buffer_reader(NULL), m_state(FSM_START), m_mode(MODE_UNDEFINED),
-    m_expectedResultCount(0), mt_kvPtr(NULL) {
+    m_expectedResultCount(0), m_requestKeyIdx(0), mt_kvPtr(NULL) {
   m_buffer_reader = reader;
 }
 
 PacketParser::PacketParser()
   : m_buffer_reader(NULL), m_state(FSM_START), m_mode(MODE_UNDEFINED),
-    m_expectedResultCount(0), mt_kvPtr(NULL) {
+    m_expectedResultCount(0), m_requestKeyIdx(0), mt_kvPtr(NULL) {
 }
 
 
@@ -37,8 +37,8 @@ void PacketParser::processMessageResult(enum message_result_type tp) {
   m_messageResults.push_back(message_result_t());
 
   message_result_t* inner_rst = &m_messageResults.back();
-  struct iovec iov = m_requestKeys.front();
-  m_requestKeys.pop();
+  struct iovec iov = m_requestKeys[m_requestKeyIdx];
+  ++m_requestKeyIdx;
   inner_rst->type_ = tp;
   inner_rst->key = static_cast<char*>(iov.iov_base);
   inner_rst->key_len = iov.iov_len;
@@ -65,10 +65,10 @@ void PacketParser::setBufferReader(BufferReader* reader) {
 void PacketParser::addRequestKey(const char* const key, const size_t len) {
   // log_info("add request key: %.*s", static_cast<int>(len), key);
   struct iovec iov = {const_cast<char*>(key), len};
-  m_requestKeys.push(iov);
+  m_requestKeys.push_back(iov);
 }
 
-std::queue<struct iovec>* PacketParser::getRequestKeys() {
+std::vector<struct iovec>* PacketParser::getRequestKeys() {
   return &m_requestKeys;
 }
 
@@ -76,6 +76,10 @@ size_t PacketParser::requestKeyCount() {
   return m_requestKeys.size();
 }
 
+struct iovec* PacketParser::currentRequestKey() {
+  assert(m_requestKeyIdx <= m_requestKeys.size());
+  return m_requestKeyIdx == m_requestKeys.size() ? NULL : &m_requestKeys[m_requestKeyIdx];
+}
 
 void PacketParser::process_packets(err_code_t& err) {
   // NOTE: always return with err RET_INCOMPLETE_BUFFER_ERR if not all packets are recved.
@@ -203,7 +207,7 @@ void PacketParser::process_packets(err_code_t& err) {
           READ_UNSIGNED(inner_rst->value);
           SKIP_BYTES(1);
 
-          struct iovec iov = m_requestKeys.front();
+          struct iovec iov = m_requestKeys[m_requestKeyIdx];
           inner_rst->key = static_cast<char*>(iov.iov_base);
           inner_rst->key_len = iov.iov_len;
 
@@ -217,7 +221,7 @@ void PacketParser::process_packets(err_code_t& err) {
             return;
           }
           SKIP_BYTES(1);  // '\n'
-          m_requestKeys.pop();
+          ++m_requestKeyIdx;
           m_state = FSM_START;
         }
         break;
@@ -448,9 +452,7 @@ int PacketParser::start_state(err_code_t& err) {
 
 
 void PacketParser::reset() {
-  while (!m_requestKeys.empty()) {
-    m_requestKeys.pop();
-  }
+  m_requestKeys.clear();
 
   m_retrievalResults.clear();
   m_messageResults.clear();
@@ -460,6 +462,18 @@ void PacketParser::reset() {
   m_state = FSM_START;
   m_mode = MODE_UNDEFINED;
   m_expectedResultCount = 0;
+  m_requestKeyIdx = 0;
+}
+
+
+void PacketParser::rewind() {
+  m_retrievalResults.clear();
+  m_messageResults.clear();
+  m_lineResults.clear();
+  m_unsignedResults.clear();
+
+  m_state = FSM_START;
+  m_requestKeyIdx = 0;
 }
 
 
