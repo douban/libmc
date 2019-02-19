@@ -1,6 +1,7 @@
 # coding: utf-8
 
 import sys
+import time
 import unittest
 from libmc import (
     Client, encode_value, decode_value,
@@ -53,7 +54,7 @@ class MiscCase(unittest.TestCase):
             new_d = decode_value(*encode_value(d, 0))
             assert new_d == d
             if isinstance(d, DiveMaster):
-              assert d is not new_d
+                assert d is not new_d
 
 
 class SingleServerCase(unittest.TestCase):
@@ -242,7 +243,11 @@ class SingleServerCase(unittest.TestCase):
         nc2 = self.mc_alt.stats()[self.mc.servers[0]]['curr_connections']
         assert nc1 == nc2
         assert self.mc.quit()
-        nc2 = self.mc_alt.stats()[self.mc.servers[0]]['curr_connections']
+        max_wait = 3
+        while nc1 - 1 != nc2 and max_wait > 0:
+            nc2 = self.mc_alt.stats()[self.mc.servers[0]]['curr_connections']
+            max_wait -= 1
+            time.sleep(1)
         assert nc1 - 1 == nc2
         # back to life immediately
         assert self.mc.get('all_is_well') == 'bingo'
@@ -280,12 +285,15 @@ class ErrorCodeTestCase(unittest.TestCase):
         self.mc = Client(["127.0.0.1:21211"])
         assert self.mc.version()
         assert self.mc.get_last_error() == MC_RETURN_OK
+        assert self.mc.get_last_strerror() == "ok"
 
     def test_invalid_key(self):
         self.mc.get('invalid key')
         assert self.mc.get_last_error() == MC_RETURN_INVALID_KEY_ERR
+        assert self.mc.get_last_strerror() == "invalid_key_error"
 
     def test_mc_server_err(self):
         mc = Client(["not_exist_host:11211"])
         mc.get('valid_key')
         assert mc.get_last_error() == MC_RETURN_MC_SERVER_ERR
+        assert mc.get_last_strerror() == "server_error"

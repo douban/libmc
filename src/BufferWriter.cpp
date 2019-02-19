@@ -20,6 +20,7 @@ BufferWriter::~BufferWriter() {
 
 void BufferWriter::reset() {
   m_iovec.clear();
+  m_originalIovec.clear();
   for (std::vector<char*>::const_iterator it = m_unsignedStringList.begin();
        it != m_unsignedStringList.end(); ++it) {
     delete[] *it;
@@ -40,7 +41,7 @@ void BufferWriter::takeBuffer(const char* const buf, size_t buf_len) {
   iov.iov_base = const_cast<char*>(buf);
   iov.iov_len = buf_len;
   m_iovec.push_back(iov);
-  m_msgIovlen += 1;
+  ++m_msgIovlen;
 }
 
 
@@ -52,15 +53,11 @@ void BufferWriter::takeNumber(int64_t val) {
   iov.iov_base = buf;
   iov.iov_len = douban::mc::utility::int64ToCharArray(val, buf);
   m_iovec.push_back(iov);
-  m_msgIovlen += 1;
+  ++m_msgIovlen;
 }
 
 
-#ifdef __APPLE__
-const struct iovec* const BufferWriter::getReadPtr(int &n) {
-#else
 const struct iovec* const BufferWriter::getReadPtr(size_t &n) {
-#endif
   n = m_msgIovlen;
   if (n > 0) {
     return &m_iovec[m_readIdx];
@@ -77,9 +74,21 @@ void BufferWriter::commitRead(size_t nSent) {
   }
 
   if (nSent > 0) {
+    if (m_originalIovec.empty()) {
+      m_originalIovec = m_iovec;
+    }
     struct iovec* iovPtr = &m_iovec[m_readIdx];
     iovPtr->iov_base = static_cast<char*>(iovPtr->iov_base) + nSent;
     iovPtr->iov_len -= nSent;
+  }
+}
+
+
+void BufferWriter::rewind() {
+  m_readIdx = 0;
+  m_msgIovlen = m_iovec.size();
+  if (!m_originalIovec.empty()) {
+    m_iovec = m_originalIovec;
   }
 }
 

@@ -14,13 +14,13 @@ namespace mc {
 
 PacketParser::PacketParser(BufferReader* reader)
   : m_buffer_reader(NULL), m_state(FSM_START), m_mode(MODE_UNDEFINED),
-    m_expectedResultCount(0), mt_kvPtr(NULL) {
+    m_expectedResultCount(0), m_requestKeyIdx(0), mt_kvPtr(NULL) {
   m_buffer_reader = reader;
 }
 
 PacketParser::PacketParser()
   : m_buffer_reader(NULL), m_state(FSM_START), m_mode(MODE_UNDEFINED),
-    m_expectedResultCount(0), mt_kvPtr(NULL) {
+    m_expectedResultCount(0), m_requestKeyIdx(0), mt_kvPtr(NULL) {
 }
 
 
@@ -37,8 +37,8 @@ void PacketParser::processMessageResult(enum message_result_type tp) {
   m_messageResults.push_back(message_result_t());
 
   message_result_t* inner_rst = &m_messageResults.back();
-  struct ::iovec iov = m_requestKeys.front();
-  m_requestKeys.pop();
+  struct iovec iov = m_requestKeys[m_requestKeyIdx];
+  ++m_requestKeyIdx;
   inner_rst->type_ = tp;
   inner_rst->key = static_cast<char*>(iov.iov_base);
   inner_rst->key_len = iov.iov_len;
@@ -64,11 +64,11 @@ void PacketParser::setBufferReader(BufferReader* reader) {
 
 void PacketParser::addRequestKey(const char* const key, const size_t len) {
   // log_info("add request key: %.*s", static_cast<int>(len), key);
-  struct ::iovec iov = {const_cast<char*>(key), len};
-  m_requestKeys.push(iov);
+  struct iovec iov = {const_cast<char*>(key), len};
+  m_requestKeys.push_back(iov);
 }
 
-std::queue<struct iovec>* PacketParser::getRequestKeys() {
+std::vector<struct iovec>* PacketParser::getRequestKeys() {
   return &m_requestKeys;
 }
 
@@ -76,12 +76,13 @@ size_t PacketParser::requestKeyCount() {
   return m_requestKeys.size();
 }
 
+struct iovec* PacketParser::currentRequestKey() {
+  assert(m_requestKeyIdx <= m_requestKeys.size());
+  return m_requestKeyIdx == m_requestKeys.size() ? NULL : &m_requestKeys[m_requestKeyIdx];
+}
 
 void PacketParser::process_packets(err_code_t& err) {
   // NOTE: always return with err RET_INCOMPLETE_BUFFER_ERR if not all packets are recved.
-  //
-  // m_n_active--;
-  // m_buffer_reader->print();
   err = RET_OK;
 
   if (IS_END_STATE(m_state)) {
@@ -122,7 +123,7 @@ void PacketParser::process_packets(err_code_t& err) {
           if (err != RET_OK) {
             return;
           }
-          SKIP_BYTES(1);  // " "
+          SKIP_BYTES(1);  // ' '
           m_state = FSM_GET_KEY;
         }
         break;
@@ -133,23 +134,23 @@ void PacketParser::process_packets(err_code_t& err) {
           READ_UNSIGNED(flags);
           mt_kvPtr->flags = static_cast<flags_t>(flags);
           SKIP_BYTES(1);
-          m_state = FSM_GET_FLAG;
+          m_state = FSM_GET_FLAGS;
         }
         break;
-      case FSM_GET_FLAG: // got "flag "
+      case FSM_GET_FLAGS: // got "flags "
         {
-          assert(mt_kvPtr != NULL && mt_kvPtr->bytes >= 0 && mt_kvPtr->bytes + 1 >= mt_kvPtr->bytesRemain);
+          assert(mt_kvPtr != NULL && mt_kvPtr->bytes + 1 >= mt_kvPtr->bytesRemain);
           uint64_t bytes;
           READ_UNSIGNED(bytes);
           mt_kvPtr->bytes = static_cast<uint32_t>(bytes);
-          mt_kvPtr->bytesRemain = mt_kvPtr->bytes + 1; // 1 for '\n
-          SKIP_BYTES(1);  // " " or "\r"
-          m_state = FSM_GET_BYTES_CAS;
+          mt_kvPtr->bytesRemain = mt_kvPtr->bytes + 1; // 1 for '\n'
+          SKIP_BYTES(1);  // ' ' or '\r'
+          m_state = FSM_GET_BYTES;
         }
         break;
-      case FSM_GET_BYTES_CAS: // got "bytes\r" or "bytes cas\r"
+      case FSM_GET_BYTES: // got "bytes " or "bytes\r"
         {
-          assert(mt_kvPtr != NULL);
+          assert(mt_kvPtr != NULL && mt_kvPtr->bytesRemain == mt_kvPtr->bytes + 1);
           const char c = m_buffer_reader->peek(err, 0);
           if (err != RET_OK) {
             return;
@@ -158,20 +159,23 @@ void PacketParser::process_packets(err_code_t& err) {
             mt_kvPtr->cas_unique = 0;
           } else {  // gets
             READ_UNSIGNED(mt_kvPtr->cas_unique);
-            SKIP_BYTES(1); // '\r' after cas
+            SKIP_BYTES(1);  // '\r' after cas
           }
+          m_state = FSM_GET_CAS;
+        }
+        break;
+      case FSM_GET_CAS: // got "cas\r" or got "bytes\r"
+        {
+          assert(mt_kvPtr != NULL && mt_kvPtr->bytesRemain == mt_kvPtr->bytes + 1);
+          SKIP_BYTES(1);  // '\n'
+          --mt_kvPtr->bytesRemain;
           m_state = FSM_GET_VALUE_REMAINING;
         }
         break;
-      case FSM_GET_VALUE_REMAINING: // not got "\n" + all bytes + "\r\n"
+      case FSM_GET_VALUE_REMAINING: // not got <data block> + "\r\n"
         {
-          assert(mt_kvPtr != NULL);
-          if (mt_kvPtr->bytesRemain == mt_kvPtr->bytes + 1) {
-            SKIP_BYTES(1);
-            --mt_kvPtr->bytesRemain;
-          }
-
-          if (mt_kvPtr->bytesRemain == mt_kvPtr->bytes) {
+          assert(mt_kvPtr != NULL && (mt_kvPtr->bytesRemain == mt_kvPtr->bytes || mt_kvPtr->bytesRemain == 0));
+          if (mt_kvPtr->bytesRemain > 0) {
             mt_kvPtr->data_block.clear();
             if (m_buffer_reader->readLeft() < mt_kvPtr->bytes + 2) {
               m_buffer_reader->setNextPreferedDataBlockSize(mt_kvPtr->bytes + 2 - m_buffer_reader->readLeft());
@@ -184,10 +188,10 @@ void PacketParser::process_packets(err_code_t& err) {
           }
 
           if (mt_kvPtr->bytesRemain == 0) {
-            SKIP_BYTES(2); // "\r\n
+            SKIP_BYTES(2); // "\r\n"
 #ifndef NDEBUG
             char* _k = parseTokenData(mt_kvPtr->key, mt_kvPtr->key_len);
-            // debug("got %.*s", static_cast<int>(mt_kvPtr->key_len), _k);
+            // log_debug("got %.*s", static_cast<int>(mt_kvPtr->key_len), _k);
             if (mt_kvPtr->key.size() > 1) {
               delete[] _k;
             }
@@ -203,7 +207,7 @@ void PacketParser::process_packets(err_code_t& err) {
           READ_UNSIGNED(inner_rst->value);
           SKIP_BYTES(1);
 
-          struct ::iovec iov = m_requestKeys.front();
+          struct iovec iov = m_requestKeys[m_requestKeyIdx];
           inner_rst->key = static_cast<char*>(iov.iov_base);
           inner_rst->key_len = iov.iov_len;
 
@@ -217,7 +221,7 @@ void PacketParser::process_packets(err_code_t& err) {
             return;
           }
           SKIP_BYTES(1);  // '\n'
-          m_requestKeys.pop();
+          ++m_requestKeyIdx;
           m_state = FSM_START;
         }
         break;
@@ -448,9 +452,7 @@ int PacketParser::start_state(err_code_t& err) {
 
 
 void PacketParser::reset() {
-  while (!m_requestKeys.empty()) {
-    m_requestKeys.pop();
-  }
+  m_requestKeys.clear();
 
   m_retrievalResults.clear();
   m_messageResults.clear();
@@ -460,6 +462,18 @@ void PacketParser::reset() {
   m_state = FSM_START;
   m_mode = MODE_UNDEFINED;
   m_expectedResultCount = 0;
+  m_requestKeyIdx = 0;
+}
+
+
+void PacketParser::rewind() {
+  m_retrievalResults.clear();
+  m_messageResults.clear();
+  m_lineResults.clear();
+  m_unsignedResults.clear();
+
+  m_state = FSM_START;
+  m_requestKeyIdx = 0;
 }
 
 

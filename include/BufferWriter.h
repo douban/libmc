@@ -23,26 +23,27 @@ class BufferWriter {
   void reserve(size_t n);
   void takeBuffer(const char* const buf, size_t buf_len);
   void takeNumber(int64_t val);
-#ifdef __APPLE__
-  const struct iovec* const getReadPtr(int &n);
-#else
   const struct iovec* const getReadPtr(size_t &n);
-#endif
   void commitRead(size_t nSent);
+  void rewind();
   size_t msgIovlen();
+  const bool isRead();
 
  protected:
   std::vector<struct iovec> m_iovec;
+  std::vector<struct iovec> m_originalIovec;
   std::vector<char*>  m_unsignedStringList;
+
+  // the index of iovec vector we'll read next
   size_t m_readIdx;
 
-#ifdef __APPLE__
-  int m_msgIovlen;
-#else
+  // the number of iovec left to read
   size_t m_msgIovlen;
-#endif
 };
 
+inline const bool BufferWriter::isRead() {
+  return m_readIdx != 0;
+}
 
 } // namespace io
 } // namespace mc

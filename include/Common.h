@@ -9,11 +9,14 @@
 #include <cstdlib>
 #include <cerrno>
 
+#include "Export.h"
+
 #define PROJECT_NAME "libmc"
 #define MC_DEFAULT_PORT 11211
 #define MC_DEFAULT_POLL_TIMEOUT 300
 #define MC_DEFAULT_CONNECT_TIMEOUT 10
 #define MC_DEFAULT_RETRY_TIMEOUT 5
+#define MC_DEFAULT_MAX_RETRIES 0
 
 
 #ifdef UIO_MAXIOV
@@ -54,18 +57,17 @@
 # define __VOID_CAST (void)
 #endif
 
+void printBacktrace();
 
 #define _mc_clean_errno() (errno == 0 ? "None" : strerror(errno))
-#define _mc_output_stderr(LEVEL, FORMAT, ...) ( \
+
+#define _mc_output_stderr(LEVEL, FORMAT, ...) \
   fprintf( \
     stderr, \
-    "[" PROJECT_NAME "] [" #LEVEL "] [%s:%u] " FORMAT "\n", \
+    "[" PROJECT_NAME "] [" #LEVEL "] [%s:%d] " FORMAT "\n", \
     __FILE__, __LINE__, ##__VA_ARGS__ \
-  ), \
-  __VOID_CAST(0) \
-)
+  )
 
-void printBacktrace();
 
 #define MC_LOG_LEVEL_ERROR 1
 #define MC_LOG_LEVEL_WARNING 2
@@ -74,66 +76,70 @@ void printBacktrace();
 
 #define MC_LOG_LEVEL MC_LOG_LEVEL_ERROR
 
-#ifdef NDEBUG
-#define debug(M, ...) __VOID_CAST(0)
 
-#define _ASSERTION_FAILED(cond) ( \
-  _mc_output_stderr(PANIC, "failed assertion `%s'" , #cond), \
-  printBacktrace(), \
-  __VOID_CAST(0) \
-)
+#ifdef NDEBUG
+
+#define log_debug_if(cond, M, ...) __VOID_CAST(0)
+#define log_debug(M, ...) __VOID_CAST(0)
+
+#define _ASSERTION_FAILED(cond) do { \
+  _mc_output_stderr(FATAL, "failed assertion `%s'" , #cond); \
+  printBacktrace(); \
+} while (0)
+
 #else
 
 #if MC_LOG_LEVEL >= MC_LOG_LEVEL_DEBUG
-#define debug(M, ...) ( \
-  _mc_output_stderr(DEBUG, "[E: %s] " M, _mc_clean_errno(), ##__VA_ARGS__), \
-  __VOID_CAST(0) \
-)
+#define log_debug(M, ...) _mc_output_stderr(DEBUG, "[E: %s] " M, _mc_clean_errno(), ##__VA_ARGS__)
 #else
-#define debug(M, ...) __VOID_CAST(0)
+#define log_debug(M, ...) __VOID_CAST(0)
 #endif
+#define _ASSERTION_FAILED(cond) do { \
+  _mc_output_stderr(FATAL, "failed assertion `%s'" , #cond); \
+  printBacktrace(); \
+  abort(); \
+} while (0)
 
-#define _ASSERTION_FAILED(cond) ( \
-  _mc_output_stderr(PANIC, "failed assertion `%s'" , #cond), \
-  printBacktrace(), \
-  abort() \
-)
-#endif
+#define log_debug_if(cond, M, ...) do { \
+  if (cond) log_debug(M, ##__VA_ARGS__); \
+} while (0)
 
-#define ASSERT(cond) ( \
-  (cond) ? \
-  __VOID_CAST(0) : \
-  _ASSERTION_FAILED(cond) \
-)
+#endif // NDEBUG
+
+#define ASSERT(cond) if (!(cond)) _ASSERTION_FAILED(cond)
 
 #define NOT_REACHED() ASSERT(0)
 
 #if MC_LOG_LEVEL >= MC_LOG_LEVEL_INFO
-#define log_info(M, ...) ( \
-  _mc_output_stderr(INFO, M, ##__VA_ARGS__), \
-  __VOID_CAST(0) \
-)
+#define log_info(M, ...) _mc_output_stderr(INFO, M, ##__VA_ARGS__)
 #else
 #define log_info(M, ...) __VOID_CAST(0)
 #endif
 
+#define log_info_if(cond, M, ...) do { \
+  if (cond) log_info(M, ##__VA_ARGS__); \
+} while (0)
+
 #if MC_LOG_LEVEL >= MC_LOG_LEVEL_WARNING
-#define log_warn(M, ...) ( \
-  _mc_output_stderr(WARN, "[E: %s] " M, _mc_clean_errno(), ##__VA_ARGS__), \
-  __VOID_CAST(0) \
-)
+#define log_warn(M, ...) _mc_output_stderr(WARN, "[E: %s] " M, _mc_clean_errno(), ##__VA_ARGS__)
 #else
 #define log_warn(M, ...) __VOID_CAST(0)
 #endif
 
+#define log_warn_if(cond, M, ...) do { \
+  if (cond) log_warn(M, ##__VA_ARGS__); \
+} while (0)
+
 #if MC_LOG_LEVEL >= MC_LOG_LEVEL_ERROR
-#define log_err(M, ...) ( \
-  _mc_output_stderr(ERROR, "[E: %s] " M, _mc_clean_errno(), ##__VA_ARGS__), \
-  __VOID_CAST(0) \
-)
+#define log_err(M, ...) _mc_output_stderr(ERROR, "[E: %s] " M, _mc_clean_errno(), ##__VA_ARGS__)
 #else
 #define log_err(M, ...) __VOID_CAST(0)
 #endif
+
+#define log_err_if(cond, M, ...) do { \
+  if (cond) log_err(M, ##__VA_ARGS__); \
+} while (0)
+
 
 namespace douban {
 namespace mc {
@@ -150,12 +156,14 @@ typedef enum {
   // ERROR
   FSM_ERROR, // got "ERROR\r\n"
 
-  // VALUE
+  // VALUE <key> <flags> <bytes>[ <cas unique>]\r\n
+  // <data block>\r\n
   FSM_GET_START, // got "VALUE "
   FSM_GET_KEY, // got "key "
-  FSM_GET_FLAG, // got "flag "
-  FSM_GET_BYTES_CAS, // got "bytes cas\r" or got "bytes "
-  FSM_GET_VALUE_REMAINING, // got last "\r\n" not got all bytes + "\r\n"
+  FSM_GET_FLAGS, // got "flags "
+  FSM_GET_BYTES, // got "bytes " or "bytes\r"
+  FSM_GET_CAS, // got "cas\r" or got "bytes\r"
+  FSM_GET_VALUE_REMAINING, // not got <data block> + "\r\n"
 
   // VERSION
   FSM_VER_START, // got "VERSION "
@@ -163,7 +171,7 @@ typedef enum {
   // STAT
   FSM_STAT_START, // got "STAT "
 
-  // [0-9] // INCR/DESC
+  // [0-9] // INCR/DECR
   FSM_INCR_DECR_START, // got [0-9]
   FSM_INCR_DECR_REMAINING, // not got "\r\n"
 } parser_state_t;
@@ -172,8 +180,12 @@ typedef enum {
 
 
 typedef enum {
-  // storage commands -> key_va -> success_or_failure
-  // key -> flags_t -> exptime_t -> bytes -> [cas_unique_t] -> success_or_fail
+  // storage commands
+  // <command name> <key> <flags> <exptime> <bytes>[ noreply]\r\n
+  // cas <key> <flags> <exptime> <bytes> <cas unique>[ noreply]\r\n
+  // <data block>\r\n
+  // ->
+  // text msg
   SET_OP,
   ADD_OP,
   REPLACE_OP,
@@ -181,26 +193,39 @@ typedef enum {
   PREPEND_OP,
   CAS_OP,
 
-  // retrieval commands -> key(s) -> key_val(s)
-  // key(s) ->
+  // retrieval commands
+  // get <key>*\r\n
+  // gets <key>*\r\n
+  // ->
+  // VALUE <key> <flags> <bytes> [<cas unique>]\r\n
+  // <data block>\r\n
+  // "END\r\n"
   GET_OP,
   GETS_OP,
 
-  // modify commands -> key -> uint64_t -> uint64_t_or_not_found
+  // incr/decr <key> <value>[ noreply]\r\n
+  // ->
+  // <value>\r\n or "NOT_FOUND\r\n"
   INCR_OP,
   DECR_OP,
 
-  // touch command
-  TOUCH_OP, // key -> exptime_t -> text_msg
+  // touch <key> <exptime>[ noreply]\r\n
+  // ->
+  // text msg
+  TOUCH_OP,
 
-  // key commands -> key -> text_msg
-  DELETE_OP, // key -> text_msg
+  // delete <key>[ noreply]\r\n
+  // ->
+  // text msg
+  DELETE_OP,
+
   STATS_OP,
   FLUSHALL_OP,
   VERSION_OP,
   QUIT_OP,
 } op_code_t;
 
+const char* errCodeToString(err_code_t err);
 
 } // namespace mc
 } // namespace douban

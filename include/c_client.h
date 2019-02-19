@@ -15,15 +15,15 @@ extern "C" {
   void client_config(void* client, config_options_t opt, int val);
   void client_destroy(void* client);
 
-  const char* client_get_server_address_by_key(void* client, const char* key, size_t key_len);
+  const char* client_get_server_address_by_key(void* client, const char* key, const size_t key_len);
   const char* client_get_realtime_server_address_by_key(void* client, const char* key,
-                                                        size_t key_len);
+                                                        const size_t key_len);
 
-  int client_version(void* client, broadcast_result_t** results, size_t* n_hosts);
+  err_code_t client_version(void* client, broadcast_result_t** results, size_t* n_hosts);
   void client_destroy_broadcast_result(void* client);
 
 #define DECL_RETRIEVAL_CMD(M) \
-  int client_##M(void* client, const char* const* keys, const size_t* key_lens, \
+  err_code_t client_##M(void* client, const char* const* keys, const size_t* key_lens, \
                  size_t nKeys, retrieval_result_t*** results, size_t* n_results)
   DECL_RETRIEVAL_CMD(get);
   DECL_RETRIEVAL_CMD(gets);
@@ -32,7 +32,7 @@ extern "C" {
   void client_destroy_retrieval_result(void* client);
 
 #define DECL_STORAGE_CMD(M) \
-  int client_##M(void* client, const char* const* keys, const size_t* key_lens, \
+  err_code_t client_##M(void* client, const char* const* keys, const size_t* key_lens, \
                const flags_t* flags, const exptime_t exptime, \
                const cas_unique_t* cas_uniques, const bool noreply, \
                const char* const* vals, const size_t* val_lens, \
@@ -45,25 +45,27 @@ extern "C" {
   DECL_STORAGE_CMD(cas);
 #undef DECL_STORAGE_CMD
 
-  int client_touch(void* client, const char* const* keys, const size_t* key_lens,
+  err_code_t client_touch(void* client, const char* const* keys, const size_t* key_lens,
                    const exptime_t exptime, const bool noreply, size_t n_items,
                    message_result_t*** results, size_t* n_results);
   void client_destroy_message_result(void* client);
 
-  int client_delete(void*client, const char* const* keys, const size_t* key_lens,
+  err_code_t client_delete(void*client, const char* const* keys, const size_t* key_lens,
                     const bool noreply, size_t n_items,
                     message_result_t*** results, size_t* n_results);
 
-  int client_incr(void* client, const char* key, const size_t keyLen,
+  err_code_t client_incr(void* client, const char* key, const size_t keyLen,
                   const uint64_t delta, const bool noreply,
                   unsigned_result_t** results, size_t* n_results);
-  int client_decr(void* client, const char* key, const size_t keyLen,
+  err_code_t client_decr(void* client, const char* key, const size_t keyLen,
                   const uint64_t delta, const bool noreply,
                   unsigned_result_t** results, size_t* n_results);
   void client_destroy_unsigned_result(void* client);
 
-  int client_stats(void* client, broadcast_result_t** results, size_t* n_servers);
-  int client_quit(void* client);
+  err_code_t client_stats(void* client, broadcast_result_t** results, size_t* n_servers);
+  err_code_t client_quit(void* client);
+
+  const char* err_code_to_string(err_code_t err);
 #ifdef __cplusplus
 }
 #endif

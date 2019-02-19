@@ -23,11 +23,11 @@ function start()
     if [ `ps -ef | grep "$cmd" | grep -c $port` -ge 1 ]; then
         echo "Starting the memcached server on port '$port'... "
     else
-        if [ ! -f $basedir/var/log/${port}.log ]; then 
+        if [ ! -f $basedir/var/log/${port}.log ]; then
             mkdir -p $basedir/var/log
             touch $basedir/var/log/${port}.log
         fi
-        $cmd -d -u $USER -l $ip -t $threads -m ${memory} -p $port -P $basedir/var/run/${port}.pid > $basedir/var/log/${port}.log 2>&1
+        $cmd -d -u $USER -l $ip -t $threads -m ${memory} -p $port -P $basedir/var/run/${port}.pid -o idle_timeout=1 > $basedir/var/log/${port}.log 2>&1
         echo "Starting the memcached server on port '$port'... "
     fi
 }
@@ -45,7 +45,7 @@ function stop()
 }
 
 case "$1" in
-    start) 
+    start)
         if [ -n "$2" ]; then
             start $2
         else
@@ -55,7 +55,7 @@ case "$1" in
             wait
         fi
         ;;
-    stop)   
+    stop)
         if [ -n "$2" ]; then
             port="$2"
             stop $port

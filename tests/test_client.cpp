@@ -197,12 +197,12 @@ TEST(test_client, test_version) {
       broadcast_result_t* r = results + i;
       ASSERT_TRUE(r->len == 1);
       ASSERT_TRUE(r->line_lens[0]);
-      char c = r->lines[0][r->line_lens[0] - 1];
+      // possible version strings:
+      // - "1.4.14 (Ubuntu)" (on Travis-CI)
+      // - "1.5.2"
+      // First char is expected to be a digit
+      char c = r->lines[0][0];
       ASSERT_TRUE('0' <= c && c <= '9');
-      // for (int j = 0; j < r->len; j++) {
-      //   printf("%s: %.*s\n", r->host, static_cast<int>(r->line_lens[j]), r->lines[j]);
-      // }
-      // printf("\r\n");
     }
     client->destroyBroadcastResult();
     delete client;
@@ -357,5 +357,41 @@ TEST(client, noreply) {
     client->_delete(keys, key_lens, noreply, 3, &m_results, &nResults);
     client->destroyMessageResult();
     delete client;
+  }
+}
+
+TEST(client, update_server) {
+  Client* client = newClient(3);
+  if (client == NULL) {
+    hint();
+  } else {
+    const char * hosts[] = {
+        "127.0.0.1",
+        "127.0.0.1",
+        "127.0.0.1",
+    };
+    const uint32_t ports[] = {
+        21211, 21212, 11213
+    };
+    const char * aliases[] = {
+        "alfa",
+        "bravo",
+        "charlie"
+    };
+    int rv;
+
+    rv = client->updateServers(hosts, ports, 2, aliases);
+    ASSERT_EQ(rv, 1);
+
+    const char * mismatch_aliases[] = {
+        "afla",
+        "bravo",
+        "charlie"
+    };
+    rv = client->updateServers(hosts, ports, 3, mismatch_aliases);
+    ASSERT_EQ(rv, 2);
+
+    rv = client->updateServers(hosts, ports, 3, aliases);
+    ASSERT_EQ(rv, -3);
   }
 }

@@ -1,7 +1,6 @@
 #include <unistd.h>
 #include <vector>
 
-#include "Export.h"
 #include "Common.h"
 #include "Client.h"
 #include "Keywords.h"
@@ -30,6 +29,10 @@ void Client::config(config_options_t opt, int val) {
       break;
     case CFG_HASH_FUNCTION:
       ConnectionPool::setHashFunction(static_cast<hash_function_options_t>(val));
+      break;
+    case CFG_MAX_RETRIES:
+      setMaxRetries(val);
+      break;
     default:
       break;
   }
@@ -55,7 +58,7 @@ err_code_t Client::gets(const char* const* keys, const size_t* keyLens, size_t n
 
 
 void Client::collectRetrievalResult(retrieval_result_t*** results, size_t* nResults) {
-  assert(m_outRetrievalResultPtrs.size() == 0);
+  assert(m_outRetrievalResultPtrs.empty());
   ConnectionPool::collectRetrievalResult(m_outRetrievalResultPtrs);
   *nResults = m_outRetrievalResultPtrs.size();
   if (*nResults == 0) {
@@ -73,7 +76,7 @@ void Client::destroyRetrievalResult() {
 
 
 void Client::collectMessageResult(message_result_t*** results, size_t* nResults) {
-  assert(m_outMessageResultPtrs.size() == 0);
+  assert(m_outMessageResultPtrs.empty());
   ConnectionPool::collectMessageResult(m_outMessageResultPtrs);
   *nResults = m_outMessageResultPtrs.size();
 
@@ -92,13 +95,13 @@ void Client::destroyMessageResult() {
 
 
 #define IMPL_STORAGE_CMD(M, O) \
-err_code_t Client::M(const char* const* keys, const size_t* key_lens, \
+err_code_t Client::M(const char* const* keys, const size_t* keyLens, \
                  const flags_t* flags, const exptime_t exptime, \
                  const cas_unique_t* cas_uniques, const bool noreply, \
-                 const char* const* vals, const size_t* val_lens, \
+                 const char* const* vals, const size_t* valLens, \
                  size_t nItems, message_result_t*** results, size_t* nResults) { \
-  dispatchStorage((O), keys, key_lens, flags, exptime, cas_uniques, noreply, vals, \
-                  val_lens, nItems); \
+  dispatchStorage((O), keys, keyLens, flags, exptime, cas_uniques, noreply, vals, \
+                  valLens, nItems); \
   err_code_t rv = waitPoll(); \
   collectMessageResult(results, nResults); \
   return rv;\
@@ -112,10 +115,10 @@ IMPL_STORAGE_CMD(prepend, PREPEND_OP)
 IMPL_STORAGE_CMD(cas, CAS_OP)
 #undef IMPL_STORAGE_CMD
 
-err_code_t Client::_delete(const char* const* keys, const size_t* key_lens,
+err_code_t Client::_delete(const char* const* keys, const size_t* keyLens,
                      const bool noreply, size_t nItems,
                      message_result_t*** results, size_t* nResults) {
-  dispatchDeletion(keys, key_lens, noreply, nItems);
+  dispatchDeletion(keys, keyLens, noreply, nItems);
   err_code_t rv = waitPoll();
   collectMessageResult(results, nResults);
   return rv;
@@ -123,7 +126,7 @@ err_code_t Client::_delete(const char* const* keys, const size_t* key_lens,
 
 
 void Client::collectBroadcastResult(broadcast_result_t** results, size_t* nHosts) {
-  assert(m_outBroadcastResultPtrs.size() == 0);
+  assert(m_outBroadcastResultPtrs.empty());
   *nHosts = m_nConns;
   ConnectionPool::collectBroadcastResult(m_outBroadcastResultPtrs);
   *results = &m_outBroadcastResultPtrs.front();
@@ -149,8 +152,9 @@ err_code_t Client::version(broadcast_result_t** results, size_t* nHosts) {
 
 
 err_code_t Client::quit() {
-  broadcastCommand(keywords::kQUIT, 4);
+  broadcastCommand(keywords::kQUIT, 4, true);
   err_code_t rv = waitPoll();
+  markDeadAll(NULL, keywords::kCONN_QUIT);
   return rv;
 }
 
@@ -175,7 +179,7 @@ err_code_t Client::touch(const char* const* keys, const size_t* keyLens,
 
 void Client::collectUnsignedResult(unsigned_result_t** results, size_t* nResults) {
 
-  assert(m_outUnsignedResultPtrs.size() == 0);
+  assert(m_outUnsignedResultPtrs.empty());
   ConnectionPool::collectUnsignedResult(m_outUnsignedResultPtrs);
   *nResults = m_outUnsignedResultPtrs.size();
 

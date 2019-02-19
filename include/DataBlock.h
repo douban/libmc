@@ -39,7 +39,7 @@ class DataBlock {
   size_t capacity();
   bool reusable();
   size_t nBytesRef();
-  size_t push(size_t len);
+  size_t occupy(size_t len);
   char* getWritePtr();
   size_t getWriteLeft();
   size_t find(char c, size_t since = 0);

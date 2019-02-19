@@ -18,10 +18,12 @@ else:
     import pickle
 
 import os
+import sys
 import traceback
 import threading
 import zlib
 import marshal
+import warnings
 
 
 cdef extern from "Common.h" namespace "douban::mc":
@@ -50,6 +52,7 @@ cdef extern from "Export.h":
         CFG_CONNECT_TIMEOUT
         CFG_RETRY_TIMEOUT
         CFG_HASH_FUNCTION
+        CFG_MAX_RETRIES
 
     ctypedef enum hash_function_options_t:
         OPT_HASH_MD5
@@ -62,7 +65,6 @@ cdef extern from "Export.h":
     ctypedef uint64_t cas_unique_t
 
     ctypedef struct retrieval_result_t:
-        retrieval_result_t()
         char* key
         uint8_t key_len
         flags_t flags
@@ -114,8 +116,10 @@ cdef extern from "Client.h" namespace "douban::mc":
         void config(config_options_t opt, int val) nogil
         int init(const char* const * hosts, const uint32_t* ports, size_t n,
                  const char* const * aliases) nogil
-        char* getServerAddressByKey(const char* key, size_t keyLen) nogil
-        char* getRealtimeServerAddressByKey(const char* key, size_t keyLen) nogil
+        int updateServers(const char* const * hosts, const uint32_t* ports, size_t n,
+                          const char* const * aliases) nogil
+        char* getServerAddressByKey(const char* key, const size_t keyLen) nogil
+        char* getRealtimeServerAddressByKey(const char* key, const size_t keyLen) nogil
         void enableConsistentFailover() nogil
         void disableConsistentFailover() nogil
         err_code_t get(
@@ -198,7 +202,9 @@ cdef extern from "Client.h" namespace "douban::mc":
             size_t* nResults
         ) nogil
         void destroyUnsignedResult() nogil
-        void _sleep(uint32_t ms) nogil
+        void _sleep(uint32_t seconds) nogil
+
+    const char* errCodeToString(err_code_t err) nogil
 
 cdef uint32_t MC_DEFAULT_PORT = 11211
 cdef flags_t _FLAG_EMPTY = 0
@@ -219,6 +225,7 @@ MC_DEFAULT_EXPTIME = PyInt_FromLong(DEFAULT_EXPTIME)
 MC_POLL_TIMEOUT = PyInt_FromLong(CFG_POLL_TIMEOUT)
 MC_CONNECT_TIMEOUT = PyInt_FromLong(CFG_CONNECT_TIMEOUT)
 MC_RETRY_TIMEOUT = PyInt_FromLong(CFG_RETRY_TIMEOUT)
+MC_MAX_RETRIES = PyInt_FromLong(CFG_MAX_RETRIES)
 
 
 MC_HASH_MD5 = PyInt_FromLong(OPT_HASH_MD5)
@@ -239,19 +246,6 @@ MC_RETURN_INCOMPLETE_BUFFER_ERR = PyInt_FromLong(RET_INCOMPLETE_BUFFER_ERR)
 MC_RETURN_OK = PyInt_FromLong(RET_OK)
 
 
-cdef dict ERROR_CODE_TO_STR = {
-    MC_RETURN_SEND_ERR: 'send_error',
-    MC_RETURN_RECV_ERR: 'recv_error',
-    MC_RETURN_CONN_POLL_ERR: 'conn_poll_error',
-    MC_RETURN_POLL_TIMEOUT_ERR: 'poll_timeout_error',
-    MC_RETURN_POLL_ERR: 'poll_error',
-    MC_RETURN_MC_SERVER_ERR: 'server_error',
-    MC_RETURN_PROGRAMMING_ERR: 'programming_error',
-    MC_RETURN_INVALID_KEY_ERR: 'invalid_key_error',
-    MC_RETURN_INCOMPLETE_BUFFER_ERR: 'incomplete_buffer_error',
-    MC_RETURN_OK: 'ok'
-}
-
 
 cdef bytes _encode_value(object val, int comp_threshold, flags_t *flags):
     type_ = type(val)
@@ -269,7 +263,7 @@ cdef bytes _encode_value(object val, int comp_threshold, flags_t *flags):
         flags[0] = _FLAG_LONG
         enc_val = str(val).encode('ascii')
     elif type_.__module__ == 'numpy':
-        enc_val = pickle.dumps(val, -1)
+        enc_val = pickle.dumps(val, 2)
         flags[0] = _FLAG_PICKLE
     else:
         try:
@@ -277,10 +271,10 @@ cdef bytes _encode_value(object val, int comp_threshold, flags_t *flags):
             flags[0] = _FLAG_MARSHAL
         except:
             try:
-                enc_val = pickle.dumps(val, -1)
+                enc_val = pickle.dumps(val, 2)
                 flags[0] = _FLAG_PICKLE
-            except:
-                pass
+            except Exception as err:
+                warnings.warn("[libmc] encode value failed, err type: %s, val type: %s %s" % (type(err), type(val), ''.join(traceback.format_stack())))
 
     if comp_threshold > 0 and enc_val is not None and len(enc_val) > comp_threshold:
         enc_val = zlib.compress(enc_val)
@@ -314,12 +308,14 @@ cpdef object decode_value(bytes val, flags_t flags):
     elif flags & _FLAG_MARSHAL:
         try:
             dec_val = marshal.loads(dec_val)
-        except:
+        except Exception as err:
+            warnings.warn("[libmc] unmarshal failed, err type: %s %s" % (type(err), ''.join(traceback.format_stack())))
             dec_val = None
     elif flags & _FLAG_PICKLE:
         try:
             dec_val = pickle.loads(dec_val)
-        except:
+        except Exception as err:
+            warnings.warn("[libmc] unpickle failed, err type: %s %s" % (type(err), ''.join(traceback.format_stack())))
             dec_val = None
     return dec_val
 
@@ -338,7 +334,7 @@ cdef class PyClient:
     cdef hash_function_options_t hash_fn
     cdef bool_t failover
     cdef basestring encoding
-    cdef int last_error
+    cdef err_code_t last_error
     cdef object _thread_ident
     cdef object _created_stack
 
@@ -346,10 +342,36 @@ cdef class PyClient:
                   basestring prefix=None, hash_function_options_t hash_fn=OPT_HASH_MD5, failover=False,
                   encoding='utf8'):
         self.servers = servers
+        self._imp = new Client()
+        self._imp.config(CFG_HASH_FUNCTION, hash_fn)
+        rv = self._update_servers(servers, True)
+        if failover:
+            self._imp.enableConsistentFailover()
+        else:
+            self._imp.disableConsistentFailover()
+
+        self.do_split = do_split
+        self.comp_threshold = comp_threshold
+        self.noreply = noreply
+        self.hash_fn = hash_fn
+        self.failover = failover
+        self.encoding = encoding
+        if prefix:
+            self.prefix = bytes(prefix) if isinstance(prefix, bytes) else prefix.encode(self.encoding)
+        else:
+            self.prefix = None
+
+        self.last_error = RET_OK
+        self._thread_ident = None
+        self._created_stack = traceback.extract_stack()
+
+    cdef _update_servers(self, list servers, bool_t init):
+        cdef int rv = 0
         cdef size_t n = len(servers)
         cdef char** c_hosts = <char**>PyMem_Malloc(n * sizeof(char*))
         cdef uint32_t* c_ports = <uint32_t*>PyMem_Malloc(n * sizeof(uint32_t))
         cdef char** c_aliases = <char**>PyMem_Malloc(n * sizeof(char*))
+
         servers_ = []
         for srv in servers:
             addr_alias = srv.split(' ')
@@ -380,33 +402,18 @@ cdef class PyClient:
             else:
                 c_aliases[i] = PyString_AsString(alias)
 
-        cdef int rv = 0
-        self._imp = new Client()
-        self._imp.config(CFG_HASH_FUNCTION, hash_fn)
-        rv = self._imp.init(c_hosts, c_ports, n, c_aliases)
-        if failover:
-            self._imp.enableConsistentFailover()
+        if init:
+            rv = self._imp.init(c_hosts, c_ports, n, c_aliases)
         else:
-            self._imp.disableConsistentFailover()
+            rv = self._imp.updateServers(c_hosts, c_ports, n, c_aliases)
 
         PyMem_Free(c_hosts)
         PyMem_Free(c_ports)
         PyMem_Free(c_aliases)
-        self.do_split = do_split
-        self.comp_threshold = comp_threshold
-        self.noreply = noreply
-        self.hash_fn = hash_fn
-        self.failover = failover
-        self.encoding = encoding
-        if prefix:
-            self.prefix = bytes(prefix) if isinstance(prefix, bytes) else prefix.encode(self.encoding)
-        else:
-            self.prefix = None
+
         Py_DECREF(servers_)
 
-        self.last_error = 0
-        self._thread_ident = None
-        self._created_stack = traceback.extract_stack()
+        return rv
 
     def __dealloc__(self):
         del self._imp
@@ -426,9 +433,9 @@ cdef class PyClient:
         PyString_AsStringAndSize(key2, &c_key, <Py_ssize_t*>&c_key_len)
         with nogil:
             c_addr = self._imp.getServerAddressByKey(c_key, c_key_len)
-        cdef basestring c_server_addr = c_addr
+        cdef basestring server_addr = c_addr
         Py_DECREF(key2)
-        return c_server_addr
+        return server_addr
 
     def get_realtime_host_by_key(self, basestring key):
         cdef bytes key2 = self.normalize_key(key)
@@ -440,12 +447,12 @@ cdef class PyClient:
         with nogil:
             c_addr = self._imp.getRealtimeServerAddressByKey(c_key, c_key_len)
         Py_DECREF(key2)
-        cdef basestring c_server_addr
+        cdef basestring server_addr
         if c_addr != NULL:
-            c_server_addr = c_addr
-            return c_server_addr
+            server_addr = c_addr
+            return server_addr
 
-    cdef normalize_key(self, basestring raw_key):
+    cpdef normalize_key(self, basestring raw_key):
         cdef bytes key
         if isinstance(raw_key, unicode):
             key = raw_key.encode(self.encoding)
@@ -627,7 +634,7 @@ cdef class PyClient:
             else:
                 pass
 
-        rv = self.last_error == 0 and (self.noreply or (n_res == 1 and results[0][0].type_ == MSG_STORED))
+        rv = self.last_error == RET_OK and (self.noreply or (n_res == 1 and results[0][0].type_ == MSG_STORED))
 
         with nogil:
             self._imp.destroyMessageResult()
@@ -768,7 +775,7 @@ cdef class PyClient:
                                    self.noreply, c_vals, c_val_lens, n, &results, &n_rst)
             else:
                 pass
-        is_succeed = self.last_error == 0 and (self.noreply or n_rst == n)
+        is_succeed = self.last_error == RET_OK and (self.noreply or n_rst == n)
         cdef list failed_keys = []
         if not is_succeed and return_failure:
             succeed_keys = [results[i][0].key[:results[i][0].key_len] for i in range(n_rst) if results[i][0].type_ == MSG_STORED]
@@ -850,7 +857,7 @@ cdef class PyClient:
         with nogil:
             self.last_error = self._imp._delete(&c_key, &c_key_len, self.noreply, n, &results, &n_res)
 
-        rv = self.last_error == 0 and (self.noreply or (n_res == 1 and (results[0][0].type_ == MSG_DELETED or results[0][0].type_ == MSG_NOT_FOUND)))
+        rv = self.last_error == RET_OK and (self.noreply or (n_res == 1 and (results[0][0].type_ == MSG_DELETED or results[0][0].type_ == MSG_NOT_FOUND)))
 
         with nogil:
             self._imp.destroyMessageResult()
@@ -876,7 +883,7 @@ cdef class PyClient:
         with nogil:
             self.last_error = self._imp._delete(c_keys, c_key_lens, self.noreply, n, &results, &n_res)
 
-        is_succeed = self.last_error == 0 and (self.noreply or n_res == n)
+        is_succeed = self.last_error == RET_OK and (self.noreply or n_res == n)
         cdef list failed_keys = []
 
         if not is_succeed and return_failure:
@@ -910,7 +917,7 @@ cdef class PyClient:
         with nogil:
             self.last_error = self._imp.touch(&c_key, &c_key_len, exptime, self.noreply, n, &results, &n_res)
 
-        rv = self.last_error == 0 and (self.noreply or (n_res == 1 and results[0][0].type_ == MSG_TOUCHED))
+        rv = self.last_error == RET_OK and (self.noreply or (n_res == 1 and results[0][0].type_ == MSG_TOUCHED))
         with nogil:
             self._imp.destroyMessageResult()
         Py_DECREF(key)
@@ -943,9 +950,7 @@ cdef class PyClient:
         with nogil:
             self.last_error = self._imp.quit()
             self._imp.destroyBroadcastResult()
-        if self.last_error in {RET_CONN_POLL_ERR, RET_RECV_ERR}:
-            return True
-        return False
+        return self.last_error in {RET_CONN_POLL_ERR, RET_OK}
 
     def stats(self):
         self._record_thread_ident()
@@ -1029,7 +1034,6 @@ cdef class PyClient:
 
     def clear_thread_ident(self):
         self._thread_ident = None
-        self._thread_ident_stack = None
 
     def _record_thread_ident(self):
         if self._thread_ident is None:
@@ -1048,5 +1052,12 @@ cdef class PyClient:
     def get_last_error(self):
         return self.last_error
 
+    def update_servers(self, servers):
+        rv = self._update_servers(servers, False)
+        if rv + len(servers) == 0:
+            self.servers = servers
+            return True
+        return False
+
     def get_last_strerror(self):
-        return ERROR_CODE_TO_STR.get(self.last_error, '')
+        return errCodeToString(self.last_error)

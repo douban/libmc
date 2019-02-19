@@ -11,6 +11,7 @@
 #include <queue>
 
 #include "Connection.h"
+#include "Keywords.h"
 
 using douban::mc::io::BufferWriter;
 using douban::mc::io::BufferReader;
@@ -22,7 +23,8 @@ Connection::Connection()
     : m_counter(0), m_port(0), m_socketFd(-1),
       m_alive(false), m_hasAlias(false), m_deadUntil(0),
       m_connectTimeout(MC_DEFAULT_CONNECT_TIMEOUT),
-      m_retryTimeout(MC_DEFAULT_RETRY_TIMEOUT) {
+      m_retryTimeout(MC_DEFAULT_RETRY_TIMEOUT),
+      m_maxRetries(MC_DEFAULT_MAX_RETRIES), m_retires(0) {
   m_name[0] = '\0';
   m_host[0] = '\0';
   m_buffer_writer = new BufferWriter();
@@ -62,7 +64,7 @@ int Connection::connect() {
   hints.ai_family = AF_INET;
   hints.ai_socktype = SOCK_STREAM;
   hints.ai_protocol = IPPROTO_TCP;
-  char str_port[MC_NI_MAXSERV] = "\0";
+  char str_port[MC_NI_MAXSERV] = "";
   snprintf(str_port, MC_NI_MAXSERV, "%u", m_port);
   if (getaddrinfo(m_host, str_port, &hints, &server_addrinfo) != 0) {
     if (server_addrinfo) {
@@ -79,21 +81,14 @@ int Connection::connect() {
     }
 
     // non blocking
-    int flags = -1;
-    do {
-      flags = fcntl(fd, F_GETFL, 0);
-    } while (flags == -1 && (errno == EINTR || errno == EAGAIN));
-    if (flags == -1) {
+    int flags;
+
+    if ((flags = fcntl(fd, F_GETFL)) == -1) {
       goto try_next_ai;
     }
 
     if ((flags & O_NONBLOCK) == 0) {
-      int rv = -1;
-      do {
-        rv = fcntl(fd, F_SETFL, flags | O_NONBLOCK);
-      } while (rv == -1 && (errno == EINTR || errno == EAGAIN));
-
-      if (rv == -1) {
+      if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1) {
         goto try_next_ai;
       }
     }
@@ -168,8 +163,14 @@ void Connection::close() {
   }
 }
 
-bool Connection::tryReconnect() {
+bool Connection::tryReconnect(bool check_retries) {
   if (!m_alive) {
+    if (check_retries) {
+      m_retires += 1;
+      if (m_retires > m_maxRetries) {
+        return m_alive;
+      }
+    }
     time_t now;
     time(&now);
     if (now >= m_deadUntil) {
@@ -193,13 +194,15 @@ void Connection::markDead(const char* reason, int delay) {
     time(&m_deadUntil);
     m_deadUntil += delay; // check after `delay` seconds, default 0
     this->close();
-    log_warn("Connection %s is dead(reason: %s, delay: %d), next check at %lu",
-             m_name, reason, delay, m_deadUntil);
-    std::queue<struct iovec>* q = m_parser.getRequestKeys();
-    if (!q->empty()) {
-      log_warn("%s: first request key: %.*s", m_name,
-               static_cast<int>(q->front().iov_len),
-               static_cast<char*>(q->front().iov_base));
+    if (strcmp(reason, keywords::kCONN_QUIT) != 0) {
+      log_warn("Connection %s is dead(reason: %s, delay: %d), next check at %lu",
+               m_name, reason, delay, m_deadUntil);
+      struct iovec* key = m_parser.currentRequestKey();
+      if (key != NULL) {
+        log_warn("%s: first request key: %.*s", m_name,
+                 static_cast<int>(key->iov_len),
+                 static_cast<char*>(key->iov_base));
+      }
     }
   }
 }
@@ -212,8 +215,8 @@ void Connection::takeBuffer(const char* const buf, size_t buf_len) {
   m_buffer_writer->takeBuffer(buf, buf_len);
 }
 
-void Connection::addRequestKey(const char* const buf, const size_t buf_len) {
-  m_parser.addRequestKey(buf, buf_len);
+void Connection::addRequestKey(const char* const key, const size_t len) {
+  m_parser.addRequestKey(key, len);
 }
 
 size_t Connection::requestKeyCount() {
@@ -231,7 +234,9 @@ void Connection::takeNumber(int64_t val) {
 ssize_t Connection::send() {
   struct msghdr msg = {};
 
-  msg.msg_iov = const_cast<struct iovec *>(m_buffer_writer->getReadPtr(msg.msg_iovlen));
+  size_t n = 0;
+  msg.msg_iov = const_cast<struct iovec *>(m_buffer_writer->getReadPtr(n));
+  msg.msg_iovlen = n;
 
   // otherwise may lead to EMSGSIZE, SEE issue#3 on code
   int flags = 0;
@@ -243,7 +248,6 @@ ssize_t Connection::send() {
   ssize_t nSent = ::sendmsg(m_socketFd, &msg, flags);
 
   if (nSent == -1) {
-    m_buffer_writer->reset();
     return -1;
   } else {
     m_buffer_writer->commitRead(nSent);
@@ -251,20 +255,23 @@ ssize_t Connection::send() {
 
   size_t msgLeft = m_buffer_writer->msgIovlen();
   if (msgLeft == 0) {
-    m_buffer_writer->reset();
     return 0;
   } else {
     return msgLeft;
   }
 }
 
-ssize_t Connection::recv() {
+ssize_t Connection::recv(bool peek) {
+  int flags = 0;
   size_t bufferSize = m_buffer_reader->getNextPreferedDataBlockSize();
   size_t bufferSizeAvailable = m_buffer_reader->prepareWriteBlock(bufferSize);
   char* writePtr = m_buffer_reader->getWritePtr();
-  ssize_t bufferSizeActual = ::recv(m_socketFd, writePtr, bufferSizeAvailable, 0);
+  if (peek) {
+    flags |= MSG_PEEK;
+  }
+  ssize_t bufferSizeActual = ::recv(m_socketFd, writePtr, bufferSizeAvailable, flags);
   // log_info("%p recv(%lu) %.*s", this, bufferSizeActual, (int)bufferSizeActual, writePtr);
-  if (bufferSizeActual > 0) {
+  if (!peek && bufferSizeActual > 0) {
     m_buffer_reader->commitWrite(bufferSizeActual);
   }
   return bufferSizeActual;
@@ -290,15 +297,22 @@ types::UnsignedResultList* Connection::getUnsignedResults() {
   return m_parser.getUnsignedResults();
 }
 
-std::queue<struct iovec>* Connection::getRequestKeys() {
+std::vector<struct iovec>* Connection::getRequestKeys() {
   return m_parser.getRequestKeys();
 }
 
 void Connection::reset() {
   m_counter = 0;
+  m_retires = 0;
   m_parser.reset();
   m_buffer_reader->reset();
   m_buffer_writer->reset(); // flush data dispatched but not sent
+}
+
+void Connection::rewind() {
+  m_parser.rewind();
+  m_buffer_reader->reset(); // flush received data
+  m_buffer_writer->rewind(); // rewind for resending data
 }
 
 void Connection::setRetryTimeout(int timeout) {
@@ -307,6 +321,10 @@ void Connection::setRetryTimeout(int timeout) {
 
 void Connection::setConnectTimeout(int timeout) {
   m_connectTimeout = timeout;
+}
+
+void Connection::setMaxRetries(int max_retries) {
+  m_maxRetries = max_retries;
 }
 
 } // namespace mc
