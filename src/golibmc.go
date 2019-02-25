@@ -35,6 +35,11 @@ const (
 	HashCRC32
 )
 
+// This is the size of the connectionOpener request chan (Client.openerCh).
+// This value should be larger than the maximum typical value
+// used for client.maxOpen. If maxOpen is significantly larger than
+// connectionRequestQueueSize then it is possible for ALL calls into the *Client
+// to block until the connectionOpener can satisfy the backlog of requests.
 const connectionRequestQueueSize = 1000000
 
 var hashFunctionMapping = map[int]C.hash_function_options_t{
@@ -44,9 +49,11 @@ var hashFunctionMapping = map[int]C.hash_function_options_t{
 	HashCRC32:   C.OPT_HASH_CRC_32,
 }
 
-
 // Credits to:
 // https://github.com/bradfitz/gomemcache/blob/master/memcache/memcache.go
+
+// The implementation of connection pool in golibmc is a tailored version of go database/sql.
+// https://github.com/golang/go/blob/master/src/database/sql/sql.go
 
 var (
 	// ErrCacheMiss means that a Get failed because the item wasn't present.
@@ -71,7 +78,7 @@ var (
 	// already closing.
 	ErrMemcachedClosed = errors.New("memcached is closed")
 
-	// ErrBadConn is returned when the connection is out of its lifetime.
+	// ErrBadConn is returned when the connection is out of its maxLifetime, so we decide not to use it.
 	ErrBadConn = errors.New("bad conn")
 
 	errTemplate   = "libmc: network error(%s)"
@@ -110,29 +117,40 @@ type Client struct {
 	pollTimeout    C.int
 	retryTimeout   C.int
 	maxRetries     C.int
-	lk             sync.Mutex
-	freeConns      []*conn
-	numOpen        int
-	openerCh       chan struct{}
-	connRequests   map[uint64]chan connRequest
-	nextRequest    uint64
-	maxLifetime    time.Duration // maximum amount of time a connection may be reused
-	maxOpen        int           // maximum amount of connection num. maxOpen <= 0 means unlimited.
-	cleanerCh      chan struct{}
-	closed         bool
+
+	lk           sync.Mutex // protects following fields
+	freeConns    []*conn
+	connRequests map[uint64]chan connRequest // a hashmap of the channels of connRequest
+	nextRequest  uint64                      // Next key to use in connRequests.
+	numOpen      int                         // number of opened and pending open connections
+	// Used to signal the need for new connections
+	// a goroutine running connectionOpener() reads on this chan and
+	// maybeOpenNewConnections sends on the chan (one send per needed connection)
+	// It is closed during client.Quit(). The close tells the connectionOpener
+	// goroutine to exit.
+	openerCh    chan struct{}
+	maxLifetime time.Duration // maximum amount of time a connection may be reused
+	maxOpen     int           // maximum amount of connection num. maxOpen <= 0 means unlimited. default is 1.
+	cleanerCh   chan struct{}
+	closed      bool
 }
 
+// connRequest represents one request for a new connection
+// When there are no idle connections available, Client.conn will create
+// a new connRequest and put it on the client.connRequests list.
 type connRequest struct {
 	*conn
 	err error
 }
 
+// conn wraps a Client with a mutex
 type conn struct {
-	_imp   unsafe.Pointer
-	client *Client
-	sync.Mutex
+	_imp      unsafe.Pointer
+	client    *Client
 	createdAt time.Time
-	closed    bool
+
+	sync.Mutex // guards following
+	closed     bool
 }
 
 // Item is an item to be got or stored in a memcached server.
@@ -189,6 +207,7 @@ not available. default: False
 disableLock: Whether to disable a lock of type sync.Mutex which will be
 use in every retrieval/storage command. default False.
 */
+// FIXME(Harry): the disableLock option is not working now, 'cause we've add a connection pool to golibmc.
 func New(servers []string, noreply bool, prefix string, hashFunc int, failover bool, disableLock bool) (client *Client) {
 	client = new(Client)
 	client.servers = servers
@@ -197,16 +216,19 @@ func New(servers []string, noreply bool, prefix string, hashFunc int, failover b
 	client.disableLock = disableLock
 	client.hashFunc = hashFunc
 	client.failover = failover
+
 	client.openerCh = make(chan struct{}, connectionRequestQueueSize)
 	client.connRequests = make(map[uint64]chan connRequest)
-	client.maxOpen = 1 // default value
+	// default allow 1 connection per client, it means disable connection pool.
+	// users can set this by client.SetConnMaxOpen.
+	client.maxOpen = 1
 
 	client.connectTimeout = -1
 	client.pollTimeout = -1
 	client.retryTimeout = -1
 	client.maxRetries = -1
 
-	go client.opener()
+	go client.connectionOpener()
 
 	return
 }
@@ -240,6 +262,9 @@ func (client *Client) unlock() {
 	}
 }
 
+// Assumes client.lk is locked.
+// If there are connRequests and the connection limit hasn't been reached,
+// then tell the connectionOpener to open new connections.
 func (client *Client) maybeOpenNewConnections() {
 	if client.closed {
 		return
@@ -252,19 +277,24 @@ func (client *Client) maybeOpenNewConnections() {
 		}
 	}
 	for numRequests > 0 {
-		client.numOpen++
+		client.numOpen++ // optimistically
 		numRequests--
 		client.openerCh <- struct{}{}
 	}
 }
 
-func (client *Client) opener() {
+// Runs in a separate goroutine, opens new connections when requested.
+func (client *Client) connectionOpener() {
 	for range client.openerCh {
 		client.openNewConnection()
 	}
 }
 
+// Open one new connection
 func (client *Client) openNewConnection() {
+	// maybeOpenNewConnctions has already executed client.numOpen++ before it sent
+	// on client.openerCh. This function must execute client.numOpen-- if the
+	// connection fails or is closed before returning.
 	if client.closed {
 		client.lk.Lock()
 		client.numOpen--
@@ -281,6 +311,7 @@ func (client *Client) openNewConnection() {
 	}
 	client.lk.Lock()
 	if !client.putConnLocked(cn, nil) {
+		// Don't decrease the client.numOpen here, conn.quit will take care of it.
 		client.lk.Unlock()
 		cn.quit()
 		return
@@ -289,6 +320,7 @@ func (client *Client) openNewConnection() {
 	return
 }
 
+// new a conn
 func (client *Client) newConn() (*conn, error) {
 	cn := conn{
 		client:    client,
@@ -359,6 +391,9 @@ func (client *Client) newConn() (*conn, error) {
 	return &cn, nil
 }
 
+// putConn adds a connection to the client's free pool or satisfy a connRequest,
+// if the conn is not bad.
+// err is optionally the last error that occurred on this connection.
 func (client *Client) putConn(cn *conn, err error) error {
 	client.lk.Lock()
 	if isBadConnErr(err) || !client.putConnLocked(cn, nil) {
@@ -373,6 +408,14 @@ func (client *Client) putConn(cn *conn, err error) error {
 	return err
 }
 
+// Satisfy a connRequest or put the conn in the idle pool and return true
+// or return false.
+// putConnLocked will satisfy a connRequest if there is one, or it will
+// return the *conn to the freeConn list (currently, no idle connection limit).
+// If err != nil, the value of cn is ignored.
+// If err == nil, then cn must not equal nil.
+// If a connRequest was fulfilled or the *conn was placed in the
+// freeConn list, then true is returned, otherwise false is returned.
 func (client *Client) putConnLocked(cn *conn, err error) bool {
 	if client.closed {
 		return false
@@ -381,11 +424,13 @@ func (client *Client) putConnLocked(cn *conn, err error) bool {
 		return false
 	}
 	if len(client.connRequests) > 0 {
+		// Get a request from queue and satisfy it.
 		var req chan connRequest
 		var reqKey uint64
 		for reqKey, req = range client.connRequests {
 			break
 		}
+		// Remove from pending requests.
 		delete(client.connRequests, reqKey)
 		req <- connRequest{
 			conn: cn,
@@ -398,17 +443,26 @@ func (client *Client) putConnLocked(cn *conn, err error) bool {
 	return true
 }
 
+// Client.conn returns a single connection by either opening a new connection
+// or returning an existing connection from the connection pool. Client.conn will
+// block until either a connection is returned or ctx is canceled.
+//
+// Every conn should be returned to the connection pool after use by
+// calling Client.putConn.
 func (client *Client) conn(ctx context.Context) (*conn, error) {
 	cn, err := client._conn(ctx, true)
 	if err == nil {
 		return cn, nil
 	}
+	// If we get ErrBadConn, it means the free conn is reach its maxLifetime.
+	// So we decide to force create a new connection.
 	if err == ErrBadConn {
 		return client._conn(ctx, false)
 	}
 	return cn, err
 }
 
+// _conn returns a newly-opened or cached *conn.
 func (client *Client) _conn(ctx context.Context, useFreeConn bool) (*conn, error) {
 	client.lk.Lock()
 	if client.closed {
@@ -424,10 +478,10 @@ func (client *Client) _conn(ctx context.Context, useFreeConn bool) (*conn, error
 	}
 	lifetime := client.maxLifetime
 
-	var cn *conn
+	// Prefer a free connection, if possible.
 	numFree := len(client.freeConns)
 	if useFreeConn && numFree > 0 {
-		cn = client.freeConns[0]
+		cn := client.freeConns[0]
 		copy(client.freeConns, client.freeConns[1:])
 		client.freeConns = client.freeConns[:numFree-1]
 		client.lk.Unlock()
@@ -438,21 +492,30 @@ func (client *Client) _conn(ctx context.Context, useFreeConn bool) (*conn, error
 		return cn, nil
 	}
 
+	// Out of free connections or we were asked not to use one. If we're not
+	// allowed to open any more connections, make a request and wait.
 	if client.maxOpen > 0 && client.maxOpen <= client.numOpen {
+		// New connection request
+		// Make the connRequest channel. It's buffered so that the
+		// connectionOpener doesn't block while waiting for the req to be read.
 		req := make(chan connRequest, 1)
+
+		// It is assumed that nextRequest will not overflow.
 		reqKey := client.nextRequest
 		client.nextRequest++
 		client.connRequests[reqKey] = req
 		client.lk.Unlock()
 
+		// Timeout the connection request with the context.
 		select {
-		// timeout
 		case <-ctx.Done():
 			// Remove the connection request and ensure no value has been sent
 			// on it after removing.
 			client.lk.Lock()
 			delete(client.connRequests, reqKey)
 			client.lk.Unlock()
+
+			// Make sure we put the conn back if we got one.
 			select {
 			case ret, ok := <-req:
 				if ok {
@@ -469,13 +532,14 @@ func (client *Client) _conn(ctx context.Context, useFreeConn bool) (*conn, error
 		}
 	}
 
-	client.numOpen++
+	// Make a new connection
+	client.numOpen++ // optimistically
 	client.lk.Unlock()
 	newCn, err := client.newConn()
 	if err != nil {
 		client.lk.Lock()
 		defer client.lk.Unlock()
-		client.numOpen--
+		client.numOpen-- // correct for earlier optimism
 		client.maybeOpenNewConnections()
 		return nil, err
 	}
@@ -492,7 +556,7 @@ func (client *Client) SetConnMaxLifetime(d time.Duration) {
 		d = 0
 	}
 	client.lk.Lock()
-	// wake cleaner up when lifetime is shortened.
+	// wake cleaner up when maxLifetime is shortened.
 	if d > 0 && d < client.maxLifetime && client.cleanerCh != nil {
 		select {
 		case client.cleanerCh <- struct{}{}:
@@ -564,7 +628,7 @@ func (client *Client) connectionCleaner(d time.Duration) {
 
 		for _, cn := range closing {
 			if err := cn.quit(); err != nil {
-				log.Println("Failed conn.close", err)
+				log.Println("Failed conn.quit", err)
 			}
 		}
 
@@ -595,6 +659,7 @@ func (client *Client) ConfigTimeout(cCfgKey C.config_options_t, timeout time.Dur
 	case RetryTimeout:
 		client.retryTimeout = C.int(timeout / time.Second)
 	case PollTimeout:
+		// FIXME(Harry): should use time.Millisecond
 		client.pollTimeout = C.int(timeout / time.Microsecond)
 	case ConnectTimeout:
 		client.connectTimeout = C.int(timeout / time.Microsecond)
@@ -1355,6 +1420,9 @@ func (client *Client) Quit() error {
 	client.freeConns = nil
 	client.lk.Unlock()
 
+	// FIXME(Harry): We use empty context everywhere, and it is useless.
+	//	We should cancel ctx here to make it useful.
+
 	return err
 }
 
@@ -1365,6 +1433,9 @@ func (cn *conn) expired(timeout time.Duration) bool {
 	return cn.createdAt.Add(timeout).Before(time.Now())
 }
 
+// FIXME(Harry): We are using quit everywhere when the conn is failed,
+//	I think we can just close socket instead of send quit, it should save some time.
+//	So don't mix up Quit and Close, implement a Close function plz.
 func (cn *conn) quit() error {
 	cn.Lock()
 	defer cn.Unlock()
@@ -1377,6 +1448,7 @@ func (cn *conn) quit() error {
 	cn.client.lk.Lock()
 	defer cn.client.lk.Unlock()
 	cn.client.numOpen--
+	// FIXME(Harry): I think we can use isBadConnErr here.
 	if errCode == C.RET_OK || errCode == C.RET_CONN_POLL_ERR {
 		cn.client.maybeOpenNewConnections()
 		return nil
