@@ -659,10 +659,9 @@ func (client *Client) ConfigTimeout(cCfgKey C.config_options_t, timeout time.Dur
 	case RetryTimeout:
 		client.retryTimeout = C.int(timeout / time.Second)
 	case PollTimeout:
-		// FIXME(Harry): should use time.Millisecond
-		client.pollTimeout = C.int(timeout / time.Microsecond)
+		client.pollTimeout = C.int(timeout / time.Millisecond)
 	case ConnectTimeout:
-		client.connectTimeout = C.int(timeout / time.Microsecond)
+		client.connectTimeout = C.int(timeout / time.Millisecond)
 	}
 }
 
