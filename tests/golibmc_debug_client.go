@@ -1,3 +1,5 @@
+// A standalone client using golibmc which aims to do ad-hoc trials.
+
 package main
 
 import (
@@ -13,7 +15,10 @@ func newClient() *golibmc.Client {
 	failover := false
 	disableLock := false
 
-	SERVERS := []string{"sa-dev:1 mc-server-will-timeout"}
+	// The following is an arbitrary server:port which cannot reach,
+	// so it will timeout when we connect
+	SERVERS := []string{"1.1.1.1:1 mc-server-will-timeout"}
+
 	// SERVERS := []string{"localhost:21211 mc-server-local"}
 
 	CONNECT_TIMEOUT := 10
