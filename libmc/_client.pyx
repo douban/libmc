@@ -779,11 +779,14 @@ cdef class PyClient:
                                    self.noreply, c_vals, c_val_lens, n, &results, &n_rst)
             else:
                 pass
-        is_succeed = self.last_error == RET_OK and (self.noreply or n_rst == n)
+
+        is_succeed = (self.last_error == RET_OK) and (self.noreply or n_rst == n)
+
         cdef list failed_keys = []
-        if not is_succeed and return_failure:
+        if return_failure:
             succeed_keys = [results[i][0].key[:results[i][0].key_len] for i in range(n_rst) if results[i][0].type_ == MSG_STORED]
             failed_keys = list(set(keys) - set(succeed_keys))
+            is_succeed = is_succeed and (len(failed_keys) == 0)
 
         with nogil:
             self._imp.destroyMessageResult()
