@@ -710,7 +710,7 @@ cdef class PyClient:
         cdef bytes key2 = self.normalize_key(key)
         return self._store_raw(APPEND_OP, key2, _FLAG_EMPTY, DEFAULT_EXPTIME, val, DEFAULT_CAS_UNIQUE)
 
-    cdef _prepend_or_append_multi(self, op_code_t op, list keys, object val, exptime_t exptime, bool_t compress):
+    cdef _prepend_or_append_multi(self, op_code_t op, list keys, object val, exptime_t exptime, bool_t compress, bool_t return_failure):
         cdef list normalized_keys = [self.normalize_key(key) for key in keys]
         cdef size_t n = len(keys)
         cdef flags_t* c_flags = <flags_t*>PyMem_Malloc(n * sizeof(flags_t))
@@ -727,19 +727,23 @@ cdef class PyClient:
         for i in range(n):
             c_flags[i] = _FLAG_EMPTY
 
-        rv = self._store_multi_raw(op, n, normalized_keys, vals, c_flags, exptime, return_failure=False)
+        if return_failure:
+            rv, failed_keys = self._store_multi_raw(op, n, normalized_keys, vals, c_flags, exptime, return_failure=True)
+        else:
+            rv = self._store_multi_raw(op, n, normalized_keys, vals, c_flags, exptime, return_failure=False)
+
         PyMem_Free(c_flags)
-        return rv
+        return (rv, failed_keys) if return_failure else rv
 
-    def prepend_multi(self, keys, bytes val, exptime_t exptime=DEFAULT_EXPTIME, bool_t compress=False):
+    def prepend_multi(self, keys, bytes val, exptime_t exptime=DEFAULT_EXPTIME, bool_t compress=False, bool_t return_failure=False):
         self._record_thread_ident()
         self._check_thread_ident()
-        return self._prepend_or_append_multi(PREPEND_OP, keys, val, exptime, compress)
+        return self._prepend_or_append_multi(PREPEND_OP, keys, val, exptime, compress, return_failure)
 
-    def append_multi(self, keys, bytes val, exptime_t exptime=DEFAULT_EXPTIME, bool_t compress=False):
+    def append_multi(self, keys, bytes val, exptime_t exptime=DEFAULT_EXPTIME, bool_t compress=False, bool_t return_failure=False):
         self._record_thread_ident()
         self._check_thread_ident()
-        return self._prepend_or_append_multi(APPEND_OP, keys, val, exptime, compress)
+        return self._prepend_or_append_multi(APPEND_OP, keys, val, exptime, compress, return_failure)
 
     def cas(self, basestring key, object val, exptime_t exptime, cas_unique_t cas_unique):
         self._record_thread_ident()
@@ -775,11 +779,14 @@ cdef class PyClient:
                                    self.noreply, c_vals, c_val_lens, n, &results, &n_rst)
             else:
                 pass
-        is_succeed = self.last_error == RET_OK and (self.noreply or n_rst == n)
+
+        is_succeed = (self.last_error == RET_OK) and (self.noreply or n_rst == n)
+
         cdef list failed_keys = []
-        if not is_succeed and return_failure:
+        if return_failure:
             succeed_keys = [results[i][0].key[:results[i][0].key_len] for i in range(n_rst) if results[i][0].type_ == MSG_STORED]
             failed_keys = list(set(keys) - set(succeed_keys))
+            is_succeed = is_succeed and (len(failed_keys) == 0)
 
         with nogil:
             self._imp.destroyMessageResult()
