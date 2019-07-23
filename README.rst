@@ -171,6 +171,15 @@ Yes, with the help of `greenify <https://github.com/douban/greenify>`__,
 libmc is friendly to gevent. Read ``tests/shabby/gevent_issue.py`` for
 details.
 
+**Notice:**
+
+`gevent.monkey.patch_all()` will override `threading.current_thread().ident` to Greenlet's ID, this will cause libmc to throw a ThreadUnSafe error or run into dead lock, you should only patch the things that you need, e.g.
+
+.. code:: python
+
+    from gevent import monkey
+    monkey.patch_socket()
+
 Acknowledgments
 ---------------
 
