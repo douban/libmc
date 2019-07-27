@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 # from: https://gist.githubusercontent.com/pkrusche/7369262/raw/5bf2dc8afb88d3fdde7be6d16ee4290db6735f37/versioning.py
 
 """ Git Versioning Script

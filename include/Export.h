@@ -45,14 +45,6 @@ typedef uint64_t cas_unique_t;
 
 
 typedef struct {
-  char* host;
-  char** lines;
-  size_t* line_lens;
-  size_t len;
-} broadcast_result_t;
-
-
-typedef struct {
   char* key; // 8B
   char* data_block; // 8B
   cas_unique_t cas_unique; // 8B
@@ -63,7 +55,8 @@ typedef struct {
 
 
 enum message_result_type {
-  MSG_EXISTS,
+  MSG_LIBMC_INVALID = -1,
+  MSG_EXISTS = 0,
   MSG_OK,
   MSG_STORED,
   MSG_NOT_STORED,
@@ -85,3 +78,16 @@ typedef struct {
   size_t key_len;
   uint64_t value;
 } unsigned_result_t;
+
+
+// For flush_all command, we need to specify
+// {host} and {msg_type},
+// for other broadcast commands, we need to specify
+// all fields except {msg_type}
+typedef struct {
+  char* host;
+  char** lines;
+  size_t* line_lens;
+  size_t len;
+  enum message_result_type msg_type;  // for flush_all command
+} broadcast_result_t;

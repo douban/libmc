@@ -14,6 +14,7 @@ venv/
 bench_venv/
 _client.cpp
 _client.so
+_client.*.so
 .tox/
 
 .cache/

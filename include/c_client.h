@@ -63,6 +63,8 @@ extern "C" {
   void client_destroy_unsigned_result(void* client);
 
   err_code_t client_stats(void* client, broadcast_result_t** results, size_t* n_servers);
+  void client_toggle_flush_all_feature(void* client, bool enabled);
+  err_code_t client_flush_all(void* client, broadcast_result_t** results, size_t* n_servers);
   err_code_t client_quit(void* client);
 
   const char* err_code_to_string(err_code_t err);
