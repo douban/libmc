@@ -316,6 +316,9 @@ int PacketParser::start_state(err_code_t& err) {
           assert(err == RET_OK);
           char* ptr = parseTokenData(err_td, n);
           log_err("error: [%.*s]", static_cast<int>(n - 1), ptr); // -1 to ignore '\r'
+          if (err_td.size() > 1) {
+            delete[] ptr;
+          }
           freeTokenData(err_td);
           err = RET_PROGRAMMING_ERR;
           m_state = FSM_ERROR;
@@ -369,6 +372,9 @@ int PacketParser::start_state(err_code_t& err) {
           assert(err == RET_OK);
           char* ptr = parseTokenData(err_td, n);
           log_err("server_error: [%.*s]", static_cast<int>(n - 1), ptr); // -1 to ignore '/r'
+          if (err_td.size() > 1) {
+            delete[] ptr;
+          }
           freeTokenData(err_td);
           err = RET_MC_SERVER_ERR;
           m_state = FSM_ERROR;
@@ -420,6 +426,9 @@ int PacketParser::start_state(err_code_t& err) {
         assert(err == RET_OK);
         char* ptr = parseTokenData(err_td, n);
         log_err("client_error: [%.*s]", static_cast<int>(n - 1), ptr); // -1 to ignore '/r'
+        if (err_td.size() > 1) {
+          delete[] ptr;
+        }
         freeTokenData(err_td);
         err = RET_PROGRAMMING_ERR;
         m_state = FSM_ERROR;
