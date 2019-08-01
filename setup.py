@@ -2,6 +2,7 @@ from __future__ import print_function
 import os
 import re
 import sys
+import shlex
 import pkg_resources
 from glob import glob
 from setuptools import setup, Extension
@@ -56,7 +57,7 @@ class PyTest(TestCommand):
 
     def initialize_options(self):
         TestCommand.initialize_options(self)
-        self.pytest_args = ['tests']
+        self.pytest_args = 'tests'
 
     def finalize_options(self):
         TestCommand.finalize_options(self)
@@ -66,7 +67,7 @@ class PyTest(TestCommand):
     def run_tests(self):
         #import here, cause outside the eggs aren't loaded
         import pytest
-        errno = pytest.main(self.pytest_args)
+        errno = pytest.main(shlex.split(self.pytest_args))
         sys.exit(errno)
 
 setup(

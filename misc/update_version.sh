@@ -7,8 +7,8 @@ for VERSIONING_FILE in $VERSIONING_FILES
 do
     TMPFILE=$VERSIONING_FILE".2"
     cat $VERSIONING_FILE | \
-        python $VERSIONING_SCRIPT --clean | \
-        python $VERSIONING_SCRIPT > $TMPFILE
+        python2 $VERSIONING_SCRIPT --clean | \
+        python2 $VERSIONING_SCRIPT > $TMPFILE
     mv $TMPFILE $VERSIONING_FILE
     git add $VERSIONING_FILE
 done

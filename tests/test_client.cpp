@@ -209,6 +209,36 @@ TEST(test_client, test_version) {
   }
 }
 
+TEST(test_client, test_flush_all) {
+  Client* client = newClient(2);
+  if (client == NULL) {
+    hint();
+  } else {
+    broadcast_result_t* results = NULL;
+    size_t nHosts = 0;
+    client->flushAll(&results, &nHosts);
+    // The feature is disabled by default,
+    // so no hosts are flushed
+    ASSERT_EQ(nHosts, 0);
+
+    client->toggleFlushAllFeature(true);
+    client->flushAll(&results, &nHosts);
+    ASSERT_EQ(nHosts, 2);
+
+    for (size_t i = 0; i < nHosts; i++) {
+      broadcast_result_t* r = results + i;
+      ASSERT_TRUE(r->msg_type == MSG_OK);
+    }
+    client->destroyBroadcastResult();
+
+
+    client->toggleFlushAllFeature(false);
+    client->flushAll(&results, &nHosts);
+    ASSERT_EQ(nHosts, 0);
+    delete client;
+  }
+}
+
 
 TEST(test_client, test_stats) {
   Client* client = newClient(1);

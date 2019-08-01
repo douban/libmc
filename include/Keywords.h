@@ -31,6 +31,7 @@ static const char k_NOREPLY[] = " noreply";
 
 static const char kVERSION[] = "version";
 static const char kSTATS[] = "stats";
+static const char kFLUSHALL[] = "flush_all";
 
 static const char kQUIT[] = "quit";
 

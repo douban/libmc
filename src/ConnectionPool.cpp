@@ -582,27 +582,39 @@ void ConnectionPool::collectMessageResult(std::vector<message_result_t*>& result
 }
 
 
-void ConnectionPool::collectBroadcastResult(std::vector<broadcast_result_t>& results) {
+void ConnectionPool::collectBroadcastResult(std::vector<broadcast_result_t>& results, bool isFlushAll) {
   results.resize(m_nConns);
   for (size_t i = 0; i < m_nConns; ++i) {
     Connection* conn = m_conns + i;
     broadcast_result_t* conn_result = &results[i];
     conn_result->host = const_cast<char*>(conn->name());
-    types::LineResultList* rst = conn->getLineResults();
-    conn_result->len = rst->size();
+    conn_result->lines = NULL;
+    conn_result->line_lens = NULL;
+    conn_result->len = 0;
+    conn_result->msg_type = MSG_LIBMC_INVALID;
 
-    if (conn_result->len == 0) {
-      conn_result->lines = NULL;
-      conn_result->line_lens = NULL;
-      continue;
-    }
-    conn_result->lines = new char*[conn_result->len];
-    conn_result->line_lens = new size_t[conn_result->len];
+    if (isFlushAll) {
+      types::MessageResultList* rst = conn->getMessageResults();
+      if (rst->size() == 1) {
+        conn_result->msg_type = (rst->front()).type_;
+      } else {
+        conn_result->msg_type = MSG_LIBMC_INVALID;
+      }
+    } else {
+      types::LineResultList* rst = conn->getLineResults();
+      conn_result->len = rst->size();
 
-    int j = 0;
-    for (types::LineResultList::iterator it2 = rst->begin(); it2 != rst->end(); ++it2, ++j) {
-      types::LineResult* r1 = &(*it2);
-      conn_result->lines[j] = r1->inner(conn_result->line_lens[j]);
+      if (conn_result->len == 0) {
+        continue;
+      }
+      conn_result->lines = new char*[conn_result->len];
+      conn_result->line_lens = new size_t[conn_result->len];
+
+      int j = 0;
+      for (types::LineResultList::iterator it2 = rst->begin(); it2 != rst->end(); ++it2, ++j) {
+        types::LineResult* r1 = &(*it2);
+        conn_result->lines[j] = r1->inner(conn_result->line_lens[j]);
+      }
     }
   }
 }

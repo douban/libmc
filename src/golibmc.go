@@ -1391,6 +1391,52 @@ func (client *Client) Stats() (map[string](map[string]string), error) {
 	return rv, nil
 }
 
+// Enable/Disable the flush_all feature
+func (client *Client) ToggleFlushAllFeature(enabled bool) {
+	client.lk.Lock()
+	for i := 0; i < len(client.freeConns); i++ {
+		cn := client.freeConns[i]
+		C.client_toggle_flush_all_feature(cn._imp, C.bool(enabled))
+	}
+	client.lk.Unlock()
+}
+
+// FlushAll will flush all memcached servers
+// You must call  ToggleFlushAllFeature(True) first to
+// enable this feature.
+func (client *Client) FlushAll() ([]string, error) {
+	var rst *C.broadcast_result_t
+	var n C.size_t
+	flushedHosts := []string{}
+
+	cn, err := client.conn(context.Background())
+	if err != nil {
+		return flushedHosts, err
+	}
+	defer func() {
+		client.putConn(cn, err)
+	}()
+
+	errCode := C.client_flush_all(cn._imp, &rst, &n)
+	defer C.client_destroy_broadcast_result(cn._imp)
+	sr := unsafe.Sizeof(*rst)
+
+	for i := 0; i < int(n); i++ {
+		host := C.GoString(rst.host)
+		if rst.msg_type == C.MSG_OK {
+			flushedHosts = append(flushedHosts, host)
+		}
+
+		rst = (*C.broadcast_result_t)(unsafe.Pointer(uintptr(unsafe.Pointer(rst)) + sr))
+	}
+
+	if errCode != C.RET_OK {
+		return flushedHosts, networkError(errorMessage(errCode))
+	}
+
+	return flushedHosts, nil
+}
+
 // Quit will close the sockets to each memcached server
 func (client *Client) Quit() error {
 	client.lk.Lock()

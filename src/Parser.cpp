@@ -35,13 +35,20 @@ void PacketParser::setMode(ParserMode md) {
 
 void PacketParser::processMessageResult(enum message_result_type tp) {
   m_messageResults.push_back(message_result_t());
-
   message_result_t* inner_rst = &m_messageResults.back();
-  struct iovec iov = m_requestKeys[m_requestKeyIdx];
-  ++m_requestKeyIdx;
   inner_rst->type_ = tp;
-  inner_rst->key = static_cast<char*>(iov.iov_base);
-  inner_rst->key_len = iov.iov_len;
+
+  // "OK\r\n" is not a key related response code,
+  // so we don't need to fill the key.
+  if (tp == MSG_OK) {
+    inner_rst->key = NULL;
+    inner_rst->key_len = 0;
+  } else {
+    struct iovec iov = m_requestKeys[m_requestKeyIdx];
+    ++m_requestKeyIdx;
+    inner_rst->key = static_cast<char*>(iov.iov_base);
+    inner_rst->key_len = iov.iov_len;
+  }
 }
 
 
@@ -338,6 +345,7 @@ int PacketParser::start_state(err_code_t& err) {
         // OK
         EXPECT_BYTES("OK\r\n", 4);
         processMessageResult(MSG_OK);
+        m_state = FSM_END;
       }
       break;
     case 'S':
