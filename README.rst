@@ -212,6 +212,14 @@ Contributors
 -  `@jumpeiMano <https://github.com/jumpeiMano>`__
 
 
+Who is using
+------------
+
+- `豆瓣 <https://douban.com>`__
+- `下厨房 <https://www.xiachufang.com>`__
+- `Some other projects on GitHub <https://github.com/douban/libmc/network/dependents>`__
+- Want to add your company/organization name here? Please feel free to send a PR!
+
 Documentation
 -------------
 
@@ -220,7 +228,7 @@ https://github.com/douban/libmc/wiki
 LICENSE
 -------
 
-Copyright (c) 2014-2015, Douban Inc. All rights reserved.
+Copyright (c) 2014-2019, Douban Inc. All rights reserved.
 
 Licensed under a BSD license:
 https://github.com/douban/libmc/blob/master/LICENSE.txt
