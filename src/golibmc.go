@@ -128,11 +128,12 @@ type Client struct {
 	// maybeOpenNewConnections sends on the chan (one send per needed connection)
 	// It is closed during client.Quit(). The close tells the connectionOpener
 	// goroutine to exit.
-	openerCh    chan struct{}
-	maxLifetime time.Duration // maximum amount of time a connection may be reused
-	maxOpen     int           // maximum amount of connection num. maxOpen <= 0 means unlimited. default is 1.
-	cleanerCh   chan struct{}
-	closed      bool
+	openerCh        chan struct{}
+	maxLifetime     time.Duration // maximum amount of time a connection may be reused
+	maxOpen         int           // maximum amount of connection num. maxOpen <= 0 means unlimited. default is 1.
+	cleanerCh       chan struct{}
+	closed          bool
+	flushAllEnabled bool
 }
 
 // connRequest represents one request for a new connection
@@ -216,6 +217,7 @@ func New(servers []string, noreply bool, prefix string, hashFunc int, failover b
 	client.disableLock = disableLock
 	client.hashFunc = hashFunc
 	client.failover = failover
+	client.flushAllEnabled = false
 
 	client.openerCh = make(chan struct{}, connectionRequestQueueSize)
 	client.connRequests = make(map[uint64]chan connRequest)
@@ -1393,12 +1395,7 @@ func (client *Client) Stats() (map[string](map[string]string), error) {
 
 // Enable/Disable the flush_all feature
 func (client *Client) ToggleFlushAllFeature(enabled bool) {
-	client.lk.Lock()
-	for i := 0; i < len(client.freeConns); i++ {
-		cn := client.freeConns[i]
-		C.client_toggle_flush_all_feature(cn._imp, C.bool(enabled))
-	}
-	client.lk.Unlock()
+	client.flushAllEnabled = enabled
 }
 
 // FlushAll will flush all memcached servers
@@ -1410,6 +1407,9 @@ func (client *Client) FlushAll() ([]string, error) {
 	flushedHosts := []string{}
 
 	cn, err := client.conn(context.Background())
+	C.client_toggle_flush_all_feature(
+		cn._imp, C.bool(client.flushAllEnabled),
+	)
 	if err != nil {
 		return flushedHosts, err
 	}
@@ -1431,6 +1431,11 @@ func (client *Client) FlushAll() ([]string, error) {
 	}
 
 	if errCode != C.RET_OK {
+		if errCode == C.RET_PROGRAMMING_ERR {
+			return flushedHosts, errors.New(
+				"client.ToggleFlushAllFeature(true) to enable flush_all",
+			)
+		}
 		return flushedHosts, networkError(errorMessage(errCode))
 	}
 

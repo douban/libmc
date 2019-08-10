@@ -916,6 +916,19 @@ func TestFlushAll(t *testing.T) {
 }
 
 func testFlushAll(mc *Client, t *testing.T) {
+	// Check if flush_all is disabled by default
+	flushedHosts, err := mc.FlushAll()
+	if !(err != nil && len(flushedHosts) == 0) {
+		t.Error(err)
+	}
+	mc.ToggleFlushAllFeature(true)
+	// Make sure we can flush directly
+	flushedHosts, err = mc.FlushAll()
+	if err != nil || len(flushedHosts) != len(mc.servers) {
+		t.Error(err)
+	}
+
+	// Set some random data
 	nItems := 10
 	items := make([]*Item, nItems)
 	keys := make([]string, nItems)
@@ -931,28 +944,21 @@ func testFlushAll(mc *Client, t *testing.T) {
 		}
 		keys[i] = key
 	}
-
 	mc.SetMulti(items)
 
-	// flush_all is disabled by default
-	flushedHosts, err := mc.FlushAll()
-	fmt.Println(err)
-	if ! (err != nil && len(flushedHosts) == 0) {
-		t.Error(err)
-	}
-
+	// Make sure we have some data in the cache cluster
 	itemsGot, err := mc.GetMulti(keys)
 	if err != nil || len(itemsGot) != nItems {
 		t.Error(err)
 	}
 
-	// to enable flush_all, call the following method
-	mc.ToggleFlushAllFeature(true)
+	// Flush the cache cluster
 	flushedHosts, err = mc.FlushAll()
 	if err != nil || len(flushedHosts) != len(mc.servers) {
 		t.Error(err)
 	}
 
+	// Check if the cache cluster is flushed
 	itemsGot, err = mc.GetMulti(keys)
 	if err != ErrCacheMiss || len(itemsGot) != 0 {
 		t.Error(err)
