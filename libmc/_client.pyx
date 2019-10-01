@@ -975,7 +975,7 @@ cdef class PyClient:
             self._imp.destroyBroadcastResult()
         if self.last_error == RET_PROGRAMMING_ERR:
             raise RuntimeError(
-                "Please call toggle_flush_all_feature(true) first "
+                "Please call client.toggle_flush_all_feature(True) first "
                 "to enable the flush_all feature."
             )
         return rv
