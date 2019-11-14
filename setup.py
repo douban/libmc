@@ -4,6 +4,9 @@ import re
 import sys
 import shlex
 import pkg_resources
+import platform
+from distutils.sysconfig import get_config_var
+from distutils.version import LooseVersion
 from glob import glob
 from setuptools import setup, Extension
 from setuptools.command.test import test as TestCommand
@@ -24,6 +27,25 @@ def is_installed(requirement):
         return False
     else:
         return True
+
+
+def is_platform_mac():
+    return sys.platform == 'darwin'
+
+
+# For mac, ensure extensions are built for macos 10.9 when compiling on a
+# 10.9 system or above, overriding distuitls behaviour which is to target
+# the version that python was built for. This may be overridden by setting
+# MACOSX_DEPLOYMENT_TARGET before calling setup.py
+# https://github.com/pandas-dev/pandas/issues/23424#issuecomment-446393981
+if is_platform_mac():
+    if 'MACOSX_DEPLOYMENT_TARGET' not in os.environ:
+        current_system = LooseVersion(platform.mac_ver()[0])
+        python_target = LooseVersion(
+            get_config_var('MACOSX_DEPLOYMENT_TARGET'))
+        if python_target < '10.9' and current_system >= '10.9':
+            os.environ['MACOSX_DEPLOYMENT_TARGET'] = '10.9'
+
 
 # Resolving Cython dependency via 'setup_requires' requires setuptools >= 18.0:
 # https://github.com/pypa/setuptools/commit/a811c089a4362c0dc6c4a84b708953dde9ebdbf8
