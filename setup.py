@@ -14,7 +14,7 @@ from setuptools.command.test import test as TestCommand
 
 sources = (glob("src/*.cpp") +
            ["libmc/_client.pyx"])
-include_dirs = ["include"]
+include_dirs = ["include", "3rd_party"]
 
 COMPILER_FLAGS = ["-fno-strict-aliasing", "-fno-exceptions", "-fno-rtti",
                   "-Wall", "-DMC_USE_SMALL_VECTOR", "-O3", "-DNDEBUG"]
