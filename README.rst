@@ -81,8 +81,8 @@ Configuration
    are optional. If ``port`` is not given, default port ``11211`` will
    be used. ``alias`` will be used to compute server hash if given,
    otherwise server hash will be computed based on ``host`` and ``port``
-   (i.e.: If ``port`` is not given or it is equal to ``11211``, ``host`` will be
-   used to compute server hash. If ``port`` is not equal to ``11211``,
+   (i.e.: If ``port`` is not given or it is equal to ``11211``, ``host``
+   will be used to compute server hash. If ``port`` is not equal to ``11211``,
    ``host:port`` will be used).
 -  ``do_split``: Memcached server will refuse to store value if size >=
    1MB, if ``do_split`` is enabled, large value (< 10 MB) will be
@@ -173,7 +173,11 @@ details.
 
 **Notice:**
 
-`gevent.monkey.patch_all()` will override `threading.current_thread().ident` to Greenlet's ID, this will cause libmc to throw a ThreadUnSafe error or run into dead lock, you should only patch the things that you need, e.g.
+`gevent.monkey.patch_all()` will override
+`threading.current_thread().ident` to Greenlet's ID,
+this will cause libmc to throw a ThreadUnSafe error
+or run into dead lock, you should only patch the things
+that you need, e.g.
 
 .. code:: python
 
@@ -218,7 +222,8 @@ Who is using
 - `豆瓣 <https://douban.com>`__
 - `下厨房 <https://www.xiachufang.com>`__
 - `Some other projects on GitHub <https://github.com/douban/libmc/network/dependents>`__
-- Want to add your company/organization name here? Please feel free to send a PR!
+- Want to add your company/organization name here?
+  Please feel free to send a PR!
 
 Documentation
 -------------
