@@ -27,11 +27,11 @@ from ._client import (
     __file__ as _libmc_so_file
 )
 
-__VERSION__ = "1.3.0"
-__version__ = "v1.3.2-1-gdc1d618"
+__VERSION__ = "1.3.3"
+__version__ = "v1.3.3"
 __author__ = "mckelvin"
 __email__ = "mckelvin@users.noreply.github.com"
-__date__ = "Fri Feb 14 15:18:42 2020 +0800"
+__date__ = "Fri Feb 14 15:58:10 2020 +0800"
 
 
 class Client(PyClient):
