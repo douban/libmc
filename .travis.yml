@@ -14,7 +14,7 @@ env:
 - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Release PRJ_COMPILER=gcc
 - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Debug PRJ_COMPILER=gcc
 - TEST_SUITE=benchmark
-matrix:
+jobs:
   include:
   - python: '3.7'
     env: TEST_SUITE=cppcheck
@@ -47,10 +47,10 @@ after_script:
 deploy:
   provider: pypi
   skip_existing: true
-  user: everpcpc
+  username: everpcpc
   password: $PYPI_TOKEN
+  distributions: sdist bdist_wheel
   on:
     tags: true
-    distributions: sdist bdist_wheel
     repo: douban/libmc
     branch: master
