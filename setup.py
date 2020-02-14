@@ -59,10 +59,8 @@ if not is_installed(setuptools_req):
 
         you can upgrade setuptools:
         $ pip install -U setuptools
-        """ % pkg_resources.get_distribution("setuptools").version
-        ),
-        file=sys.stderr
-    )
+        """ % pkg_resources.get_distribution("setuptools").version),
+        file=sys.stderr)
     exit(1)
 
 
@@ -137,5 +135,4 @@ setup(
         "pytest",
         "future",
         "numpy",
-    ]
-)
+    ])
