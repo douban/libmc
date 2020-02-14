@@ -54,4 +54,4 @@ deploy:
     tags: true
     repo: douban/libmc
     branch: master
-    condition: $TEST_SUITE = "unittest" AND $CMAKE_BUILD_TYPE = "Release" AND $PRJ_COMPILER = "gcc"
+    condition: $TEST_SUITE = "unittest" && $CMAKE_BUILD_TYPE = "Release" && $PRJ_COMPILER = "gcc"
