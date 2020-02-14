@@ -3,6 +3,9 @@ language: python
 python:
 - '2.7'
 - '3.5'
+- '3.6'
+- '3.7'
+- '3.8'
 cache:
   pip: true
 env:
@@ -13,7 +16,8 @@ env:
 - TEST_SUITE=benchmark
 matrix:
   include:
-  - env: TEST_SUITE=cppcheck
+  - python: '3.7'
+    env: TEST_SUITE=cppcheck
 addons:
   apt:
     sources:
@@ -26,7 +30,7 @@ addons:
     - memcached
     - libmemcached11
     - golang
-    - g++-7
+    - g++
 install:
 - if [[ $TEST_SUITE != "cppcheck" ]]; then pip install --upgrade pip setuptools; fi
 - if [[ $TEST_SUITE != "cppcheck" ]]; then pip install future; fi
@@ -35,7 +39,7 @@ install:
 before_script:
 - if [[ $TEST_SUITE != "cppcheck" ]]; then ./misc/memcached_server start; fi
 script:
-- if [[ $PRJ_COMPILER = "gcc" ]]; then export CC=gcc-7 CXX=g++-7; fi
+- if [[ $PRJ_COMPILER = "gcc" ]]; then export CC=gcc CXX=g++; fi
 - if [[ $PRJ_COMPILER = "clang" ]]; then export CC=clang CXX=clang++; fi
 - "./misc/travis/$TEST_SUITE.sh"
 after_script:
@@ -43,9 +47,8 @@ after_script:
 deploy:
   provider: pypi
   skip_existing: true
-  user: tclh123
-  password:
-    secure: Bjdh2JsV8sDmnZya74p0wCZ5jMgYmODfFQ11o3tk45/QCPBwa3wUOSjWHYCoBLVKya37UvH+cEnSfQjST+3IaC5D7miifl43aI6A/jRDb6ooNzraFV3Vs6bjp3yndCF1e0noknHo7ab+2s5lOsS5ot28lmQS5SKRtH7vheYnzLA=
+  user: everpcpc
+  password: $PYPI_TOKEN
   on:
     tags: true
     distributions: sdist bdist_wheel

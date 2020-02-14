@@ -21,3 +21,7 @@ _client.*.so
 .clang_complete
 *.sw[op]
 tests/resources/keys_*.txt
+.vscode/
+
+/go.mod
+/go.sum

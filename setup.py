@@ -11,13 +11,18 @@ from glob import glob
 from setuptools import setup, Extension
 from setuptools.command.test import test as TestCommand
 
-
-sources = (glob("src/*.cpp") +
-           ["libmc/_client.pyx"])
+sources = (glob("src/*.cpp") + ["libmc/_client.pyx"])
 include_dirs = ["include"]
 
-COMPILER_FLAGS = ["-fno-strict-aliasing", "-fno-exceptions", "-fno-rtti",
-                  "-Wall", "-DMC_USE_SMALL_VECTOR", "-O3", "-DNDEBUG"]
+COMPILER_FLAGS = [
+    "-fno-strict-aliasing",
+    "-fno-exceptions",
+    "-fno-rtti",
+    "-Wall",
+    "-DMC_USE_SMALL_VECTOR",
+    "-O3",
+    "-DNDEBUG",
+]
 
 
 def is_installed(requirement):
@@ -29,46 +34,42 @@ def is_installed(requirement):
         return True
 
 
-def is_platform_mac():
-    return sys.platform == 'darwin'
-
-
 # For mac, ensure extensions are built for macos 10.9 when compiling on a
 # 10.9 system or above, overriding distuitls behaviour which is to target
 # the version that python was built for. This may be overridden by setting
 # MACOSX_DEPLOYMENT_TARGET before calling setup.py
 # https://github.com/pandas-dev/pandas/issues/23424#issuecomment-446393981
-if is_platform_mac():
-    if 'MACOSX_DEPLOYMENT_TARGET' not in os.environ:
-        current_system = LooseVersion(platform.mac_ver()[0])
-        python_target = LooseVersion(
-            get_config_var('MACOSX_DEPLOYMENT_TARGET'))
-        if python_target < '10.9' and current_system >= '10.9':
-            os.environ['MACOSX_DEPLOYMENT_TARGET'] = '10.9'
-
+if sys.platform == 'darwin' and 'MACOSX_DEPLOYMENT_TARGET' not in os.environ:
+    current_system = LooseVersion(platform.mac_ver()[0])
+    python_target = LooseVersion(get_config_var('MACOSX_DEPLOYMENT_TARGET'))
+    if python_target < LooseVersion('10.9') and current_system >= LooseVersion('10.9'):
+        os.environ['MACOSX_DEPLOYMENT_TARGET'] = '10.9'
 
 # Resolving Cython dependency via 'setup_requires' requires setuptools >= 18.0:
 # https://github.com/pypa/setuptools/commit/a811c089a4362c0dc6c4a84b708953dde9ebdbf8
 setuptools_req = "setuptools >= 18.0"
 if not is_installed(setuptools_req):
     import textwrap
-    print(textwrap.dedent("""
+    print(
+        textwrap.dedent(
+            """
         setuptools >= 18.0 is required, and the dependency cannot be
         automatically resolved with the version of setuptools that is
         currently installed (%s).
 
         you can upgrade setuptools:
         $ pip install -U setuptools
-        """ % pkg_resources.get_distribution("setuptools").version),
-        file=sys.stderr)
+        """ % pkg_resources.get_distribution("setuptools").version
+        ),
+        file=sys.stderr
+    )
     exit(1)
 
 
 def find_version(*file_paths):
     with open(os.path.join(*file_paths)) as fhandler:
         version_file = fhandler.read()
-        version_match = re.search(r"^__VERSION__ = ['\"]([^'\"]*)['\"]",
-                                  version_file, re.M)
+        version_match = re.search(r"^__VERSION__ = ['\"]([^'\"]*)['\"]", version_file, re.M)
     if version_match:
         return version_match.group(1)
     raise RuntimeError("Unable to find version string.")
@@ -87,16 +88,17 @@ class PyTest(TestCommand):
         self.test_suite = True
 
     def run_tests(self):
-        #import here, cause outside the eggs aren't loaded
+        # import here, cause outside the eggs aren't loaded
         import pytest
         errno = pytest.main(shlex.split(self.pytest_args))
         sys.exit(errno)
+
 
 setup(
     name="libmc",
     packages=["libmc"],
     version=find_version("libmc", "__init__.py"),
-    license= "BSD License",
+    license="BSD License",
     description="Fast and light-weight memcached client for C++/Python",
     author="PAN, Myautsai",
     author_email="myautsai@gmail.com",
@@ -104,21 +106,32 @@ setup(
     keywords=["memcached", "memcache", "client"],
     long_description=open("README.rst").read(),
     classifiers=[
-        "Intended Audience :: Developers",
-        "License :: OSI Approved :: BSD License",
-        "Development Status :: 5 - Production/Stable",
         "Programming Language :: C++",
         "Programming Language :: Python",
+        "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: Implementation :: CPython",
+        "Development Status :: 5 - Production/Stable",
         "Operating System :: POSIX :: Linux",
-        "Topic :: Software Development :: Libraries"
+        "Intended Audience :: Developers",
+        "License :: OSI Approved :: BSD License",
+        "Topic :: Software Development :: Libraries",
     ],
     # Support for the basestring type is new in Cython 0.20.
     setup_requires=["Cython >= 0.20"],
     cmdclass={"test": PyTest},
     ext_modules=[
-        Extension("libmc._client", sources, include_dirs=include_dirs,
-                  language="c++", extra_compile_args=COMPILER_FLAGS)
+        Extension(
+            "libmc._client",
+            sources,
+            include_dirs=include_dirs,
+            language="c++",
+            extra_compile_args=COMPILER_FLAGS,
+        )
     ],
     tests_require=[
         "pytest",
