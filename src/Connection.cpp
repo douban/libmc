@@ -122,11 +122,11 @@ try_next_ai:
 }
 
 int Connection::connectPoll(int fd, struct addrinfo* ai_ptr) {
-  int rv = ::connect(fd, ai_ptr->ai_addr, ai_ptr->ai_addrlen);
-  if (rv == 0) {
+  int conn_rv = ::connect(fd, ai_ptr->ai_addr, ai_ptr->ai_addrlen);
+  if (conn_rv == 0) {
     return 0;
   }
-  assert(rv == -1);
+  assert(conn_rv == -1);
   switch (errno) {
     case EINPROGRESS:
     case EALREADY:
@@ -137,14 +137,14 @@ int Connection::connectPoll(int fd, struct addrinfo* ai_ptr) {
         pollfds[0].events = POLLOUT;
         int max_timeout = 6;
         while (--max_timeout) {
-          int rv = poll(pollfds, n_fds, m_connectTimeout);
-          if (rv == 1) {
+          int poll_rv = poll(pollfds, n_fds, m_connectTimeout);
+          if (poll_rv == 1) {
             if (pollfds[0].revents & (POLLERR | POLLHUP | POLLNVAL)) {
               return -1;
             } else {
               return 0;
             }
-          } else if (rv == -1) {
+          } else if (poll_rv == -1) {
             return -1;
           }
         }

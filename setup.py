@@ -106,17 +106,31 @@ setup(
     keywords=["memcached", "memcache", "client"],
     long_description=open("README.rst").read(),
     classifiers=[
-        "Intended Audience :: Developers", "License :: OSI Approved :: BSD License",
-        "Development Status :: 5 - Production/Stable", "Programming Language :: C++", "Programming Language :: Python",
-        "Programming Language :: Python :: Implementation :: CPython", "Operating System :: POSIX :: Linux",
-        "Topic :: Software Development :: Libraries"
+        "Programming Language :: C++",
+        "Programming Language :: Python",
+        "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: Implementation :: CPython",
+        "Development Status :: 5 - Production/Stable",
+        "Operating System :: POSIX :: Linux",
+        "Intended Audience :: Developers",
+        "License :: OSI Approved :: BSD License",
+        "Topic :: Software Development :: Libraries",
     ],
     # Support for the basestring type is new in Cython 0.20.
     setup_requires=["Cython >= 0.20"],
     cmdclass={"test": PyTest},
     ext_modules=[
         Extension(
-            "libmc._client", sources, include_dirs=include_dirs, language="c++", extra_compile_args=COMPILER_FLAGS
+            "libmc._client",
+            sources,
+            include_dirs=include_dirs,
+            language="c++",
+            extra_compile_args=COMPILER_FLAGS,
         )
     ],
     tests_require=[

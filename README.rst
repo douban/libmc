@@ -1,7 +1,7 @@
 libmc
 =====
 
-|build status|
+|build| |status| |pypiv| |pyversions| |wheel| |license|
 
 libmc is a memcached client library for Python without any other
 dependencies in runtime. It's mainly written in C++ and Cython. libmc
@@ -233,10 +233,16 @@ https://github.com/douban/libmc/wiki
 LICENSE
 -------
 
-Copyright (c) 2014-2019, Douban Inc. All rights reserved.
+Copyright (c) 2014-2020, Douban Inc. All rights reserved.
 
 Licensed under a BSD license:
 https://github.com/douban/libmc/blob/master/LICENSE.txt
 
-.. |build status| image:: https://travis-ci.org/douban/libmc.png
+.. |build| image:: https://travis-ci.org/douban/libmc.svg
    :target: https://travis-ci.org/douban/libmc
+
+.. |status| image:: https://img.shields.io/pypi/status/libmc
+.. |pypiv| image:: https://img.shields.io/pypi/v/libmc
+.. |pyversions| image:: https://img.shields.io/pypi/pyversions/libmc
+.. |wheel| image:: https://img.shields.io/pypi/wheel/libmc
+.. |license| image:: https://img.shields.io/pypi/l/libmc
