@@ -47,7 +47,7 @@ after_script:
 deploy:
   provider: pypi
   skip_existing: true
-  username: everpcpc
+  username: __token__
   password: $PYPI_TOKEN
   distributions: sdist bdist_wheel
   on:
