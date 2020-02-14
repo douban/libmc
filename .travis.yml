@@ -49,7 +49,6 @@ deploy:
   skip_existing: true
   username: __token__
   password: $PYPI_TOKEN
-  distributions: sdist bdist_wheel
   on:
     tags: true
     repo: douban/libmc
