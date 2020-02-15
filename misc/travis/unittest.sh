@@ -1,8 +1,7 @@
 #!/bin/sh
-set -x
-set -e
-echo $CXX
-go version
+set -ex
+
+echo "CXX=${CXX}"
 python misc/generate_hash_dataset.py tests/resources/keys.txt
 mkdir -p build
 cd build
@@ -13,5 +12,3 @@ cd ..
 python setup.py test
 python setup.py install
 ./tests/shabby/run_test.sh
-cd golibmc
-go test

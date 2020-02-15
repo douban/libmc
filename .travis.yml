@@ -1,5 +1,6 @@
 dist: xenial
 language: python
+os: linux
 python:
 - '2.7'
 - '3.5'
@@ -16,8 +17,12 @@ env:
 - TEST_SUITE=benchmark
 jobs:
   include:
-  - python: '3.7'
-    env: TEST_SUITE=cppcheck
+  - env: TEST_SUITE=gotest PRJ_COMPILER=gcc
+  - env: TEST_SUITE=gotest PRJ_COMPILER=clang
+  - env: TEST_SUITE=cppcheck
+  - env: TEST_SUITE=buildwheels PLAT=manylinux2010_x86_64
+    services:
+      - docker
 addons:
   apt:
     sources:
@@ -29,21 +34,21 @@ addons:
     - cppcheck
     - memcached
     - libmemcached11
-    - golang
     - g++
+    - golang
 install:
-- if [[ $TEST_SUITE != "cppcheck" ]]; then pip install --upgrade pip setuptools; fi
-- if [[ $TEST_SUITE != "cppcheck" ]]; then pip install future; fi
-- if [[ $TEST_SUITE = "unittest" ]]; then pip install pytest greenify gevent; fi
+- if [[ $TEST_SUITE = "unittest" || $TEST_SUITE = "benchmark" || $TEST_SUITE = "buildwheels" ]]; then pip install --upgrade pip setuptools future; fi
+- if [[ $TEST_SUITE = "unittest" || $TEST_SUITE = "benchmark" ]]; then pip install pytest greenify gevent; fi
 - if [[ $TEST_SUITE = "benchmark" ]]; then pip install python-memcached pylibmc; fi
+- if [[ $TEST_SUITE = "buildwheels" ]]; then docker pull quay.io/pypa/$PLAT; fi
 before_script:
-- if [[ $TEST_SUITE != "cppcheck" ]]; then ./misc/memcached_server start; fi
+- if [[ $TEST_SUITE != "cppcheck" && $TEST_SUITE != "buildwheels" ]]; then ./misc/memcached_server start; fi
 script:
 - if [[ $PRJ_COMPILER = "gcc" ]]; then export CC=gcc CXX=g++; fi
 - if [[ $PRJ_COMPILER = "clang" ]]; then export CC=clang CXX=clang++; fi
 - "./misc/travis/$TEST_SUITE.sh"
 after_script:
-- if [[ $TEST_SUITE != "cppcheck" ]]; then ./misc/memcached_server stop; fi
+- if [[ $TEST_SUITE != "cppcheck" && $TEST_SUITE != "buildwheels" ]]; then ./misc/memcached_server stop; fi
 deploy:
   provider: pypi
   skip_existing: true
@@ -53,4 +58,4 @@ deploy:
     tags: true
     repo: douban/libmc
     branch: master
-    condition: $TEST_SUITE = "unittest" && $CMAKE_BUILD_TYPE = "Release" && $PRJ_COMPILER = "gcc"
+    condition: $TEST_SUITE = "buildwheels"
