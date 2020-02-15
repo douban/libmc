@@ -9,15 +9,14 @@ python:
 cache:
   pip: true
 env:
-- TEST_SUITE=unittest CMAKE_BUILD_TYPE=Release PRJ_COMPILER=clang
-- TEST_SUITE=unittest CMAKE_BUILD_TYPE=Debug PRJ_COMPILER=clang
 - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Release PRJ_COMPILER=gcc
-- TEST_SUITE=unittest CMAKE_BUILD_TYPE=Debug PRJ_COMPILER=gcc
-- TEST_SUITE=benchmark
 jobs:
   include:
-  - python: '3.7'
-    env: TEST_SUITE=cppcheck
+  - env: TEST_SUITE=cppcheck
+  - env: TEST_SUITE=buildwheels DOCKER_IMAGE=quay.io/pypa/manylinux2010_x86_64
+    sudo: required
+    services:
+      - docker
 addons:
   apt:
     sources:
@@ -32,18 +31,17 @@ addons:
     - golang
     - g++
 install:
-- if [[ $TEST_SUITE != "cppcheck" ]]; then pip install --upgrade pip setuptools; fi
-- if [[ $TEST_SUITE != "cppcheck" ]]; then pip install future; fi
+- pip install --upgrade pip setuptools future
 - if [[ $TEST_SUITE = "unittest" ]]; then pip install pytest greenify gevent; fi
 - if [[ $TEST_SUITE = "benchmark" ]]; then pip install python-memcached pylibmc; fi
 before_script:
-- if [[ $TEST_SUITE != "cppcheck" ]]; then ./misc/memcached_server start; fi
+- if [[ $TEST_SUITE != "cppcheck" && $TEST_SUITE != "buildwheels" ]]; then ./misc/memcached_server start; fi
 script:
 - if [[ $PRJ_COMPILER = "gcc" ]]; then export CC=gcc CXX=g++; fi
 - if [[ $PRJ_COMPILER = "clang" ]]; then export CC=clang CXX=clang++; fi
 - "./misc/travis/$TEST_SUITE.sh"
 after_script:
-- if [[ $TEST_SUITE != "cppcheck" ]]; then ./misc/memcached_server stop; fi
+- if [[ $TEST_SUITE != "cppcheck" && $TEST_SUITE != "buildwheels" ]]; then ./misc/memcached_server stop; fi
 deploy:
   provider: pypi
   skip_existing: true
@@ -53,4 +51,4 @@ deploy:
     tags: true
     repo: douban/libmc
     branch: master
-    condition: $TEST_SUITE = "unittest" && $CMAKE_BUILD_TYPE = "Release" && $PRJ_COMPILER = "gcc"
+    condition: $TEST_SUITE = "buildwheels"
