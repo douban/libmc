@@ -1,8 +1,7 @@
 #!/bin/bash
+set -ex
 
-set -e
-
-# echo $CXX
+echo "CXX=${CXX}"
 ./misc/memcached_server start &>/dev/null &
 python misc/generate_hash_dataset.py tests/resources/keys.txt &>/dev/null &
 mkdir -p build

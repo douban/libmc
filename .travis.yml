@@ -1,5 +1,6 @@
 dist: xenial
 language: python
+os: linux
 python:
 - '2.7'
 - '3.5'
@@ -9,12 +10,17 @@ python:
 cache:
   pip: true
 env:
+- TEST_SUITE=unittest CMAKE_BUILD_TYPE=Release PRJ_COMPILER=clang
+- TEST_SUITE=unittest CMAKE_BUILD_TYPE=Debug PRJ_COMPILER=clang
 - TEST_SUITE=unittest CMAKE_BUILD_TYPE=Release PRJ_COMPILER=gcc
+- TEST_SUITE=unittest CMAKE_BUILD_TYPE=Debug PRJ_COMPILER=gcc
+- TEST_SUITE=benchmark
 jobs:
   include:
+  - env: TEST_SUITE=gotest PRJ_COMPILER=gcc
+  - env: TEST_SUITE=gotest PRJ_COMPILER=clang
   - env: TEST_SUITE=cppcheck
-  - env: TEST_SUITE=buildwheels DOCKER_IMAGE=quay.io/pypa/manylinux2010_x86_64
-    sudo: required
+  - env: TEST_SUITE=buildwheels PLAT=manylinux2010_x86_64
     services:
       - docker
 addons:
@@ -28,12 +34,13 @@ addons:
     - cppcheck
     - memcached
     - libmemcached11
-    - golang
     - g++
+    - golang
 install:
-- pip install --upgrade pip setuptools future
-- if [[ $TEST_SUITE = "unittest" ]]; then pip install pytest greenify gevent; fi
+- if [[ $TEST_SUITE = "unittest" || $TEST_SUITE = "benchmark" || $TEST_SUITE = "buildwheels" ]]; then pip install --upgrade pip setuptools future; fi
+- if [[ $TEST_SUITE = "unittest" || $TEST_SUITE = "benchmark" ]]; then pip install pytest greenify gevent; fi
 - if [[ $TEST_SUITE = "benchmark" ]]; then pip install python-memcached pylibmc; fi
+- if [[ $TEST_SUITE = "buildwheels" ]]; then docker pull quay.io/pypa/$PLAT; fi
 before_script:
 - if [[ $TEST_SUITE != "cppcheck" && $TEST_SUITE != "buildwheels" ]]; then ./misc/memcached_server start; fi
 script:
