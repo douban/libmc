@@ -21,6 +21,7 @@ jobs:
   - env: TEST_SUITE=gotest PRJ_COMPILER=clang
   - env: TEST_SUITE=cppcheck
   - env: TEST_SUITE=buildwheels PLAT=manylinux2010_x86_64
+    python: '3.7'
     services:
       - docker
 addons:
@@ -50,10 +51,8 @@ script:
 after_script:
 - if [[ $TEST_SUITE != "cppcheck" && $TEST_SUITE != "buildwheels" ]]; then ./misc/memcached_server stop; fi
 deploy:
-  provider: pypi
-  skip_existing: true
-  username: __token__
-  password: $PYPI_TOKEN
+  provider: script
+  script: "./misc/deploy_pypi.sh"
   on:
     tags: true
     repo: douban/libmc

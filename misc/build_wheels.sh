@@ -11,3 +11,4 @@ for whl in wheelhouse/*.whl; do
     auditwheel repair "$whl" --plat $PLAT -w /io/wheelhouse/
 done
 
+chmod -R 0777 /io/wheelhouse/
