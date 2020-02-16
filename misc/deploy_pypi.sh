@@ -8,4 +8,4 @@ twine upload \
     --skip-existing \
     --verbose \
     --repository-url https://upload.pypi.org/legacy/ \
-    dist/*.{tar.gz,whl}
+    dist/*

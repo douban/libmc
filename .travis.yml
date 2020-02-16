@@ -53,6 +53,7 @@ after_script:
 deploy:
   provider: script
   script: "./misc/deploy_pypi.sh"
+  skip_cleanup: true
   on:
     tags: true
     repo: douban/libmc
