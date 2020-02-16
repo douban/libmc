@@ -1,9 +1,9 @@
 package golibmc
 
-const _Version = "v1.3.7"
+const _Version = "v1.4.0"
 const _Author = "mckelvin"
 const _Email = "mckelvin@users.noreply.github.com"
-const _Date = "Sat Feb 15 22:11:17 2020 +0800"
+const _Date = "Sun Feb 16 10:31:11 2020 +0800"
 
 // Version of the package
 const Version = _Version
