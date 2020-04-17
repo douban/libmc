@@ -228,6 +228,7 @@ func New(servers []string, noreply bool, prefix string, hashFunc int, failover b
 	client.connectTimeout = -1
 	client.pollTimeout = -1
 	client.retryTimeout = -1
+	// users can set this by client.SetMaxRetries.
 	client.maxRetries = -1
 
 	go client.connectionOpener()
@@ -575,6 +576,13 @@ func (client *Client) SetConnMaxOpen(maxOpen int) {
 	client.lk.Lock()
 	defer client.lk.Unlock()
 	client.maxOpen = maxOpen
+}
+
+// SetMaxRetries sets the maximum amount of retries.
+func (client *Client) SetMaxRetries(maxRetries int) {
+	client.lk.Lock()
+	defer client.lk.Unlock()
+	client.maxRetries = maxRetries
 }
 
 func (client *Client) needStartCleaner() bool {
