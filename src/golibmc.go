@@ -116,7 +116,7 @@ type Client struct {
 	connectTimeout C.int
 	pollTimeout    C.int
 	retryTimeout   C.int
-	maxRetries     C.int
+	maxRetries     int  // maximum amount of retries. maxRetries <= 0 means unlimited. default is -1.
 
 	lk           sync.Mutex // protects following fields
 	freeConns    []*conn
