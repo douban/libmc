@@ -116,7 +116,7 @@ type Client struct {
 	connectTimeout C.int
 	pollTimeout    C.int
 	retryTimeout   C.int
-	maxRetries     int  // maximum amount of retries. maxRetries <= 0 means unlimited. default is -1.
+	maxRetries     C.int  // maximum amount of retries. maxRetries <= 0 means unlimited. default is -1.
 
 	lk           sync.Mutex // protects following fields
 	freeConns    []*conn
@@ -582,7 +582,7 @@ func (client *Client) SetConnMaxOpen(maxOpen int) {
 func (client *Client) SetMaxRetries(maxRetries int) {
 	client.lk.Lock()
 	defer client.lk.Unlock()
-	client.maxRetries = maxRetries
+	client.maxRetries = C.int(maxRetries)
 }
 
 func (client *Client) needStartCleaner() bool {
