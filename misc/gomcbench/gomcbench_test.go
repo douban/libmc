@@ -1,10 +1,13 @@
 package gomcbench
 
-import "fmt"
-import "strings"
-import "testing"
-import "github.com/douban/libmc/golibmc"
-import "github.com/bradfitz/gomemcache/memcache"
+import (
+	"fmt"
+	"strings"
+	"testing"
+
+	"github.com/bradfitz/gomemcache/memcache"
+	golibmc "github.com/douban/libmc/src"
+)
 
 const NSERVERS int = 10
 const key1 string = "google"
