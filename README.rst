@@ -245,4 +245,4 @@ https://github.com/douban/libmc/blob/master/LICENSE.txt
 .. |pypiv| image:: https://img.shields.io/pypi/v/libmc
 .. |pyversions| image:: https://img.shields.io/pypi/pyversions/libmc
 .. |wheel| image:: https://img.shields.io/pypi/wheel/libmc
-.. |license| image:: https://img.shields.io/pypi/l/libmc
+.. |license| image:: https://img.shields.io/pypi/l/libmc?color=blue
