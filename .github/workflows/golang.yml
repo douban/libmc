@@ -1,0 +1,35 @@
+name: Golang
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+
+jobs:
+  gotest:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        gover: ["1.15"]
+        compiler: ["gcc", "clang"]
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup system dependencies
+      run: |
+        sudo apt-get -y install memcached g++
+    - name: Set up Golang
+      uses: actions/setup-go@v2
+      with:
+        go-version: ${{ matrix.gover }}
+    - name: Start memcached servers
+      run: ./misc/memcached_server start
+    - name: Run gotest
+      run: |
+        if [[ ${{ matrix.compiler }} = "gcc" ]]; then export CC=gcc CXX=g++; fi
+        if [[ ${{ matrix.compiler }} = "clang" ]]; then export CC=clang CXX=clang++; fi
+        ./misc/travis/gotest.sh
+    - name: Stop memcached servers
+      run: ./misc/memcached_server stop

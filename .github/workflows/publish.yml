@@ -1,0 +1,34 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - v*
+
+jobs:
+  pypi:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.7
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.7
+    - name: Build a source tarball
+      run: python setup.py sdist
+    - name: Build wheels
+      uses: RalfG/python-wheels-manylinux-build@v0.3.4-manylinux1_x86_64
+      with:
+        python-versions: 'cp27-cp27mu cp36-cp36m cp37-cp37m cp38-cp38'
+        build-requirements: 'cython'
+    - name: Clean linux_x86_64.whl
+      run: rm dist/*-linux_x86_64.whl
+    - name: Check build result
+      run: ls -lh dist/
+    - name: Publish to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        skip_existing: true
+        user: __token__
+        password: ${{ secrets.PYPI_API_TOKEN }}

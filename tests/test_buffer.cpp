@@ -13,16 +13,16 @@ using douban::mc::io::TokenData;
 
 #define TEST_SKIP_BYTES_NO_THROW(N) \
   do { \
-    err_code_t err; \
-    reader.skipBytes(err, (N)); \
-    ASSERT_EQ(err, RET_OK); \
+    err_code_t e; \
+    reader.skipBytes(e, (N)); \
+    ASSERT_EQ(e, RET_OK); \
   } while(0)
 
 #define TEST_READ_UNSIGNED_NO_THROW(N) \
   do { \
-    err_code_t err; \
-    reader.readUnsigned(err, (N)); \
-    ASSERT_EQ(err, RET_OK); \
+    err_code_t e; \
+    reader.readUnsigned(e, (N)); \
+    ASSERT_EQ(e, RET_OK); \
   } while(0)
 
 TEST(test_buffer, min_capacity) {

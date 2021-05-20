@@ -1,0 +1,66 @@
+name: Python
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  unittest:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        pyver: ["2.7", "3.6", "3.7", "3.8"]
+        compiler: ["gcc", "clang"]
+        build_type: ["Debug", "Release"]
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup system dependencies
+      run: |
+        sudo apt-get -y install valgrind memcached g++
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.pyver }}
+    - name: Install python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install setuptools future pytest greenify gevent numpy
+    - name: Start memcached servers
+      run: ./misc/memcached_server start
+    - name: Run unittest
+      run: |
+        if [[ ${{ matrix.compiler }} = "gcc" ]]; then export CC=gcc CXX=g++; fi
+        if [[ ${{ matrix.compiler }} = "clang" ]]; then export CC=clang CXX=clang++; fi
+        ./misc/travis/unittest.sh
+    - name: Stop memcached servers
+      run: ./misc/memcached_server stop
+
+  benchmark:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        pyver: ["2.7", "3.6", "3.7", "3.8"]
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup system dependencies
+      run: |
+        sudo apt-get -y install memcached libmemcached-dev g++
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.pyver }}
+    - name: Install python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install setuptools future python-memcached pylibmc
+    - name: Start memcached servers
+      run: ./misc/memcached_server start
+    - name: Run benchmark
+      run: |
+        ./misc/travis/benchmark.sh
+    - name: Stop memcached servers
+      run: ./misc/memcached_server stop

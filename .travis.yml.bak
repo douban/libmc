@@ -3,7 +3,6 @@ language: python
 os: linux
 python:
 - '2.7'
-- '3.5'
 - '3.6'
 - '3.7'
 - '3.8'
@@ -20,7 +19,7 @@ jobs:
   - env: TEST_SUITE=gotest PRJ_COMPILER=gcc
   - env: TEST_SUITE=gotest PRJ_COMPILER=clang
   - env: TEST_SUITE=cppcheck
-  - env: TEST_SUITE=buildwheels PLAT=manylinux2010_x86_64
+  - env: TEST_SUITE=buildwheels PLAT=manylinux1_x86_64
     python: '3.7'
     services:
       - docker

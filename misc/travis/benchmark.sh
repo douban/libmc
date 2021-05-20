@@ -1,5 +1,5 @@
 #!/bin/sh
 set -ex
 
-python setup.py install
+pip install -e .
 python ./misc/runbench.py
