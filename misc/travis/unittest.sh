@@ -10,5 +10,5 @@ make -j8
 valgrind --leak-check=full make test
 cd ..
 python setup.py test
-python setup.py install
+pip install -e .
 ./tests/shabby/run_test.sh
