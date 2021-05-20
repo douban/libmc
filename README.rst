@@ -238,8 +238,11 @@ Copyright (c) 2014-2020, Douban Inc. All rights reserved.
 Licensed under a BSD license:
 https://github.com/douban/libmc/blob/master/LICENSE.txt
 
-.. |build| image:: https://travis-ci.org/douban/libmc.svg
-   :target: https://travis-ci.org/douban/libmc
+.. |build:Golang| image:: https://github.com/douban/libmc/actions/workflows/golang.yml/badge.svg
+   :target: https://github.com/douban/libmc/actions/workflows/golang.yml
+
+.. |build:Python| image:: ttps://github.com/douban/libmc/actions/workflows/python.yml/badge.svg
+   :target: https://github.com/douban/libmc/actions/workflows/python.yml
 
 .. |pypiv| image:: https://img.shields.io/pypi/v/libmc
    :target: https://pypi.org/project/libmc/
