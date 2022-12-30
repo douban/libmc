@@ -429,6 +429,7 @@ err_code_t ConnectionPool::waitPoll() {
   while (m_nActiveConn) {
     int rv = poll(pollfds, n_fds, m_pollTimeout);
     if (rv == -1) {
+      printf(" Value of errno: %d\n ", errno);
       markDeadAll(pollfds, keywords::kPOLL_ERROR);
       ret_code = RET_POLL_ERR;
       break;
