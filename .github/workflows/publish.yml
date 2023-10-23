@@ -18,13 +18,12 @@ jobs:
 
     - name: Build wheels
       run: python -m cibuildwheel --output-dir wheelhouse
-    - name: Clean linux_x86_64.whl
-      run: rm dist/*-linux_x86_64.whl
     - name: Check build result
-      run: ls -lh dist/
+      run: ls -lh wheelhouse/
     - name: Publish to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
+        packages-dir: wheelhouse/
         skip_existing: true
         user: __token__
         password: ${{ secrets.PYPI_API_TOKEN }}
