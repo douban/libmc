@@ -378,19 +378,25 @@ cdef class PyClient:
 
         servers_ = []
         for srv in servers:
-            addr_alias = srv.split(' ')
+            addr_alias = srv.rsplit(' ', 1)
             addr = addr_alias[0]
             if len(addr_alias) == 1:
                 alias = None
+            elif addr.endswith("\\"):
+                addr = srv
+                alias = None
             else:
                 alias = addr_alias[1]
-
-            host_port = addr.split(':')
-            host = host_port[0]
-            if len(host_port) == 1:
-                port = MC_DEFAULT_PORT
+            
+            if addr.startswith("/"):
+                port = 0
             else:
-                port = int(host_port[1])
+                host_port = addr.split(':')
+                host = host_port[0]
+                if len(host_port) == 1:
+                    port = MC_DEFAULT_PORT
+                else:
+                    port = int(host_port[1])
             if PY_MAJOR_VERSION > 2:
                 host = PyUnicode_AsUTF8String(host)
                 alias = PyUnicode_AsUTF8String(alias) if alias else None

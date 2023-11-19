@@ -73,6 +73,11 @@ mc::Client* newClient(int n) {
     "sierra",
     "tango"
   };
+  return md5Client(hosts, ports, n, aliases);
+}
+
+mc::Client* md5Client(const char* const * hosts, const uint32_t* ports, const size_t n,
+                      const char* const * aliases = NULL) {
   mc::Client* client = new mc::Client();
   client->config(CFG_HASH_FUNCTION, OPT_HASH_MD5);
   client->init(hosts, ports, n, aliases);
@@ -85,6 +90,12 @@ mc::Client* newClient(int n) {
     return NULL;
   }
   return client;
+}
+
+mc::Client* newUnixClient() {
+  const char * hosts[] = { "/tmp/env_mc_dev/var/run/unix_test.socket" };
+  const uint32_t ports[] = { 0 };
+  return md5Client(hosts, ports, 1);
 }
 
 

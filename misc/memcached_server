@@ -32,6 +32,18 @@ function start()
     fi
 }
 
+function unix()
+{
+    name="${1:-unix_test}"
+    if [ ! -f $basedir/var/log/${name}.log ]; then
+        mkdir -p $basedir/var/log
+        touch $basedir/var/log/${name}.log
+    fi
+    mkdir -p $basedir/var/run
+    $cmd -d -u $USER -s $basedir/var/run/${name}.socket -t $threads -m ${memory} -P $basedir/var/run/${name}.pid > $basedir/var/log/${name}.log 2>&1
+    echo "Starting the memcached server on '$basedir/var/run/${name}.socket'... "
+}
+
 function stop()
 {
     port="$1"
@@ -77,6 +89,19 @@ case "$1" in
             done
             wait
         fi
+        ;;
+    unix)
+        shift
+        unix $@
+        ;;
+    unixstop)
+        if [ `ls $basedir/var/run/ | grep -c .pid` -ge 1 ]; then
+            names="`basename $basedir/var/run/*.pid | cut -d. -f1`"
+            for name in $names; do
+                stop $name &
+            done
+        fi
+        wait
         ;;
     *)
         printf 'Usage: %s {start|stop|restart} <port>\n' "$prog"

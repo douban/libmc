@@ -61,7 +61,8 @@ class Connection {
     size_t m_counter;
 
  protected:
-    int connectPoll(int fd, struct addrinfo* ai_ptr);
+    int connectPoll(int fd, const sockaddr* ai_ptr, const socklen_t ai_addrlen);
+    inline int local();
 
     char m_name[MC_NI_MAXHOST + 1 + MC_NI_MAXSERV];
     char m_host[MC_NI_MAXHOST];
@@ -70,6 +71,7 @@ class Connection {
     int m_socketFd;
     bool m_alive;
     bool m_hasAlias;
+    bool m_local;
     time_t m_deadUntil;
     io::BufferWriter* m_buffer_writer; // for send
     io::BufferReader* m_buffer_reader; // for recv
