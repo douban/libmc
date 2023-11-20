@@ -50,5 +50,36 @@ const char* errCodeToString(err_code_t err) {
   }
 }
 
+bool isLocalPath(const char* host) {
+  return host[0] == '/';
+}
+
+char** splitServerString(char* input) {
+  bool escaped = false;
+  char *res[3] = { input--, NULL, NULL };
+  for (;;) {
+    switch (*(++input))
+    {
+      case ':': // invalid in a UNIX path
+        *input = '\0';
+        res[1] = input + 1;
+      case '\0':
+        break;
+      case ' ':
+        if (!escaped) {
+          *input = '\0';
+          res[2] = input + 1;
+          break;
+        }
+      default:
+        escaped = false;
+        continue;
+      case '\\':
+        escaped ^= 1;
+    }
+  }
+  return res;
+}
+
 } // namespace mc
 } // namespace douban

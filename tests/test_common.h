@@ -23,6 +23,22 @@ void gen_random(char *s, const int len) {
 }
 
 
+mc::Client* md5Client(const char* const * hosts, const uint32_t* ports, const size_t n,
+                      const char* const * aliases = NULL) {
+  mc::Client* client = new mc::Client();
+  client->config(CFG_HASH_FUNCTION, OPT_HASH_MD5);
+  client->init(hosts, ports, n, aliases);
+  broadcast_result_t* results;
+  size_t nHosts;
+  int ret = client->version(&results, &nHosts);
+  client->destroyBroadcastResult();
+  if (ret != 0) {
+    delete client;
+    return NULL;
+  }
+  return client;
+}
+
 mc::Client* newClient(int n) {
   assert(n <= 20);
   const char * hosts[] = {
@@ -74,22 +90,6 @@ mc::Client* newClient(int n) {
     "tango"
   };
   return md5Client(hosts, ports, n, aliases);
-}
-
-mc::Client* md5Client(const char* const * hosts, const uint32_t* ports, const size_t n,
-                      const char* const * aliases = NULL) {
-  mc::Client* client = new mc::Client();
-  client->config(CFG_HASH_FUNCTION, OPT_HASH_MD5);
-  client->init(hosts, ports, n, aliases);
-  broadcast_result_t* results;
-  size_t nHosts;
-  int ret = client->version(&results, &nHosts);
-  client->destroyBroadcastResult();
-  if (ret != 0) {
-    delete client;
-    return NULL;
-  }
-  return client;
 }
 
 mc::Client* newUnixClient() {

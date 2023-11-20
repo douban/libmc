@@ -46,7 +46,7 @@ Connection::~Connection() {
 int Connection::init(const char* host, uint32_t port, const char* alias) {
   snprintf(m_host, sizeof m_host, "%s", host);
   m_port = port;
-  m_local = m_host[0] == '/'; // un.h UNIX_PATH_MAX < netdb.h NI_MAXHOST
+  m_local = isLocalSocket(m_host); // un.h UNIX_PATH_MAX < netdb.h NI_MAXHOST
   if (alias == NULL) {
     m_hasAlias = false;
     if (m_local) {
@@ -131,7 +131,7 @@ try_next_ai:
   return m_alive ? 0 : -1;
 }
 
-inline int Connection::local() {
+int Connection::local() {
   int fd, flags, opt_keepalive = 1;
 
   if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {

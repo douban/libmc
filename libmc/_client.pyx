@@ -45,6 +45,8 @@ cdef extern from "Common.h" namespace "douban::mc":
         VERSION_OP
         QUIT_OP
 
+    #bool isLocalSocket(const char* host) nogil
+
 
 cdef extern from "Export.h":
     ctypedef enum config_options_t:
@@ -382,7 +384,7 @@ cdef class PyClient:
             addr = addr_alias[0]
             if len(addr_alias) == 1:
                 alias = None
-            elif addr.endswith("\\"):
+            elif (len(addr) - len(addr.rstrip("\\"))) % 2 == 1:
                 addr = srv
                 alias = None
             else:

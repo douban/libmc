@@ -338,6 +338,7 @@ func (client *Client) newConn() (*conn, error) {
 	cAliases := make([]*C.char, n)
 
 	for i, srv := range client.servers {
+		// TODO: UNIX paths
 		addrAndAlias := strings.Split(srv, " ")
 
 		addr := addrAndAlias[0]

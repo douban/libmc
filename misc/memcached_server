@@ -94,7 +94,14 @@ case "$1" in
         shift
         unix $@
         ;;
-    unixstop)
+    startall)
+        unix &
+        for port in $PORTS; do
+            start $port &
+        done
+        wait
+        ;;
+    stopall)
         if [ `ls $basedir/var/run/ | grep -c .pid` -ge 1 ]; then
             names="`basename $basedir/var/run/*.pid | cut -d. -f1`"
             for name in $names; do
