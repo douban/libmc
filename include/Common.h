@@ -225,12 +225,6 @@ typedef enum {
   QUIT_OP,
 } op_code_t;
 
-struct ServerSpec {
-  char* host;
-  char* port;
-  char* alias;
-};
-
 const char* errCodeToString(err_code_t err);
 bool isLocalSocket(const char* host);
 ServerSpec splitServerString(char* input);

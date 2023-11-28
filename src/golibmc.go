@@ -338,30 +338,21 @@ func (client *Client) newConn() (*conn, error) {
 	cAliases := make([]*C.char, n)
 
 	for i, srv := range client.servers {
-		// TODO: UNIX paths
-		addrAndAlias := strings.Split(srv, " ")
+		csrv := C.CString(srv)
+		defer C.free(unsafe.Pointer(csrv))
+		split := C.splitServerString(csrv)
 
-		addr := addrAndAlias[0]
-		if len(addrAndAlias) == 2 {
-			cAlias := C.CString(addrAndAlias[1])
-			defer C.free(unsafe.Pointer(cAlias))
-			cAliases[i] = cAlias
-		}
+		cAliases[i] = split.alias
+		cHosts[i] = split.host
 
-		hostAndPort := strings.Split(addr, ":")
-		host := hostAndPort[0]
-		cHost := C.CString(host)
-		defer C.free(unsafe.Pointer(cHost))
-		cHosts[i] = cHost
-
-		if len(hostAndPort) == 2 {
-			port, err := strconv.Atoi(hostAndPort[1])
+		if split.port == nil {
+			cPorts[i] = C.uint32_t(DefaultPort)
+		} else {
+			port, err := strconv.Atoi(C.GoString(split.port))
 			if err != nil {
 				return nil, err
 			}
 			cPorts[i] = C.uint32_t(port)
-		} else {
-			cPorts[i] = C.uint32_t(DefaultPort)
 		}
 	}
 

@@ -8,7 +8,6 @@
 using douban::mc::Client;
 using douban::mc::tests::newUnixClient;
 using douban::mc::splitServerString;
-using douban::mc::ServerSpec;
 
 TEST(test_unix, establish_connection) {
   Client* client = newUnixClient();

@@ -55,7 +55,7 @@ bool isLocalSocket(const char* host) {
 }
 
 ServerSpec splitServerString(char* input) {
-  bool escaped = false, num = false;
+  bool escaped = false;
   ServerSpec res = { input--, NULL, NULL };
   for (;;) {
     switch (*(++input))
@@ -65,7 +65,6 @@ ServerSpec splitServerString(char* input) {
       case ':': // invalid in a UNIX path
         *input = '\0';
         res.port = input + 1;
-        num = true;
         continue;
       case ' ':
         if (!escaped) {
@@ -74,13 +73,6 @@ ServerSpec splitServerString(char* input) {
           return res;
         }
       default:
-        if (num) {
-          *res.port = ':';
-          res.port = NULL;
-          num = false;
-        }
-      case '0': case '1': case '2': case '3': case '4':
-      case '5': case '6': case '7': case '8': case '9':
         escaped = false;
         continue;
       case '\\':

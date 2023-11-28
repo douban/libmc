@@ -46,11 +46,6 @@ cdef extern from "Common.h" namespace "douban::mc":
         VERSION_OP
         QUIT_OP
 
-    cdef struct ServerSpec:
-        char* host
-        char* port
-        char* alias
-
     ServerSpec splitServerString(char* input) nogil
 
 
@@ -106,6 +101,11 @@ cdef extern from "Export.h":
         RET_INVALID_KEY_ERR
         RET_INCOMPLETE_BUFFER_ERR
         RET_OK
+
+    ctypedef struct ServerSpec:
+        char* host
+        char* port
+        char* alias
 
     ctypedef struct unsigned_result_t:
         char* key
@@ -398,6 +398,10 @@ cdef class PyClient:
             c_hosts[i] = c_split.host
             c_ports[i] = MC_DEFAULT_PORT if c_split.port == NULL else atoi(c_split.port)
             c_aliases[i] = c_split.alias
+            if c_split.port == NULL:
+                c_ports[i] = MC_DEFAULT_PORT
+            else:
+                c_ports[i] = PyInt_AsLong(int(<bytes>c_split.port))
 
         if init:
             rv = self._imp.init(c_hosts, c_ports, n, c_aliases)

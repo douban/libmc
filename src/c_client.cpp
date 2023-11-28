@@ -159,3 +159,7 @@ err_code_t client_quit(void* client) {
 const char* err_code_to_string(err_code_t err) {
   return douban::mc::errCodeToString(err);
 }
+
+ServerSpec splitServerString(char* input) {
+  return douban::mc::splitServerString(input);
+}
