@@ -29,14 +29,14 @@ jobs:
         python -m pip install --upgrade pip
         pip install setuptools future pytest greenify gevent numpy
     - name: Start memcached servers
-      run: ./misc/memcached_server startall
+      run: ./misc/memcached_server start
     - name: Run unittest
       run: |
         if [[ ${{ matrix.compiler }} = "gcc" ]]; then export CC=gcc CXX=g++; fi
         if [[ ${{ matrix.compiler }} = "clang" ]]; then export CC=clang CXX=clang++; fi
         ./misc/travis/unittest.sh
     - name: Stop memcached servers
-      run: ./misc/memcached_server stopall
+      run: ./misc/memcached_server stop
 
   benchmark:
     runs-on: ubuntu-latest

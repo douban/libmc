@@ -25,11 +25,11 @@ jobs:
       with:
         go-version: ${{ matrix.gover }}
     - name: Start memcached servers
-      run: ./misc/memcached_server startall
+      run: ./misc/memcached_server start
     - name: Run gotest
       run: |
         if [[ ${{ matrix.compiler }} = "gcc" ]]; then export CC=gcc CXX=g++; fi
         if [[ ${{ matrix.compiler }} = "clang" ]]; then export CC=clang CXX=clang++; fi
         ./misc/travis/gotest.sh
     - name: Stop memcached servers
-      run: ./misc/memcached_server stopall
+      run: ./misc/memcached_server stop
