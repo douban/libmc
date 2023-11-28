@@ -39,6 +39,7 @@ mc::Client* md5Client(const char* const * hosts, const uint32_t* ports, const si
   return client;
 }
 
+
 mc::Client* newClient(int n) {
   assert(n <= 20);
   const char * hosts[] = {
@@ -90,12 +91,6 @@ mc::Client* newClient(int n) {
     "tango"
   };
   return md5Client(hosts, ports, n, aliases);
-}
-
-mc::Client* newUnixClient() {
-  const char * hosts[] = { "/tmp/env_mc_dev/var/run/unix_test.socket" };
-  const uint32_t ports[] = { 0 };
-  return md5Client(hosts, ports, 1);
 }
 
 
