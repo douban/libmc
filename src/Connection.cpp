@@ -47,7 +47,7 @@ Connection::~Connection() {
 int Connection::init(const char* host, uint32_t port, const char* alias) {
   snprintf(m_host, sizeof m_host, "%s", host);
   m_port = port;
-  m_local = isLocalSocket(m_host); // un.h UNIX_PATH_MAX < netdb.h NI_MAXHOST
+  m_local = isLocalSocket(m_host);
   if (alias == NULL) {
     m_hasAlias = false;
     if (m_local) {
@@ -152,6 +152,8 @@ int Connection::local() {
   struct sockaddr_un addr;
   memset(&addr, 0, sizeof(addr));
   addr.sun_family = AF_UNIX;
+  // un.h UNIX_PATH_MAX < netdb.h NI_MAXHOST
+  // storing the unix path as a host doesn't limit the input but can overflow
   strncpy(addr.sun_path, m_host, sizeof(addr.sun_path) - 1);
   assert(strcmp(addr.sun_path, m_host) == 0);
   if (connectPoll(fd, (const struct sockaddr *)&addr, sizeof addr) != 0) {
