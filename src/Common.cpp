@@ -60,12 +60,13 @@ ServerSpec splitServerString(char* input) {
   for (;;) {
     switch (*(++input))
     {
+      case '\0':
+        return res;
       case ':': // invalid in a UNIX path
         *input = '\0';
         res.port = input + 1;
         num = true;
-      case '\0':
-        return res;
+        continue;
       case ' ':
         if (!escaped) {
           *input = '\0';

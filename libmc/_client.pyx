@@ -394,7 +394,6 @@ cdef class PyClient:
         Py_INCREF(servers_)
         for i in range(n):
             c_split = splitServerString(servers_[i])
-            host, port, alias = c_split
 
             c_hosts[i] = c_split.host
             c_ports[i] = MC_DEFAULT_PORT if c_split.port == NULL else atoi(c_split.port)
