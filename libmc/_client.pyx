@@ -3,6 +3,7 @@
 # cython: profile=False, c_string_type=unicode, c_string_encoding=utf8
 
 from libc.stdint cimport uint8_t, uint32_t, uint64_t, int64_t
+from libc.stdlib cimport atoi
 from libcpp cimport bool as bool_t
 from libcpp.string cimport string
 from libcpp.vector cimport vector
@@ -45,7 +46,12 @@ cdef extern from "Common.h" namespace "douban::mc":
         VERSION_OP
         QUIT_OP
 
-    #bool isLocalSocket(const char* host) nogil
+    cdef struct ServerSpec:
+        char* host
+        char* port
+        char* alias
+
+    ServerSpec splitServerString(char* input) nogil
 
 
 cdef extern from "Export.h":
@@ -380,39 +386,19 @@ cdef class PyClient:
 
         servers_ = []
         for srv in servers:
-            addr_alias = srv.rsplit(' ', 1)
-            addr = addr_alias[0]
-            if len(addr_alias) == 1:
-                alias = None
-            elif (len(addr) - len(addr.rstrip("\\"))) % 2 == 1:
-                addr = srv
-                alias = None
-            else:
-                alias = addr_alias[1]
-            
-            if addr.startswith("/"):
-                port = 0
-            else:
-                host_port = addr.split(':')
-                host = host_port[0]
-                if len(host_port) == 1:
-                    port = MC_DEFAULT_PORT
-                else:
-                    port = int(host_port[1])
             if PY_MAJOR_VERSION > 2:
-                host = PyUnicode_AsUTF8String(host)
-                alias = PyUnicode_AsUTF8String(alias) if alias else None
-            servers_.append((host, port, alias))
+                srv = PyUnicode_AsUTF8String(srv)
+            srv = PyString_AsString(srv)
+            servers_.append(srv)
 
         Py_INCREF(servers_)
         for i in range(n):
-            host, port, alias = servers_[i]
-            c_hosts[i] = PyString_AsString(host)
-            c_ports[i] = PyInt_AsLong(port)
-            if alias is None:
-                c_aliases[i] = NULL
-            else:
-                c_aliases[i] = PyString_AsString(alias)
+            c_split = splitServerString(servers_[i])
+            host, port, alias = c_split
+
+            c_hosts[i] = c_split.host
+            c_ports[i] = MC_DEFAULT_PORT if c_split.port == NULL else atoi(c_split.port)
+            c_aliases[i] = c_split.alias
 
         if init:
             rv = self._imp.init(c_hosts, c_ports, n, c_aliases)

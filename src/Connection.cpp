@@ -11,6 +11,7 @@
 #include <fcntl.h>
 #include <queue>
 
+#include "Common.h"
 #include "Connection.h"
 #include "Keywords.h"
 

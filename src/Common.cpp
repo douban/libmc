@@ -50,28 +50,36 @@ const char* errCodeToString(err_code_t err) {
   }
 }
 
-bool isLocalPath(const char* host) {
+bool isLocalSocket(const char* host) {
   return host[0] == '/';
 }
 
-char** splitServerString(char* input) {
-  bool escaped = false;
-  char *res[3] = { input--, NULL, NULL };
+ServerSpec splitServerString(char* input) {
+  bool escaped = false, num = false;
+  ServerSpec res = { input--, NULL, NULL };
   for (;;) {
     switch (*(++input))
     {
       case ':': // invalid in a UNIX path
         *input = '\0';
-        res[1] = input + 1;
+        res.port = input + 1;
+        num = true;
       case '\0':
-        break;
+        return res;
       case ' ':
         if (!escaped) {
           *input = '\0';
-          res[2] = input + 1;
-          break;
+          res.alias = input + 1;
+          return res;
         }
       default:
+        if (num) {
+          *res.port = ':';
+          res.port = NULL;
+          num = false;
+        }
+      case '0': case '1': case '2': case '3': case '4':
+      case '5': case '6': case '7': case '8': case '9':
         escaped = false;
         continue;
       case '\\':
