@@ -40,6 +40,8 @@ unusedFunction:src/c_client.cpp:145
 unusedFunction:src/c_client.cpp:149
 unusedFunction:src/c_client.cpp:154
 unusedFunction:src/c_client.cpp:159
+unusedFunction:src/c_client.cpp:159
+unusedFunction:src/c_client.cpp:163
 unusedFunction:src/Utility.cpp:43
 *:src/Connection.cpp:32
 *:src/Connection.cpp:37
