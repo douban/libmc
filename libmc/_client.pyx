@@ -3,7 +3,6 @@
 # cython: profile=False, c_string_type=unicode, c_string_encoding=utf8
 
 from libc.stdint cimport uint8_t, uint32_t, uint64_t, int64_t
-from libc.stdlib cimport atoi
 from libcpp cimport bool as bool_t
 from libcpp.string cimport string
 from libcpp.vector cimport vector
@@ -396,7 +395,6 @@ cdef class PyClient:
             c_split = splitServerString(servers_[i])
 
             c_hosts[i] = c_split.host
-            c_ports[i] = MC_DEFAULT_PORT if c_split.port == NULL else atoi(c_split.port)
             c_aliases[i] = c_split.alias
             if c_split.port == NULL:
                 c_ports[i] = MC_DEFAULT_PORT
