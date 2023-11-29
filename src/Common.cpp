@@ -56,9 +56,9 @@ bool isLocalSocket(const char* host) {
 
 ServerSpec splitServerString(char* input) {
   bool escaped = false;
-  ServerSpec res = { input--, NULL, NULL };
-  for (;;) {
-    switch (*(++input))
+  ServerSpec res = { input, NULL, NULL };
+  for (;input++;) {
+    switch (*input)
     {
       case '\0':
         return res;
