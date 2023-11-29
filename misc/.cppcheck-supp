@@ -1,10 +1,14 @@
+*:include/rapidjson/itoa.h:141
+*:include/rapidjson/itoa.h:216
 *:include/llvm/SmallVector.h:55
 *:include/llvm/SmallVector.h:88
 *:include/llvm/SmallVector.h:134
 *:include/llvm/SmallVector.h:162
+*:include/llvm/SmallVector.h:164
 *:include/llvm/SmallVector.h:214
 *:include/llvm/SmallVector.h:515
 *:include/llvm/SmallVector.h:516
+*:include/llvm/SmallVector.h:546
 *:include/llvm/SmallVector.h:715
 *:include/llvm/SmallVector.h:718
 *:include/llvm/SmallVector.h:726

@@ -39,6 +39,9 @@ class NoPickle(object):
     def __getattr__(self, name):
         pass
 
+    def __getstate__(self):
+        raise Exception('can not be pickled')
+
 
 class CmemcachedRegressionCase(unittest.TestCase):
 
