@@ -44,6 +44,12 @@ def test_hard_server_error():
 
     assert mc.set('foo', 1)
     memcached_server_ctl('stop', normal_port)
+
+    # I dont know why,
+    # but the server is still connectable after stop.
+    # add a sleep to wait for the server quit
+    time.sleep(3)
+
     assert not mc.set('foo', 1)  # fail
     memcached_server_ctl('start', normal_port)
     assert not mc.set('foo', 1)  # still fail
