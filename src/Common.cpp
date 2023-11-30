@@ -54,10 +54,11 @@ bool isLocalSocket(const char* host) {
   return host[0] == '/';
 }
 
+// modifies input string and output pointers reference input
 ServerSpec splitServerString(char* input) {
   bool escaped = false;
   ServerSpec res = { input, NULL, NULL };
-  for (;;input++) {
+  for (;; input++) {
     switch (*input)
     {
       case '\0':
@@ -69,8 +70,12 @@ ServerSpec splitServerString(char* input) {
       case ' ':
         if (!escaped) {
           *input = '\0';
-          res.alias = input + 1;
-          return res;
+          if (res.alias == NULL) {
+            res.alias = input + 1;
+            continue;
+          } else {
+            return res;
+          }
         }
       default:
         escaped = false;
