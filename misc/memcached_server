@@ -53,7 +53,6 @@ function stop()
         kill -TERM `ps -ef | grep "$cmd" | grep $port | grep -v grep | awk '{ print $2 }'`
         echo "Stopping the memcached server on port '$port'... "
     fi
-    rm -rf $basedir
 }
 
 case "$1" in
@@ -76,6 +75,7 @@ case "$1" in
                 stop $port &
             done
             wait
+            rm -rf $basedir
         fi
         ;;
     restart)
@@ -109,6 +109,7 @@ case "$1" in
             done
         fi
         wait
+        rm -rf $basedir
         ;;
     *)
         printf 'Usage: %s {start|stop|restart} <port>\n' "$prog"

@@ -77,6 +77,7 @@ ServerSpec splitServerString(char* input) {
             return res;
           }
         }
+        /* FALLTHROUGH */
       default:
         escaped = false;
         continue;
