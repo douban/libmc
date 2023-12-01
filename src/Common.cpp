@@ -56,34 +56,21 @@ bool isLocalSocket(const char* host) {
   return host[0] == '/';
 }
 
-void verifyPort(const char* input, ServerSpec* res, bool* valid_port) {
-  /*
-  if (*valid_port && input > res->port) {
-    res->port[-1] = '\0';
-  } else if (res->alias == NULL) {
-    res->port = NULL;
-  }
-  *valid_port = false;
-  */
-  if (res->port != NULL) {
-    res->port[-1] = '\0';
-  }
-}
-
 // modifies input string and output pointers reference input
 ServerSpec splitServerString(char* input) {
-  bool escaped = false, valid_port = false;
+  bool escaped = false;
   ServerSpec res = { input, NULL, NULL };
   for (;; input++) {
     switch (*input)
     {
       case '\0':
-        verifyPort(input, &res, &valid_port);
         return res;
       case ':':
         if (res.alias == NULL) {
-          res.port = input + 1;
-          valid_port = true;
+          *input = '\0';
+          if (res.port == NULL) {
+            res.port = input + 1;
+          }
         }
         escaped = false;
         continue;
@@ -92,21 +79,16 @@ ServerSpec splitServerString(char* input) {
           *input = '\0';
           if (res.alias == NULL) {
             res.alias = input + 1;
-            verifyPort(input, &res, &valid_port);
             continue;
           } else {
             return res;
           }
         }
       default:
-        valid_port = false;
-      case '0': case '1': case '2': case '3': case '4':
-      case '5': case '6': case '7': case '8': case '9': 
         escaped = false;
         continue;
       case '\\':
         escaped ^= 1;
-        valid_port = false;
     }
   }
 }
