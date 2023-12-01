@@ -57,12 +57,17 @@ bool isLocalSocket(const char* host) {
 }
 
 void verifyPort(const char* input, ServerSpec* res, bool* valid_port) {
+  /*
   if (*valid_port && input > res->port) {
     res->port[-1] = '\0';
   } else if (res->alias == NULL) {
     res->port = NULL;
   }
   *valid_port = false;
+  */
+  if (res->port != NULL) {
+    res->port[-1] = '\0';
+  }
 }
 
 // modifies input string and output pointers reference input

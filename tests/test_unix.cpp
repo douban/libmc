@@ -34,6 +34,22 @@ TEST(test_unix, host_parse_regression) {
   ASSERT_STREQ(out.alias, "testing");
 }
 
+TEST(test_unix, host_parse_regression_tripped) {
+  char test[] = "127.0.0.1:21211 127.0.0.1:21211";
+  ServerSpec out = splitServerString(test);
+  ASSERT_STREQ(out.host, "127.0.0.1");
+  ASSERT_STREQ(out.port, "21211");
+  ASSERT_STREQ(out.alias, "127.0.0.1:21211");
+}
+
+TEST(test_unix, tmpname) {
+  char test[] = "127.0.0.1:invalid_port";
+  ServerSpec out = splitServerString(test);
+  ASSERT_STREQ(out.host, "127.0.0.1");
+  ASSERT_STREQ(out.port, "invalid_port");
+  ASSERT_EQ(out.alias, nullptr);
+}
+
 TEST(test_unix, socket_path_spaces) {
   char test[] = "/tmp/spacey\\ path testing";
   ServerSpec out = splitServerString(test);
