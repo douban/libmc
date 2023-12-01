@@ -3,7 +3,7 @@ package golibmc
 const _Version = "v1.4.3"
 const _Author = "mckelvin"
 const _Email = "mckelvin@users.noreply.github.com"
-const _Date = "Fri Dec 01 07:43:12 2023 +0800"
+const _Date = "Fri Dec  1 07:43:12 2023 +0800"
 
 // Version of the package
 const Version = _Version
