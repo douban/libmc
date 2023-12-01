@@ -51,6 +51,8 @@ const char* errCodeToString(err_code_t err) {
 }
 
 bool isLocalSocket(const char* host) {
+  // errors on the side of false negatives, allowing syntax expansion;
+  // starting slash to denote socket paths is from pylibmc
   return host[0] == '/';
 }
 
