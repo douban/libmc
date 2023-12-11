@@ -38,6 +38,12 @@ typedef enum {
   RET_OK = 0
 } err_code_t;
 
+typedef struct {
+  char* host;
+  char* port;
+  char* alias;
+} server_string_split_t;
+
 
 typedef int64_t exptime_t;
 typedef uint32_t flags_t;

@@ -226,6 +226,8 @@ typedef enum {
 } op_code_t;
 
 const char* errCodeToString(err_code_t err);
+bool isLocalSocket(const char* host);
+server_string_split_t splitServerString(char* input);
 
 } // namespace mc
 } // namespace douban

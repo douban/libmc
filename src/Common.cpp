@@ -50,5 +50,48 @@ const char* errCodeToString(err_code_t err) {
   }
 }
 
+bool isLocalSocket(const char* host) {
+  // errors on the side of false negatives, allowing syntax expansion;
+  // starting slash to denote socket paths is from pylibmc
+  return host[0] == '/';
+}
+
+// modifies input string and output pointers reference input
+server_string_split_t splitServerString(char* input) {
+  bool escaped = false;
+  server_string_split_t res = { input, NULL, NULL };
+  for (;; input++) {
+    switch (*input)
+    {
+      case '\0':
+        return res;
+      case ':':
+        if (res.alias == NULL) {
+          *input = '\0';
+          if (res.port == NULL) {
+            res.port = input + 1;
+          }
+        }
+        escaped = false;
+        continue;
+      case ' ':
+        if (!escaped) {
+          *input = '\0';
+          if (res.alias == NULL) {
+            res.alias = input + 1;
+            continue;
+          } else {
+            return res;
+          }
+        }
+      default:
+        escaped = false;
+        continue;
+      case '\\':
+        escaped ^= 1;
+    }
+  }
+}
+
 } // namespace mc
 } // namespace douban

@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <sys/poll.h>
 #include <sys/types.h>
 
@@ -10,6 +11,7 @@
 #include <fcntl.h>
 #include <queue>
 
+#include "Common.h"
 #include "Connection.h"
 #include "Keywords.h"
 
@@ -21,8 +23,8 @@ namespace mc {
 
 Connection::Connection()
     : m_counter(0), m_port(0), m_socketFd(-1),
-      m_alive(false), m_hasAlias(false), m_deadUntil(0),
-      m_connectTimeout(MC_DEFAULT_CONNECT_TIMEOUT),
+      m_alive(false), m_hasAlias(false), m_unixSocket(false),
+      m_deadUntil(0), m_connectTimeout(MC_DEFAULT_CONNECT_TIMEOUT),
       m_retryTimeout(MC_DEFAULT_RETRY_TIMEOUT),
       m_maxRetries(MC_DEFAULT_MAX_RETRIES), m_retires(0) {
   m_name[0] = '\0';
@@ -45,9 +47,14 @@ Connection::~Connection() {
 int Connection::init(const char* host, uint32_t port, const char* alias) {
   snprintf(m_host, sizeof m_host, "%s", host);
   m_port = port;
+  m_unixSocket = isLocalSocket(m_host);
   if (alias == NULL) {
     m_hasAlias = false;
-    snprintf(m_name, sizeof m_name, "%s:%u", m_host, m_port);
+    if (m_unixSocket) {
+      snprintf(m_name, sizeof m_name, "%s", m_host);
+    } else {
+      snprintf(m_name, sizeof m_name, "%s:%u", m_host, m_port);
+    }
   } else {
     m_hasAlias = true;
     snprintf(m_name, sizeof m_name, "%s", alias);
@@ -59,6 +66,10 @@ int Connection::init(const char* host, uint32_t port, const char* alias) {
 int Connection::connect() {
   assert(!m_alive);
   this->close();
+  if (m_unixSocket) {
+    return unixSocketConnect();
+  }
+
   struct addrinfo hints, *server_addrinfo = NULL, *ai_ptr = NULL;
   memset(&hints, 0, sizeof hints);
   hints.ai_family = AF_INET;
@@ -104,7 +115,7 @@ int Connection::connect() {
     }
 
     // make sure the connection is established
-    if (connectPoll(fd, ai_ptr) == 0) {
+    if (connectPoll(fd, ai_ptr->ai_addr, ai_ptr->ai_addrlen) == 0) {
       m_socketFd = fd;
       m_alive = true;
       break;
@@ -121,8 +132,40 @@ try_next_ai:
   return m_alive ? 0 : -1;
 }
 
-int Connection::connectPoll(int fd, struct addrinfo* ai_ptr) {
-  int conn_rv = ::connect(fd, ai_ptr->ai_addr, ai_ptr->ai_addrlen);
+int Connection::unixSocketConnect() {
+  int fd, flags, opt_keepalive = 1;
+
+  if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+    log_err("socket()");
+    return -1;
+  }
+
+  if ((flags = fcntl(fd, F_GETFL, 0)) < 0 ||
+      fcntl(fd, F_SETFL, flags | O_NONBLOCK) < 0) {
+      log_err("setting O_NONBLOCK");
+      ::close(fd);
+      return -1;
+  }
+
+  setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (void *)&opt_keepalive, sizeof opt_keepalive);
+
+  struct sockaddr_un addr;
+  memset(&addr, 0, sizeof(addr));
+  addr.sun_family = AF_UNIX;
+  // un.h UNIX_PATH_MAX < netdb.h NI_MAXHOST
+  // storing the unix path as a host doesn't limit the input but can overflow
+  strncpy(addr.sun_path, m_host, sizeof(addr.sun_path) - 1);
+  assert(strcmp(addr.sun_path, m_host) == 0);
+  if (connectPoll(fd, (const struct sockaddr *)&addr, sizeof addr) != 0) {
+    return -1;
+  }
+  m_socketFd = fd;
+  m_alive = true;
+  return 0;
+}
+
+int Connection::connectPoll(int fd, const sockaddr* ai_addr, const socklen_t ai_addrlen) {
+  int conn_rv = ::connect(fd, ai_addr, ai_addrlen);
   if (conn_rv == 0) {
     return 0;
   }
