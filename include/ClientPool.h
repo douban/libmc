@@ -35,17 +35,18 @@ public:
   void release(Client* ref);
 
 protected:
-  int growPool(int by);
+  int growPool(size_t by);
+  int setup(Client* c);
 
   bool m_opt_changed[CLIENT_CONFIG_OPTION_COUNT];
   int m_opt_value[CLIENT_CONFIG_OPTION_COUNT];
-  std::vector<Client*> m_clients;
-  int m_initial_clients;
-  int m_max_clients;
-  int m_max_growth;
+  std::vector<Client> m_clients;
+  size_t m_initial_clients;
+  size_t m_max_clients;
+  size_t m_max_growth;
 
-  std::vector<std::array<char, MC_NI_MAXHOST>> m_hosts_data;
-  std::vector<std::array<char, MC_NI_MAXHOST + 1 + MC_NI_MAXSERV>> m_aliases_data;
+  std::vector<std::array<char, MC_NI_MAXHOST> > m_hosts_data;
+  std::vector<std::array<char, MC_NI_MAXHOST + 1 + MC_NI_MAXSERV> > m_aliases_data;
   std::vector<uint32_t> m_ports;
 
   std::vector<char*> m_hosts;

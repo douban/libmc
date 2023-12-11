@@ -16,10 +16,14 @@ typedef enum {
   CFG_HASH_FUNCTION,
   CFG_MAX_RETRIES,
 
+  // type separator to track number of Client config options to save
+  CLIENT_CONFIG_OPTION_COUNT,
+
   // ClientPool config options
-  CFG_MAX_CLIENTS
+  CFG_INITIAL_CLIENTS,
+  CFG_MAX_CLIENTS,
+  CFG_MAX_GROWTH
 } config_options_t;
-#define CLIENT_CONFIG_OPTION_COUNT 5
 
 
 typedef enum {
