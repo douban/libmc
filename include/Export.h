@@ -42,7 +42,7 @@ typedef struct {
   char* host;
   char* port;
   char* alias;
-} ServerSpec;
+} server_string_split_t;
 
 
 typedef int64_t exptime_t;

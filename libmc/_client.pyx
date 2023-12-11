@@ -45,7 +45,7 @@ cdef extern from "Common.h" namespace "douban::mc":
         VERSION_OP
         QUIT_OP
 
-    ServerSpec splitServerString(char* input) nogil
+    server_string_split_t splitServerString(char* input) nogil
 
 
 cdef extern from "Export.h":
@@ -101,7 +101,7 @@ cdef extern from "Export.h":
         RET_INCOMPLETE_BUFFER_ERR
         RET_OK
 
-    ctypedef struct ServerSpec:
+    ctypedef struct server_string_split_t:
         char* host
         char* port
         char* alias

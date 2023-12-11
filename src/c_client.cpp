@@ -160,6 +160,6 @@ const char* err_code_to_string(err_code_t err) {
   return douban::mc::errCodeToString(err);
 }
 
-ServerSpec splitServerString(char* input) {
+server_string_split_t splitServerString(char* input) {
   return douban::mc::splitServerString(input);
 }

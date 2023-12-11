@@ -23,7 +23,7 @@ namespace mc {
 
 Connection::Connection()
     : m_counter(0), m_port(0), m_socketFd(-1),
-      m_alive(false), m_hasAlias(false), m_local(false),
+      m_alive(false), m_hasAlias(false), m_unixSocket(false),
       m_deadUntil(0), m_connectTimeout(MC_DEFAULT_CONNECT_TIMEOUT),
       m_retryTimeout(MC_DEFAULT_RETRY_TIMEOUT),
       m_maxRetries(MC_DEFAULT_MAX_RETRIES), m_retires(0) {
@@ -47,10 +47,10 @@ Connection::~Connection() {
 int Connection::init(const char* host, uint32_t port, const char* alias) {
   snprintf(m_host, sizeof m_host, "%s", host);
   m_port = port;
-  m_local = isLocalSocket(m_host);
+  m_unixSocket = isLocalSocket(m_host);
   if (alias == NULL) {
     m_hasAlias = false;
-    if (m_local) {
+    if (m_unixSocket) {
       snprintf(m_name, sizeof m_name, "%s", m_host);
     } else {
       snprintf(m_name, sizeof m_name, "%s:%u", m_host, m_port);
@@ -66,8 +66,8 @@ int Connection::init(const char* host, uint32_t port, const char* alias) {
 int Connection::connect() {
   assert(!m_alive);
   this->close();
-  if (m_local) {
-    return local();
+  if (m_unixSocket) {
+    return unixSocketConnect();
   }
 
   struct addrinfo hints, *server_addrinfo = NULL, *ai_ptr = NULL;
@@ -132,7 +132,7 @@ try_next_ai:
   return m_alive ? 0 : -1;
 }
 
-int Connection::local() {
+int Connection::unixSocketConnect() {
   int fd, flags, opt_keepalive = 1;
 
   if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {

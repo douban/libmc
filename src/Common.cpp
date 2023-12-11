@@ -57,9 +57,9 @@ bool isLocalSocket(const char* host) {
 }
 
 // modifies input string and output pointers reference input
-ServerSpec splitServerString(char* input) {
+server_string_split_t splitServerString(char* input) {
   bool escaped = false;
-  ServerSpec res = { input, NULL, NULL };
+  server_string_split_t res = { input, NULL, NULL };
   for (;; input++) {
     switch (*input)
     {

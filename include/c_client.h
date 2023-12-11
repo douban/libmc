@@ -68,7 +68,7 @@ extern "C" {
   err_code_t client_quit(void* client);
 
   const char* err_code_to_string(err_code_t err);
-  ServerSpec splitServerString(char* input);
+  server_string_split_t splitServerString(char* input);
 #ifdef __cplusplus
 }
 #endif
