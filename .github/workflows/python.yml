@@ -19,6 +19,7 @@ jobs:
     - uses: actions/checkout@v2
     - name: Setup system dependencies
       run: |
+        sudo apt-get update
         sudo apt-get -y install valgrind memcached g++
     - name: Set up Python
       uses: actions/setup-python@v2
@@ -48,6 +49,7 @@ jobs:
     - uses: actions/checkout@v2
     - name: Setup system dependencies
       run: |
+        sudo apt-get update
         sudo apt-get -y install memcached libmemcached-dev g++
     - name: Set up Python
       uses: actions/setup-python@v2
