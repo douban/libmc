@@ -83,7 +83,7 @@ public:
     m_waiting = unlock();
   }
 
-  size_t workerIndex(const std::mutex** worker) {
+  size_t workerIndex(std::mutex** worker) {
     return worker - m_thread_workers.data();
   }
 };

@@ -11,7 +11,7 @@ ClientPool::ClientPool(): m_initial_clients(1), m_max_clients(4), m_max_growth(4
   memset(m_opt_value, 0, sizeof m_opt_value);
 }
 
-ClientPool::ClientPool() {
+ClientPool::~ClientPool() {
 }
 
 void ClientPool::config(config_options_t opt, int val) {
@@ -75,7 +75,7 @@ int ClientPool::setup(Client* c) {
       c->config(static_cast<config_options_t>(i), m_opt_value[i]);
     }
   }
-  c->init(m_hosts.data(), m_ports.data(), m_hosts.size(), m_aliases.data());
+  return c->init(m_hosts.data(), m_ports.data(), m_hosts.size(), m_aliases.data());
 }
 
 // if called outside acquire, needs to own m_acquiring_growth
@@ -93,6 +93,8 @@ int ClientPool::growPool(size_t by) {
       rv.store(err, std::memory_order_relaxed);
     }
   });
+  // adds workers with non-zero return values
+  // if changed, acquire should probably raise rather than hang
   addWorkers(by);
   return rv;
 }

@@ -11,14 +11,14 @@ void duplicate_strings(const char* const * strs, const size_t n,
                        std::vector<std::array<char, N> >& out, std::vector<char*>& refs) {
     out.resize(n);
     refs.resize(n);
-    for (int i = 0; i < n; i++) {
+    for (size_t i = 0; i < n; i++) {
         if (strs == NULL || strs[i] == NULL) {
           out[i][0] = '\0';
           refs[i] = NULL;
           continue;
         }
         std::snprintf(out[i].data(), N, "%s", strs[i]);
-        refs[i] = &out[i];
+        refs[i] = out[i].data();
     }
 }
 
