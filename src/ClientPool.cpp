@@ -37,15 +37,15 @@ void ClientPool::config(config_options_t opt, int val) {
   }
 }
 
-int ClientPool::init(const char* const * hosts, const uint32_t* ports, const size_t n,
-                     const char* const * aliases) {
+int ClientPool::init(const char* const * hosts, const uint32_t* ports,
+                     const size_t n, const char* const * aliases) {
   updateServers(hosts, ports, n, aliases);
-  std::shared_lock initializing(m_acquiring_growth);
+  std::unique_lock initializing(m_acquiring_growth);
   return growPool(m_initial_clients);
 }
 
-int ClientPool::updateServers(const char* const* hosts, const uint32_t* ports, const size_t n,
-                              const char* const* aliases) {
+int ClientPool::updateServers(const char* const* hosts, const uint32_t* ports,
+                              const size_t n, const char* const* aliases) {
   std::lock_guard updating_clients(m_pool_lock);
   duplicate_strings(hosts, n, m_hosts_data, m_hosts);
   duplicate_strings(aliases, n, m_aliases_data, m_aliases);
