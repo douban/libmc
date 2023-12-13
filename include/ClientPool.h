@@ -1,7 +1,5 @@
 #pragma once
 
-#include <vector>
-#include <mutex>
 #include "Client.h"
 #include "LockPool.h"
 
@@ -29,16 +27,18 @@ public:
   ClientPool();
   ~ClientPool();
   void config(config_options_t opt, int val);
-  int init(const char* const * hosts, const uint32_t* ports, const size_t n,
-           const char* const * aliases = NULL);
-  int updateServers(const char* const * hosts, const uint32_t* ports, const size_t n,
-                    const char* const * aliases = NULL);
+  int init(const char* const * hosts, const uint32_t* ports,
+           const size_t n, const char* const * aliases = NULL);
+  int updateServers(const char* const * hosts, const uint32_t* ports,
+                    const size_t n, const char* const * aliases = NULL);
   Client* acquire();
   void release(Client* ref);
 
-protected:
+private:
   int growPool(size_t by);
   int setup(Client* c);
+  bool shouldGrowUnsafe();
+  int autoGrowUnsafe();
 
   bool m_opt_changed[CLIENT_CONFIG_OPTION_COUNT];
   int m_opt_value[CLIENT_CONFIG_OPTION_COUNT];
@@ -55,6 +55,7 @@ protected:
   std::vector<char*> m_aliases;
 
   std::mutex m_pool_lock;
+  mutable std::shared_mutex m_acquiring_growth;
 };
 
 } // namespace mc

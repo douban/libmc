@@ -10,10 +10,11 @@
 
 namespace douban {
 namespace mc {
-  
+
 class OrderedLock {
   std::queue<std::condition_variable*> m_fifo_locks;
   std::mutex m_fifo_access;
+
 public:
   OrderedLock() {};
   void lock() {
@@ -36,12 +37,13 @@ public:
 
 class LockPool : OrderedLock {
   std::deque<std::mutex**> m_available;
+
 protected:
   std::mutex m_available_lock;
   std::vector<std::mutex*> m_thread_workers;
   std::atomic<bool> m_waiting;
-public:
 
+public:
   LockPool() : m_waiting(false) {}
   ~LockPool() {
     std::lock_guard<std::mutex> freeing(m_available_lock);

@@ -1,4 +1,3 @@
-#include <atomic>
 #include <execution>
 
 #include "ClientPool.h"
@@ -41,6 +40,7 @@ void ClientPool::config(config_options_t opt, int val) {
 int ClientPool::init(const char* const * hosts, const uint32_t* ports, const size_t n,
                      const char* const * aliases) {
   updateServers(hosts, ports, n, aliases);
+  std::shared_lock initializing(m_acquiring_growth);
   return growPool(m_initial_clients);
 }
 
@@ -77,21 +77,46 @@ int ClientPool::setup(Client* c) {
   c->init(m_hosts.data(), m_ports.data(), m_hosts.size(), m_aliases.data());
 }
 
+// if called outside acquire, needs to own m_acquiring_growth
 int ClientPool::growPool(size_t by) {
-  std::lock_guard growing_pool(m_pool_lock);
   assert(by > 0);
+  std::lock_guard growing_pool(m_pool_lock);
   size_t from = m_clients.size();
   m_clients.resize(from + by);
-  auto start = m_clients.data() + from;
+  const auto start = m_clients.data() + from;
+  std::atomic<int> rv = 0;
   std::for_each(std::execution::par_unseq, start, start + by,
-                [this](Client& c) {
-    setup(&c);
+                [this, &rv](Client& c) {
+    const int err = setup(&c);
+    if (err != 0) {
+      rv.store(err, std::memory_order_relaxed);
+    }
   });
   addWorkers(by);
+  return rv;
+}
+
+bool ClientPool::shouldGrowUnsafe() {
+  return m_clients.size() < m_max_clients && !m_waiting;
+}
+
+int ClientPool::autoGrowUnsafe() {
+  return growPool(MIN(m_max_clients - m_clients.size(),
+                  MIN(m_max_growth, m_clients.size())));
 }
 
 Client* ClientPool::acquire() {
-  // TODO: grow pool if necessary
+  m_acquiring_growth.lock_shared();
+  const auto growing = shouldGrowUnsafe();
+  m_acquiring_growth.unlock_shared();
+  if (growing) {
+    m_acquiring_growth.lock();
+    if (shouldGrowUnsafe()) {
+      autoGrowUnsafe();
+    }
+    m_acquiring_growth.unlock();
+  }
+
   std::mutex** mux = acquireWorker();
   (**mux).lock();
   return &m_clients[workerIndex(mux)];
