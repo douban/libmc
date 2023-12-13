@@ -1,4 +1,3 @@
-#include <vector>
 #include <atomic>
 #include <execution>
 
@@ -16,6 +15,7 @@ ClientPool::ClientPool() {
 }
 
 void ClientPool::config(config_options_t opt, int val) {
+  std::lock_guard config_pool(m_pool_lock);
   switch (val) {
     case CFG_INITIAL_CLIENTS:
       m_initial_clients = val;
@@ -46,7 +46,7 @@ int ClientPool::init(const char* const * hosts, const uint32_t* ports, const siz
 
 int ClientPool::updateServers(const char* const* hosts, const uint32_t* ports, const size_t n,
                               const char* const* aliases) {
-  // TODO: acquire lock; one update at a time
+  std::lock_guard updating_clients(m_pool_lock);
   duplicate_strings(hosts, n, m_hosts_data, m_hosts);
   duplicate_strings(aliases, n, m_aliases_data, m_aliases);
 
@@ -54,10 +54,11 @@ int ClientPool::updateServers(const char* const* hosts, const uint32_t* ports, c
   std::copy(ports, ports + n, m_ports.begin());
 
   std::atomic<int> rv = 0;
-  std::for_each(std::execution::par, m_clients.begin(), m_clients.end(),
+  std::lock_guard<std::mutex> updating(m_available_lock);
+  std::for_each(std::execution::par_unseq, m_clients.begin(), m_clients.end(),
                 [this, &rv](Client& c) {
-    const int idx = &c - &m_clients[0];
-    // TODO: acquire lock idx
+    const int idx = &c - m_clients.data();
+    std::lock_guard<std::mutex> updating_worker(*m_thread_workers[idx]);
     const int err = c.updateServers(m_hosts.data(), m_ports.data(),
                                     m_hosts.size(), m_aliases.data());
     if (err != 0) {
@@ -77,25 +78,30 @@ int ClientPool::setup(Client* c) {
 }
 
 int ClientPool::growPool(size_t by) {
-  // TODO: acquire same lock as updateServers
-  // TODO: client locks start busy
+  std::lock_guard growing_pool(m_pool_lock);
   assert(by > 0);
   size_t from = m_clients.size();
   m_clients.resize(from + by);
   auto start = m_clients.data() + from;
-  std::for_each(std::execution::par, start, start + by, [this](Client& c) {
+  std::for_each(std::execution::par_unseq, start, start + by,
+                [this](Client& c) {
     setup(&c);
-    const int idx = &c - &m_clients[0];
-    // TODO: release lock idx
   });
+  addWorkers(by);
 }
 
-Client* acquire() {
-  // TODO
+Client* ClientPool::acquire() {
+  // TODO: grow pool if necessary
+  std::mutex** mux = acquireWorker();
+  (**mux).lock();
+  return &m_clients[workerIndex(mux)];
 }
 
-void release(Client* ref) {
-  // TODO
+void ClientPool::release(Client* ref) {
+  const int idx = ref - m_clients.data();
+  std::mutex** mux = &m_thread_workers[idx];
+  (**mux).unlock();
+  releaseWorker(mux);
 }
 
 } // namespace mc

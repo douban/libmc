@@ -1,7 +1,9 @@
 #pragma once
 
 #include <vector>
+#include <mutex>
 #include "Client.h"
+#include "LockPool.h"
 
 namespace douban {
 namespace mc {
@@ -22,7 +24,7 @@ void duplicate_strings(const char* const * strs, const size_t n,
     }
 }
 
-class ClientPool {
+class ClientPool : LockPool {
 public:
   ClientPool();
   ~ClientPool();
@@ -51,6 +53,8 @@ protected:
 
   std::vector<char*> m_hosts;
   std::vector<char*> m_aliases;
+
+  std::mutex m_pool_lock;
 };
 
 } // namespace mc
