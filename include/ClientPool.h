@@ -32,7 +32,7 @@ public:
   int updateServers(const char* const * hosts, const uint32_t* ports,
                     const size_t n, const char* const * aliases = NULL);
   Client* acquire();
-  void release(Client* ref);
+  void release(const Client* ref);
 
 private:
   int growPool(size_t by);

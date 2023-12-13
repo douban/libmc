@@ -8,6 +8,7 @@ namespace mc {
 // default max of 4 clients to match memcached's default of 4 worker threads
 ClientPool::ClientPool(): m_initial_clients(1), m_max_clients(4), m_max_growth(4) {
   memset(m_opt_changed, false, sizeof m_opt_changed);
+  memset(m_opt_value, 0, sizeof m_opt_value);
 }
 
 ClientPool::ClientPool() {
@@ -70,7 +71,7 @@ int ClientPool::updateServers(const char* const* hosts, const uint32_t* ports,
 
 int ClientPool::setup(Client* c) {
   for (int i = 0; i < CLIENT_CONFIG_OPTION_COUNT; i++) {
-    if (m_opt_changed) {
+    if (m_opt_changed[i]) {
       c->config(static_cast<config_options_t>(i), m_opt_value[i]);
     }
   }
@@ -122,7 +123,7 @@ Client* ClientPool::acquire() {
   return &m_clients[workerIndex(mux)];
 }
 
-void ClientPool::release(Client* ref) {
+void ClientPool::release(const Client* ref) {
   const int idx = ref - m_clients.data();
   std::mutex** mux = &m_thread_workers[idx];
   (**mux).unlock();
