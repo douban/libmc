@@ -1,4 +1,5 @@
 #include <execution>
+#include <thread>
 
 #include "ClientPool.h"
 
@@ -15,6 +16,7 @@ ClientPool::~ClientPool() {
 }
 
 void ClientPool::config(config_options_t opt, int val) {
+  assert(m_clients.size() == 0);
   std::lock_guard config_pool(m_pool_lock);
   switch (val) {
     case CFG_INITIAL_CLIENTS:
@@ -99,13 +101,17 @@ int ClientPool::growPool(size_t by) {
   return rv;
 }
 
-bool ClientPool::shouldGrowUnsafe() {
+inline bool ClientPool::shouldGrowUnsafe() {
   return m_clients.size() < m_max_clients && !m_waiting;
 }
 
-int ClientPool::autoGrowUnsafe() {
-  return growPool(MIN(m_max_clients - m_clients.size(),
-                  MIN(m_max_growth, m_clients.size())));
+int ClientPool::autoGrow() {
+  std::unique_lock<std::shared_mutex> growing(m_acquiring_growth);
+  if (shouldGrowUnsafe()) {
+    return growPool(MIN(m_max_clients - m_clients.size(),
+                    MIN(m_max_growth, m_clients.size())));
+  }
+  return 0;
 }
 
 Client* ClientPool::acquire() {
@@ -113,11 +119,7 @@ Client* ClientPool::acquire() {
   const auto growing = shouldGrowUnsafe();
   m_acquiring_growth.unlock_shared();
   if (growing) {
-    m_acquiring_growth.lock();
-    if (shouldGrowUnsafe()) {
-      autoGrowUnsafe();
-    }
-    m_acquiring_growth.unlock();
+    std::thread acquire_overflow(&ClientPool::autoGrow, this);
   }
 
   std::mutex** mux = acquireWorker();

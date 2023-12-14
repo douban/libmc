@@ -37,8 +37,8 @@ public:
 private:
   int growPool(size_t by);
   int setup(Client* c);
-  bool shouldGrowUnsafe();
-  int autoGrowUnsafe();
+  inline bool shouldGrowUnsafe();
+  int autoGrow();
 
   bool m_opt_changed[CLIENT_CONFIG_OPTION_COUNT];
   int m_opt_value[CLIENT_CONFIG_OPTION_COUNT];
