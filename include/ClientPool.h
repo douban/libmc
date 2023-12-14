@@ -1,5 +1,6 @@
 #pragma once
 
+#include <shared_mutex>
 #include "Client.h"
 #include "LockPool.h"
 

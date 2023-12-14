@@ -25,6 +25,7 @@ jobs:
       uses: actions/setup-go@v2
       with:
         go-version: ${{ matrix.gover }}
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
     - name: Start memcached servers
       run: ./misc/memcached_server start
     - name: Run gotest
