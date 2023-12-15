@@ -15,7 +15,7 @@ class OrderedLock {
   std::queue<std::condition_variable*> m_fifo_locks;
   std::mutex m_fifo_access;
 
-public:
+protected:
   OrderedLock() {};
   void lock() {
     std::unique_lock<std::mutex> acquire(m_fifo_access);
@@ -36,37 +36,42 @@ public:
 };
 
 class LockPool : OrderedLock {
-  std::deque<std::mutex**> m_available;
+  std::deque<int> m_available;
+  std::list<std::mutex* const*> m_mux_mallocs;
 
 protected:
   std::mutex m_available_lock;
-  std::vector<std::mutex*> m_thread_workers;
+  std::deque<std::mutex*> m_thread_workers;
   std::atomic<bool> m_waiting;
 
-public:
   LockPool() : m_waiting(false) {}
   ~LockPool() {
     std::lock_guard<std::mutex> freeing(m_available_lock);
     for (auto worker : m_thread_workers) {
       std::lock_guard<std::mutex> freeing_worker(*worker);
-      delete worker;
+    }
+    for (auto mem : m_mux_mallocs) {
+      delete[] mem;
     }
   }
 
   void addWorkers(size_t n) {
-    for (int i = n; i > 0; i--) {
-      m_thread_workers.emplace_back(new std::mutex);
-    }
     std::lock_guard<std::mutex> queueing_growth(m_available_lock);
+    const auto from = m_thread_workers.size();
+    for (int i = from + n; i > from; i--) {
+      m_available.push_back(i);
+    }
+    const auto muxes = new std::mutex[n];
+    m_mux_mallocs.push_back(&muxes);
     // static_cast needed for some versions of C++
     std::transform(
-      m_thread_workers.end() - n, m_thread_workers.end(), std::back_inserter(m_available),
-      static_cast<std::mutex**(*)(std::mutex*&)>(std::addressof<std::mutex*>));
+      muxes, muxes + n, std::back_inserter(m_thread_workers),
+      static_cast<std::mutex*(*)(std::mutex&)>(std::addressof<std::mutex>));
     m_waiting = true;
     for (int i = n; i-- > 0; !unlock()) {}
   }
 
-  std::mutex** acquireWorker() {
+  int acquireWorker() {
     if (!m_waiting) {
       lock();
     }
@@ -77,14 +82,10 @@ public:
     return res;
   }
 
-  void releaseWorker(std::mutex** worker) {
+  void releaseWorker(int worker) {
     std::lock_guard<std::mutex> acquiring(m_available_lock);
     m_available.push_front(worker);
     m_waiting = unlock();
-  }
-
-  size_t workerIndex(std::mutex** worker) {
-    return worker - m_thread_workers.data();
   }
 };
 

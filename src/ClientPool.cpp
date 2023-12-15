@@ -1,5 +1,6 @@
 #include <execution>
 #include <thread>
+#include <numeric>
 #include "ClientPool.h"
 
 namespace douban {
@@ -15,11 +16,22 @@ ClientPool::~ClientPool() {
 }
 
 void ClientPool::config(config_options_t opt, int val) {
-  assert(m_clients.size() == 0);
   std::lock_guard config_pool(m_pool_lock);
+  if (opt < CLIENT_CONFIG_OPTION_COUNT) {
+    m_opt_changed[opt] = true;
+    m_opt_value[opt] = val;
+    for (auto &client : m_clients) {
+      client.c.config(opt, val);
+    }
+    return;
+  }
+  std::unique_lock initializing(m_acquiring_growth);
   switch (val) {
     case CFG_INITIAL_CLIENTS:
       m_initial_clients = val;
+      if (m_clients.size() < val) {
+        growPool(m_initial_clients);
+      }
       break;
     case CFG_MAX_CLIENTS:
       m_max_clients = val;
@@ -28,13 +40,6 @@ void ClientPool::config(config_options_t opt, int val) {
       m_max_growth = val;
       break;
     default:
-      if (opt < CLIENT_CONFIG_OPTION_COUNT) {
-        m_opt_changed[opt] = true;
-        m_opt_value[opt] = val;
-        for (auto client : m_clients) {
-          client.config(opt, val);
-        }
-      }
       break;
   }
 }
@@ -57,12 +62,12 @@ int ClientPool::updateServers(const char* const* hosts, const uint32_t* ports,
 
   std::atomic<int> rv = 0;
   std::lock_guard<std::mutex> updating(m_available_lock);
-  std::for_each(std::execution::par_unseq, m_clients.begin(), m_clients.end(),
-                [this, &rv](Client& c) {
-    const int idx = &c - m_clients.data();
-    std::lock_guard<std::mutex> updating_worker(*m_thread_workers[idx]);
-    const int err = c.updateServers(m_hosts.data(), m_ports.data(),
-                                    m_hosts.size(), m_aliases.data());
+  const auto idx = irange(n);
+  std::for_each(std::execution::par_unseq, idx.begin(), idx.end(),
+                [this, &rv](int i) {
+    std::lock_guard<std::mutex> updating_worker(*m_thread_workers[i]);
+    const int err = m_clients[i].c.updateServers(
+      m_hosts.data(), m_ports.data(), m_hosts.size(), m_aliases.data());
     if (err != 0) {
       rv.store(err, std::memory_order_relaxed);
     }
@@ -85,7 +90,7 @@ int ClientPool::growPool(size_t by) {
   std::lock_guard growing_pool(m_pool_lock);
   size_t from = m_clients.size();
   m_clients.resize(from + by);
-  const auto start = m_clients.data() + from;
+  const auto start = m_clients.begin() + from;
   std::atomic<int> rv = 0;
   std::for_each(std::execution::par_unseq, start, start + by,
                 [this, &rv](Client& c) {
@@ -113,7 +118,7 @@ int ClientPool::autoGrow() {
   return 0;
 }
 
-Client* ClientPool::acquire() {
+IndexedClient* ClientPool::_acquire() {
   m_acquiring_growth.lock_shared();
   const auto growing = shouldGrowUnsafe();
   m_acquiring_growth.unlock_shared();
@@ -121,16 +126,25 @@ Client* ClientPool::acquire() {
     std::thread acquire_overflow(&ClientPool::autoGrow, this);
   }
 
-  std::mutex** mux = acquireWorker();
-  (**mux).lock();
-  return &m_clients[workerIndex(mux)];
+  int idx = acquireWorker();
+  m_thread_workers[idx]->lock();
+  return &m_clients[idx];
+}
+
+void ClientPool::_release(const IndexedClient* idx) {
+  std::mutex* const * mux = &m_thread_workers[idx->index];
+  (**mux).unlock();
+  releaseWorker(idx->index);
+}
+
+Client* ClientPool::acquire() {
+  return &_acquire()->c;
 }
 
 void ClientPool::release(const Client* ref) {
-  const int idx = ref - m_clients.data();
-  std::mutex** mux = &m_thread_workers[idx];
-  (**mux).unlock();
-  releaseWorker(mux);
+  // C std 6.7.2.1-13
+  auto idx = reinterpret_cast<const IndexedClient*>(ref);
+  return _release(idx);
 }
 
 } // namespace mc

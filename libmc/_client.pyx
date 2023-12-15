@@ -55,6 +55,11 @@ cdef extern from "Export.h":
         CFG_RETRY_TIMEOUT
         CFG_HASH_FUNCTION
         CFG_MAX_RETRIES
+        CFG_SET_FAILOVER
+
+        CFG_INITIAL_CLIENTS
+        CFG_MAX_CLIENTS
+        CFG_MAX_GROWTH
 
     ctypedef enum hash_function_options_t:
         OPT_HASH_MD5
@@ -217,6 +222,23 @@ cdef extern from "Client.h" namespace "douban::mc":
 
     const char* errCodeToString(err_code_t err) nogil
 
+
+cdef extern from "ClientPool.h" namespace "douban::mc":
+    ctypedef struct IndexedClient:
+        Client c
+        int index
+
+    cdef cppclass ClientPool:
+        ClientPool()
+        void config(config_options_t opt, int val) nogil
+        int init(const char* const * hosts, const uint32_t* ports, size_t n,
+                 const char* const * aliases) nogil
+        int updateServers(const char* const * hosts, const uint32_t* ports, size_t n,
+                          const char* const * aliases) nogil
+        IndexedClient* _acquire() nogil
+        void _release(const IndexedClient* ref) nogil
+
+
 cdef uint32_t MC_DEFAULT_PORT = 11211
 cdef flags_t _FLAG_EMPTY = 0
 cdef flags_t _FLAG_PICKLE = 1 << 0
@@ -237,6 +259,10 @@ MC_POLL_TIMEOUT = PyInt_FromLong(CFG_POLL_TIMEOUT)
 MC_CONNECT_TIMEOUT = PyInt_FromLong(CFG_CONNECT_TIMEOUT)
 MC_RETRY_TIMEOUT = PyInt_FromLong(CFG_RETRY_TIMEOUT)
 MC_MAX_RETRIES = PyInt_FromLong(CFG_MAX_RETRIES)
+MC_SET_FAILOVER = PyInt_FromLong(CFG_SET_FAILOVER)
+MC_INITIAL_CLIENTS = PyInt_FromLong(CFG_INITIAL_CLIENTS)
+MC_MAX_CLIENTS = PyInt_FromLong(CFG_MAX_CLIENTS)
+MC_MAX_GROWTH = PyInt_FromLong(CFG_MAX_GROWTH)
 
 
 MC_HASH_MD5 = PyInt_FromLong(OPT_HASH_MD5)
@@ -335,32 +361,20 @@ class ThreadUnsafe(Exception):
     pass
 
 
-cdef class PyClient:
+cdef class PyClientSettings:
     cdef readonly list servers
     cdef readonly int comp_threshold
-    cdef Client* _imp
     cdef bool_t do_split
     cdef bool_t noreply
     cdef bytes prefix
     cdef hash_function_options_t hash_fn
     cdef bool_t failover
     cdef basestring encoding
-    cdef err_code_t last_error
-    cdef object _thread_ident
-    cdef object _created_stack
 
     def __cinit__(self, list servers, bool_t do_split=True, int comp_threshold=0, noreply=False,
                   basestring prefix=None, hash_function_options_t hash_fn=OPT_HASH_MD5, failover=False,
                   encoding='utf8'):
         self.servers = servers
-        self._imp = new Client()
-        self._imp.config(CFG_HASH_FUNCTION, hash_fn)
-        rv = self._update_servers(servers, True)
-        if failover:
-            self._imp.enableConsistentFailover()
-        else:
-            self._imp.disableConsistentFailover()
-
         self.do_split = do_split
         self.comp_threshold = comp_threshold
         self.noreply = noreply
@@ -372,9 +386,37 @@ cdef class PyClient:
         else:
             self.prefix = None
 
+        self.init()
+
+    def init():
+        pass
+
+    cpdef _args():
+        return (self.servers, self.do_split, self.comp_threshold, self.noreply,
+                self.prefix, self.hash_fn, self.failover, self.encoding)
+
+    def __reduce__(self):
+        return (self.__class__, self._args())
+
+
+cdef class PyClient(PyClientSettings):
+    cdef Client* _imp
+    cdef err_code_t last_error
+    cdef object _thread_ident
+    cdef object _created_stack
+
+    def init():
         self.last_error = RET_OK
         self._thread_ident = None
         self._created_stack = traceback.extract_stack()
+
+        self._imp = new Client()
+        self._imp.config(CFG_HASH_FUNCTION, self.hash_fn)
+        rv = self._update_servers(self.servers, True)
+        if self.failover:
+            self._imp.enableConsistentFailover()
+        else:
+            self._imp.disableConsistentFailover()
 
     cdef _update_servers(self, list servers, bool_t init):
         cdef int rv = 0
@@ -416,9 +458,6 @@ cdef class PyClient:
 
     def __dealloc__(self):
         del self._imp
-
-    def __reduce__(self):
-        return (PyClient, (self.servers, self.do_split, self.comp_threshold, self.noreply, self.prefix, self.hash_fn, self.failover, self.encoding))
 
     def config(self, int opt, int val):
         self._imp.config(<config_options_t>opt, val)
@@ -1091,3 +1130,41 @@ cdef class PyClient:
 
     def get_last_strerror(self):
         return errCodeToString(self.last_error)
+
+
+class PyPoolClient(PyClient):
+    cdef IndexedClient* _indexed
+
+    def init():
+        self.last_error = RET_OK
+        self._thread_ident = None
+        self._created_stack = traceback.extract_stack()
+
+
+
+class PyClientPool(PyClientSettings):
+    worker = PyPoolClient
+    cdef list clients
+
+    def init():
+        self._imp = new ClientPool()
+        self._imp.config(CFG_HASH_FUNCTION, self.hash_fn)
+        self.clients = []
+
+    def setup(self, IndexedClientClient* imp):
+        worker = __class__.worker(*self._args())
+        worker._indexed = imp
+        worker._imp = imp.c
+        return worker
+
+    def acquire(self):
+        worker = self._imp._acquire()
+        if worker.index >= len(self.clients):
+            clients += [None] * (worker.index - len(self.clients))
+            clients.append(setup(worker))
+        elif self.clients[worker.index] == None:
+            self.clients[i] = setup(worker);
+        return self.clients[i]
+
+    def release(self, PyPoolClient worker):
+        self._imp._release(worker._indexed)

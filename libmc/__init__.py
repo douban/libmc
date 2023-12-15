@@ -1,6 +1,6 @@
 import os
 from ._client import (
-    PyClient, ThreadUnsafe,
+    PyClient, PyClientPool as ClientPool, ThreadUnsafe,
     encode_value,
     decode_value,
 
@@ -8,6 +8,10 @@ from ._client import (
     MC_POLL_TIMEOUT,
     MC_CONNECT_TIMEOUT,
     MC_RETRY_TIMEOUT,
+    MC_SET_FAILOVER,
+    MC_INITIAL_CLIENTS,
+    MC_MAX_CLIENTS,
+    MC_MAX_GROWTH,
 
     MC_HASH_MD5,
     MC_HASH_FNV1_32,
@@ -42,10 +46,12 @@ DYNAMIC_LIBRARIES = [os.path.abspath(_libmc_so_file)]
 
 
 __all__ = [
-    'Client', 'ThreadUnsafe', '__VERSION__', 'encode_value', 'decode_value',
+    'Client', 'ClientPool', 'ThreadUnsafe', '__VERSION__',
+    'encode_value', 'decode_value',
 
     'MC_DEFAULT_EXPTIME', 'MC_POLL_TIMEOUT', 'MC_CONNECT_TIMEOUT',
-    'MC_RETRY_TIMEOUT',
+    'MC_RETRY_TIMEOUT', 'MC_SET_FAILOVER', 'MC_INITIAL_CLIENTS',
+    'MC_MAX_CLIENTS', 'MC_MAX_GROWTH',
 
     'MC_HASH_MD5', 'MC_HASH_FNV1_32', 'MC_HASH_FNV1A_32', 'MC_HASH_CRC_32',
 

@@ -15,6 +15,7 @@ typedef enum {
   CFG_RETRY_TIMEOUT,
   CFG_HASH_FUNCTION,
   CFG_MAX_RETRIES,
+  CFG_SET_FAILOVER,
 
   // type separator to track number of Client config options to save
   CLIENT_CONFIG_OPTION_COUNT,

@@ -9,7 +9,7 @@ namespace mc {
 
 template <size_t N>
 void duplicate_strings(const char* const * strs, const size_t n,
-                       std::vector<std::array<char, N> >& out, std::vector<char*>& refs) {
+                       std::deque<std::array<char, N> >& out, std::vector<char*>& refs) {
     out.resize(n);
     refs.resize(n);
     for (size_t i = 0; i < n; i++) {
@@ -23,6 +23,26 @@ void duplicate_strings(const char* const * strs, const size_t n,
     }
 }
 
+class irange {
+public:
+  irange(int n) : i(0), _end(n) {}
+
+  bool operator!=(const irange& other) const { return i != _end; }
+  irange& operator++() { ++i; return *this; }
+  int operator*() const { return i; }
+  irange begin() const { return *this; }
+  irange end() const { return *this; }
+
+private:
+  int i;
+  int _end;
+};
+
+typedef struct {
+  Client c;
+  int index;
+} IndexedClient;
+
 class ClientPool : LockPool {
 public:
   ClientPool();
@@ -32,6 +52,8 @@ public:
            const size_t n, const char* const * aliases = NULL);
   int updateServers(const char* const * hosts, const uint32_t* ports,
                     const size_t n, const char* const * aliases = NULL);
+  IndexedClient* _acquire();
+  void _release(const IndexedClient* idx);
   Client* acquire();
   void release(const Client* ref);
 
@@ -43,13 +65,13 @@ private:
 
   bool m_opt_changed[CLIENT_CONFIG_OPTION_COUNT];
   int m_opt_value[CLIENT_CONFIG_OPTION_COUNT];
-  std::vector<Client> m_clients;
+  std::deque<IndexedClient> m_clients;
   size_t m_initial_clients;
   size_t m_max_clients;
   size_t m_max_growth;
 
-  std::vector<std::array<char, MC_NI_MAXHOST> > m_hosts_data;
-  std::vector<std::array<char, MC_NI_MAXHOST + 1 + MC_NI_MAXSERV> > m_aliases_data;
+  std::deque<std::array<char, MC_NI_MAXHOST> > m_hosts_data;
+  std::deque<std::array<char, MC_NI_MAXHOST + 1 + MC_NI_MAXSERV> > m_aliases_data;
   std::vector<uint32_t> m_ports;
 
   std::vector<char*> m_hosts;
