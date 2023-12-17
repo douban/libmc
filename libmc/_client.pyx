@@ -391,7 +391,7 @@ cdef class PyClientSettings:
     def init():
         pass
 
-    cpdef _args():
+    def _args():
         return (self.servers, self.do_split, self.comp_threshold, self.noreply,
                 self.prefix, self.hash_fn, self.failover, self.encoding)
 
@@ -1140,6 +1140,8 @@ class PyPoolClient(PyClient):
         self._thread_ident = None
         self._created_stack = traceback.extract_stack()
 
+    def _check_thread_ident(self):
+        pass
 
 
 class PyClientPool(PyClientSettings):
