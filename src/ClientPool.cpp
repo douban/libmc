@@ -29,7 +29,7 @@ void ClientPool::config(config_options_t opt, int val) {
   switch (val) {
     case CFG_INITIAL_CLIENTS:
       m_initial_clients = val;
-      if (m_clients.size() < val) {
+      if (m_clients.size() < m_initial_clients) {
         growPool(m_initial_clients);
       }
       break;
@@ -62,8 +62,7 @@ int ClientPool::updateServers(const char* const* hosts, const uint32_t* ports,
 
   std::atomic<int> rv = 0;
   std::lock_guard<std::mutex> updating(m_available_lock);
-  const auto idx = irange(n);
-  std::for_each(std::execution::par_unseq, idx.begin(), idx.end(),
+  std::for_each(std::execution::par_unseq, irange(), irange(n),
                 [this, &rv](int i) {
     std::lock_guard<std::mutex> updating_worker(*m_thread_workers[i]);
     const int err = m_clients[i].c.updateServers(
@@ -93,8 +92,8 @@ int ClientPool::growPool(size_t by) {
   const auto start = m_clients.begin() + from;
   std::atomic<int> rv = 0;
   std::for_each(std::execution::par_unseq, start, start + by,
-                [this, &rv](Client& c) {
-    const int err = setup(&c);
+                [this, &rv](IndexedClient& c) {
+    const int err = setup(&c.c);
     if (err != 0) {
       rv.store(err, std::memory_order_relaxed);
     }

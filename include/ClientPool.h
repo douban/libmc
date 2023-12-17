@@ -1,6 +1,7 @@
 #pragma once
 
 #include <shared_mutex>
+#include <iterator>
 #include "Client.h"
 #include "LockPool.h"
 
@@ -24,18 +25,37 @@ void duplicate_strings(const char* const * strs, const size_t n,
 }
 
 class irange {
-public:
-  irange(int n) : i(0), _end(n) {}
-
-  bool operator!=(const irange& other) const { return i != _end; }
-  irange& operator++() { ++i; return *this; }
-  int operator*() const { return i; }
-  irange begin() const { return *this; }
-  irange end() const { return *this; }
-
-private:
   int i;
-  int _end;
+
+public:
+  using value_type = int;
+  using pointer = const int*;
+  using reference = const int&;
+  using difference_type = int;
+  using iterator_category = std::random_access_iterator_tag;
+
+  irange() : i(0) {}
+  irange(int i) : i(i) {}
+
+  reference operator*() const { return i; }
+  pointer operator->() const { return &i; }
+  value_type operator[](int n) const { return i + n; }
+  friend bool operator< (const irange& lhs, const irange& rhs) { return lhs.i < rhs.i; }
+  friend bool operator> (const irange& lhs, const irange& rhs) { return rhs < lhs; }
+  friend bool operator<=(const irange& lhs, const irange& rhs) { return !(lhs > rhs); }
+  friend bool operator>=(const irange& lhs, const irange& rhs) { return !(lhs < rhs); }
+  friend bool operator==(const irange& lhs, const irange& rhs) { return lhs.i == rhs.i; }
+  friend bool operator!=(const irange& lhs, const irange& rhs) { return !(lhs == rhs); }
+  irange& operator++() { ++i; return *this; }
+  irange& operator--() { --i; return *this; }
+  irange operator++(int) { irange tmp = *this; ++tmp; return tmp; }
+  irange operator--(int) { irange tmp = *this; --tmp; return tmp; }
+  irange& operator+=(difference_type n) { i += n; return *this; }
+  irange& operator-=(difference_type n) { i -= n; return *this; }
+  friend irange operator+(const irange& lhs, difference_type n) { irange tmp = lhs; tmp += n; return tmp; }
+  friend irange operator+(difference_type n, const irange& rhs) { return rhs + n; }
+  friend irange operator-(const irange& lhs, difference_type n) { return lhs.i + (-n); }
+  friend difference_type operator-(const irange& lhs, const irange& rhs) { return lhs.i - rhs.i; }
 };
 
 typedef struct {

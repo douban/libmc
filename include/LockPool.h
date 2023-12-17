@@ -7,6 +7,8 @@
 #include <vector>
 #include <atomic>
 #include <memory>
+#include <list>
+#include <algorithm>
 
 namespace douban {
 namespace mc {
@@ -36,7 +38,7 @@ protected:
 };
 
 class LockPool : OrderedLock {
-  std::deque<int> m_available;
+  std::deque<size_t> m_available;
   std::list<std::mutex* const*> m_mux_mallocs;
 
 protected:
@@ -58,7 +60,7 @@ protected:
   void addWorkers(size_t n) {
     std::lock_guard<std::mutex> queueing_growth(m_available_lock);
     const auto from = m_thread_workers.size();
-    for (int i = from + n; i > from; i--) {
+    for (size_t i = from + n; i > from; i--) {
       m_available.push_back(i);
     }
     const auto muxes = new std::mutex[n];
