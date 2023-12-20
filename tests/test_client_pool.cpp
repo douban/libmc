@@ -39,13 +39,13 @@ TEST(test_client_pool, simple_set_get) {
   for (unsigned int j = 0; j < n_ops; j++) {
     gen_random(key, data_size);
     gen_random(value, data_size);
-    auto c = pool->acquire();
-    c->set(&keys, data_lens, flags, exptime, NULL, 0, &values, data_lens, 1, &m_results, &nResults);
-    c->destroyMessageResult();
-    c->get(&keys, data_lens, 1, &r_results, &nResults);
+    auto c = pool->_acquire();
+    c->c.set(&keys, data_lens, flags, exptime, NULL, 0, &values, data_lens, 1, &m_results, &nResults);
+    c->c.destroyMessageResult();
+    c->c.get(&keys, data_lens, 1, &r_results, &nResults);
     ASSERT_N_STREQ(r_results[0]->data_block, values, data_size);
-    c->destroyRetrievalResult();
-    pool->release(c);
+    c->c.destroyRetrievalResult();
+    pool->_release(c);
   }
 
   delete pool;

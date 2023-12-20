@@ -31,11 +31,12 @@ protected:
   std::unique_lock<std::mutex> lock() {
     std::unique_lock<std::mutex> acquire(m_fifo_access);
     if (m_locked) {
-      tprintf("locked %lu already waiting\n", m_fifo_locks.size());
       std::condition_variable signal;
+      tprintf("locked %lu already waiting signal           %p\n", m_fifo_locks.size(), &signal);
       m_fifo_locks.emplace(&signal);
       signal.wait(acquire);
-      tprintf("unlocked %lu left waiting lock              %p\n", m_fifo_locks.size(), &signal);
+      signal.notify_one();
+      tprintf("unlocked %lu left waiting signal            %p\n", m_fifo_locks.size(), &signal);
       assert(acquire.owns_lock());
     } else {
       m_locked = true;
@@ -44,19 +45,16 @@ protected:
     return acquire;
   }
 
-  void unlock(const bool owns_fifo = false, int i = 0) {
-    std::unique_lock<std::mutex> acquire;
-    if (!owns_fifo) {
-      acquire = std::unique_lock<std::mutex>(m_fifo_access);
-    }
+  void unlock(std::unique_lock<std::mutex>& acquire, int i = 0) {
     if (m_fifo_locks.empty()) {
       tprintf("fifo already empty\n");
       m_locked = false;
     } else {
-      const std::condition_variable* lock_ptr = m_fifo_locks.front();
-      tprintf("unlocking with %d available %lu waiting lock %p\n", i, m_fifo_locks.size(), lock_ptr);
-      m_fifo_locks.front()->notify_one();
+      std::condition_variable* signal = m_fifo_locks.front();
       m_fifo_locks.pop();
+      tprintf("unlocking with %d available %lu waiting lock %p\n", i, m_fifo_locks.size(), signal);
+      signal->notify_one();
+      signal->wait(acquire);
     }
   }
 };
@@ -84,7 +82,7 @@ protected:
   }
 
   void addWorkers(size_t n) {
-    std::lock_guard<std::mutex> growing_pool(m_fifo_access);
+    std::unique_lock<std::mutex> growing_pool(m_fifo_access);
     const auto from = m_thread_workers.size();
     const auto muxes = new std::mutex[n];
     m_mux_mallocs.push_back(muxes);
@@ -99,7 +97,7 @@ protected:
       static_cast<std::mutex*(*)(std::mutex&)>(std::addressof<std::mutex>));
     tprintf("available size is now %lu\n", m_available.size());
     for (int i = n; i > 0; i--) {
-      unlock(true, m_available.size());
+      unlock(growing_pool, m_available.size());
     }
   }
 
@@ -109,7 +107,7 @@ protected:
     const auto res = m_available.front();
     m_available.pop_front();
     if (!m_available.empty()) {
-      unlock(true, m_available.size());
+      unlock(fifo_lock, m_available.size());
     }
     tprintf("acquiring %lu; available size is now %lu\n", res, m_available.size());
     assert(m_available.size() <= m_thread_workers.size());
@@ -117,10 +115,10 @@ protected:
   }
 
   void releaseWorker(int worker) {
-    std::lock_guard<std::mutex> growing_pool(m_fifo_access);
+    std::unique_lock<std::mutex> growing_pool(m_fifo_access);
     m_available.push_front(worker);
     tprintf("releasing %d; available size is now %lu\n", worker, m_available.size());
-    unlock(true, m_available.size());
+    unlock(growing_pool, m_available.size());
   }
 };
 
