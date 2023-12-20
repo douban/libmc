@@ -2,6 +2,8 @@
 
 #include <shared_mutex>
 #include <iterator>
+#include <array>
+
 #include "Client.h"
 #include "LockPool.h"
 

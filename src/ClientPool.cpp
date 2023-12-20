@@ -1,6 +1,6 @@
-#include <execution>
-#include <thread>
-#include <numeric>
+//#include <execution>
+//#include <thread>
+#include <array>
 #include "ClientPool.h"
 
 namespace douban {
@@ -61,8 +61,9 @@ int ClientPool::updateServers(const char* const* hosts, const uint32_t* ports,
   std::copy(ports, ports + n, m_ports.begin());
 
   std::atomic<int> rv = 0;
-  std::lock_guard<std::mutex> updating(m_available_lock);
-  std::for_each(std::execution::par_unseq, irange(), irange(n),
+  std::lock_guard<std::mutex> updating(m_fifo_access);
+  //std::for_each(std::execution::par_unseq, irange(), irange(m_clients.size()),
+  std::for_each(irange(), irange(m_clients.size()),
                 [this, &rv](int i) {
     std::lock_guard<std::mutex> updating_worker(*m_thread_workers[i]);
     const int err = m_clients[i].c.updateServers(
@@ -88,12 +89,14 @@ int ClientPool::growPool(size_t by) {
   assert(by > 0);
   std::lock_guard growing_pool(m_pool_lock);
   size_t from = m_clients.size();
+  tprintf("growing from %lu by %lu\n", from, by);
   m_clients.resize(from + by);
-  const auto start = m_clients.begin() + from;
   std::atomic<int> rv = 0;
-  std::for_each(std::execution::par_unseq, start, start + by,
-                [this, &rv](IndexedClient& c) {
-    const int err = setup(&c.c);
+  //std::for_each(std::execution::par_unseq, irange(from), irange(from + by),
+  std::for_each(irange(from), irange(from + by),
+                [this, &rv](int i) {
+    const int err = setup(&m_clients[i].c);
+    m_clients[i].index = i;
     if (err != 0) {
       rv.store(err, std::memory_order_relaxed);
     }
@@ -101,11 +104,12 @@ int ClientPool::growPool(size_t by) {
   // adds workers with non-zero return values
   // if changed, acquire should probably raise rather than hang
   addWorkers(by);
+  tprintf("size is now %lu\n", m_clients.size());
   return rv;
 }
 
 inline bool ClientPool::shouldGrowUnsafe() {
-  return m_clients.size() < m_max_clients && !m_waiting;
+  return m_clients.size() < m_max_clients && m_locked;
 }
 
 int ClientPool::autoGrow() {
@@ -122,7 +126,9 @@ IndexedClient* ClientPool::_acquire() {
   const auto growing = shouldGrowUnsafe();
   m_acquiring_growth.unlock_shared();
   if (growing) {
-    std::thread acquire_overflow(&ClientPool::autoGrow, this);
+    //std::thread acquire_overflow(&ClientPool::autoGrow, this);
+    //acquire_overflow.detach();
+    autoGrow();
   }
 
   int idx = acquireWorker();
