@@ -24,7 +24,7 @@ import threading
 import zlib
 import marshal
 import warnings
-
+from contextlib import contextmanager
 
 cdef extern from "Common.h" namespace "douban::mc":
     ctypedef enum op_code_t:
@@ -388,10 +388,7 @@ cdef class PyClientSettings:
 
         self.init()
 
-    def init():
-        pass
-
-    def _args():
+    def _args(self):
         return (self.servers, self.do_split, self.comp_threshold, self.noreply,
                 self.prefix, self.hash_fn, self.failover, self.encoding)
 
@@ -405,7 +402,7 @@ cdef class PyClient(PyClientSettings):
     cdef object _thread_ident
     cdef object _created_stack
 
-    def init():
+    def init(self):
         self.last_error = RET_OK
         self._thread_ident = None
         self._created_stack = traceback.extract_stack()
@@ -1132,10 +1129,10 @@ cdef class PyClient(PyClientSettings):
         return errCodeToString(self.last_error)
 
 
-class PyPoolClient(PyClient):
+cdef class PyPoolClient(PyClient):
     cdef IndexedClient* _indexed
 
-    def init():
+    def init(self):
         self.last_error = RET_OK
         self._thread_ident = None
         self._created_stack = traceback.extract_stack()
@@ -1144,29 +1141,36 @@ class PyPoolClient(PyClient):
         pass
 
 
-class PyClientPool(PyClientSettings):
-    worker = PyPoolClient
+cdef class PyClientPool(PyClientSettings):
     cdef list clients
+    cdef ClientPool* _imp
 
-    def init():
+    cdef init(self):
         self._imp = new ClientPool()
         self._imp.config(CFG_HASH_FUNCTION, self.hash_fn)
         self.clients = []
 
-    def setup(self, IndexedClientClient* imp):
-        worker = __class__.worker(*self._args())
+    cdef setup(self, IndexedClient* imp):
+        worker = PyPoolClient(*self._args())
         worker._indexed = imp
-        worker._imp = imp.c
+        worker._imp = &imp.c
         return worker
 
     def acquire(self):
         worker = self._imp._acquire()
         if worker.index >= len(self.clients):
-            clients += [None] * (worker.index - len(self.clients))
-            clients.append(setup(worker))
+            self.clients += [None] * (worker.index - len(self.clients))
+            self.clients.append(self.setup(worker))
         elif self.clients[worker.index] == None:
-            self.clients[i] = setup(worker);
-        return self.clients[i]
+            self.clients[worker.index] = self.setup(worker)
+        return self.clients[worker.index]
 
     def release(self, PyPoolClient worker):
         self._imp._release(worker._indexed)
+
+    @contextmanager
+    def client(self):
+        try:
+            yield self.acquire()
+        finally:
+            self.release()

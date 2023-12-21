@@ -1,5 +1,5 @@
 //#include <execution>
-//#include <thread>
+#include <thread>
 #include <atomic>
 #include <array>
 #include "ClientPool.h"
@@ -63,8 +63,8 @@ int ClientPool::updateServers(const char* const* hosts, const uint32_t* ports,
 
   std::atomic<int> rv = 0;
   std::lock_guard<std::mutex> updating(m_fifo_access);
-  //std::for_each(std::execution::par_unseq, irange(), irange(m_clients.size()),
   std::for_each(irange(), irange(m_clients.size()),
+  //std::for_each(std::execution::par_unseq, irange(), irange(m_clients.size()),
                 [this, &rv](int i) {
     std::lock_guard<std::mutex> updating_worker(*m_thread_workers[i]);
     const int err = m_clients[i].c.updateServers(
@@ -92,8 +92,8 @@ int ClientPool::growPool(size_t by) {
   size_t from = m_clients.size();
   m_clients.resize(from + by);
   std::atomic<int> rv = 0;
-  //std::for_each(std::execution::par_unseq, irange(from), irange(from + by),
   std::for_each(irange(from), irange(from + by),
+  //std::for_each(std::execution::par_unseq, irange(from), irange(from + by),
                 [this, &rv](int i) {
     const int err = setup(&m_clients[i].c);
     m_clients[i].index = i;
@@ -125,9 +125,8 @@ IndexedClient* ClientPool::_acquire() {
   const auto growing = shouldGrowUnsafe();
   m_acquiring_growth.unlock_shared();
   if (growing) {
-    //std::thread acquire_overflow(&ClientPool::autoGrow, this);
-    //acquire_overflow.detach();
-    autoGrow();
+    std::thread acquire_overflow(&ClientPool::autoGrow, this);
+    acquire_overflow.detach();
   }
 
   int idx = acquireWorker();

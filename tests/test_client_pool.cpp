@@ -12,6 +12,7 @@ const unsigned int data_size = 10;
 const unsigned int n_servers = 20;
 const unsigned int start_port = 21211;
 const char host[] = "127.0.0.1";
+unsigned int n_threads = 8;
 
 TEST(test_client_pool, simple_set_get) {
   uint32_t ports[n_servers];
@@ -36,7 +37,7 @@ TEST(test_client_pool, simple_set_get) {
   const char* keys = &key[0];
   const char* values = &value[0];
 
-  for (unsigned int j = 0; j < n_ops; j++) {
+  for (unsigned int j = 0; j < n_ops * n_threads; j++) {
     gen_random(key, data_size);
     gen_random(value, data_size);
     auto c = pool->acquire();
@@ -52,7 +53,6 @@ TEST(test_client_pool, simple_set_get) {
 }
 
 TEST(test_client_pool, threaded_set_get) {
-  unsigned int n_threads = 8;
   uint32_t ports[n_servers];
   const char* hosts[n_servers];
   for (unsigned int i = 0; i < n_servers; i++) {
@@ -63,6 +63,7 @@ TEST(test_client_pool, threaded_set_get) {
   std::thread* threads = new std::thread[n_threads];
   ClientPool* pool = new ClientPool();
   pool->config(CFG_HASH_FUNCTION, OPT_HASH_FNV1A_32);
+  //pool->config(CFG_INITIAL_CLIENTS, 4);
   pool->init(hosts, ports, n_servers);
 
   for (unsigned int i = 0; i < n_threads; i++) {
