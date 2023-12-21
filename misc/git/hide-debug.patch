@@ -1,0 +1,10 @@
+--- a/setup.py
++++ b/setup.py
+@@ -129,7 +129,6 @@ setup(
+             include_dirs=include_dirs,
+             language="c++",
+             extra_compile_args=COMPILER_FLAGS,
+-            gdb_debug=True,
+         )
+     ],
+     tests_require=[
