@@ -1,6 +1,6 @@
 import os
 from ._client import (
-    PyClient, PyClientPool as ClientPool, ThreadUnsafe,
+    PyClient, PyClientPool, ThreadUnsafe,
     encode_value,
     decode_value,
 
@@ -39,6 +39,9 @@ __date__ = "Fri Dec  1 07:43:12 2023 +0800"
 
 
 class Client(PyClient):
+    pass
+
+class ClientPool(PyClientPool):
     pass
 
 
