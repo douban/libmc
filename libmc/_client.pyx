@@ -386,8 +386,6 @@ cdef class PyClientSettings:
         else:
             self.prefix = None
 
-        self.init()
-
     def _args(self):
         return (self.servers, self.do_split, self.comp_threshold, self.noreply,
                 self.prefix, self.hash_fn, self.failover, self.encoding)
@@ -402,7 +400,7 @@ cdef class PyClient(PyClientSettings):
     cdef object _thread_ident
     cdef object _created_stack
 
-    def init(self):
+    def __cinit__(self):
         self.last_error = RET_OK
         self._thread_ident = None
         self._created_stack = traceback.extract_stack()
@@ -1132,7 +1130,7 @@ cdef class PyClient(PyClientSettings):
 cdef class PyPoolClient(PyClient):
     cdef IndexedClient* _indexed
 
-    def init(self):
+    def __cinit__(self):
         self.last_error = RET_OK
         self._thread_ident = None
         self._created_stack = traceback.extract_stack()
@@ -1145,7 +1143,7 @@ cdef class PyClientPool(PyClientSettings):
     cdef list clients
     cdef ClientPool* _imp
 
-    cdef init(self):
+    def __cinit__(self):
         self._imp = new ClientPool()
         self._imp.config(CFG_HASH_FUNCTION, self.hash_fn)
         self.clients = []
