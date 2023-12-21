@@ -5,23 +5,13 @@
 #include <queue>
 #include <deque>
 #include <vector>
-#include <atomic>
-#include <memory>
-#include <list>
-#include <algorithm>
-
-#include <cstdarg>
-#include <unistd.h>
-#include <sys/syscall.h>
-#include <stdio.h>
-#include <assert.h>
 
 namespace douban {
 namespace mc {
 
 // https://stackoverflow.com/a/14792685/3476782
 class OrderedLock {
-  std::list<std::condition_variable*> m_fifo_locks;
+  std::queue<std::condition_variable*> m_fifo_locks;
 protected:
   std::mutex m_fifo_access;
   bool m_locked;
@@ -32,10 +22,9 @@ protected:
     std::unique_lock<std::mutex> acquire(m_fifo_access);
     if (m_locked) {
       std::condition_variable signal;
-      m_fifo_locks.emplace_back(&signal);
+      m_fifo_locks.emplace(&signal);
       signal.wait(acquire);
-      m_fifo_locks.pop_front();
-      assert(acquire.owns_lock());
+      m_fifo_locks.pop();
     } else {
       m_locked = true;
     }
@@ -86,9 +75,7 @@ protected:
     std::transform(
       muxes, muxes + n, std::back_inserter(m_thread_workers),
       static_cast<std::mutex*(*)(std::mutex&)>(std::addressof<std::mutex>));
-    for (int i = n; i > 0; i--) {
-      unlock();
-    }
+    unlock();
   }
 
   int acquireWorker() {
@@ -98,7 +85,6 @@ protected:
     if (!m_available.empty()) {
       unlock();
     }
-    assert(m_available.size() <= m_thread_workers.size());
     return res;
   }
 
