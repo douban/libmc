@@ -13,6 +13,8 @@
 #include <cstdarg>
 #include <unistd.h>
 #include <sys/syscall.h>
+#include <stdio.h>
+#include <assert.h>
 
 namespace douban {
 namespace mc {
@@ -21,7 +23,7 @@ namespace mc {
 
 // https://stackoverflow.com/a/14792685/3476782
 class OrderedLock {
-  std::queue<std::condition_variable*> m_fifo_locks;
+  std::list<std::condition_variable*> m_fifo_locks;
 protected:
   std::mutex m_fifo_access;
   bool m_locked;
@@ -33,9 +35,9 @@ protected:
     if (m_locked) {
       std::condition_variable signal;
       tprintf("locked %lu already waiting signal           %p\n", m_fifo_locks.size(), &signal);
-      m_fifo_locks.emplace(&signal);
+      m_fifo_locks.emplace_back(&signal);
       signal.wait(acquire);
-      signal.notify_one();
+      signal.notify_all();
       tprintf("unlocked %lu left waiting signal            %p\n", m_fifo_locks.size(), &signal);
       assert(acquire.owns_lock());
     } else {
@@ -51,10 +53,11 @@ protected:
       m_locked = false;
     } else {
       std::condition_variable* signal = m_fifo_locks.front();
-      m_fifo_locks.pop();
+      auto it = m_fifo_locks.begin();
       tprintf("unlocking with %d available %lu waiting lock %p\n", i, m_fifo_locks.size(), signal);
       signal->notify_one();
       signal->wait(acquire);
+      m_fifo_locks.erase(it);
     }
   }
 };
