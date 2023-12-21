@@ -82,7 +82,6 @@ TEST(test_client_pool, threaded_set_get) {
         gen_random(key, data_size);
         gen_random(value, data_size);
         auto c = pool->_acquire();
-        tprintf("acquired client %d\n", c->index);
         c->c.set(&keys, data_lens, flags, exptime, NULL, 0, &values, data_lens, 1, &m_results, &nResults);
         c->c.destroyMessageResult();
         c->c.get(&keys, data_lens, 1, &r_results, &nResults);

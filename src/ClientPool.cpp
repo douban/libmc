@@ -89,7 +89,6 @@ int ClientPool::growPool(size_t by) {
   assert(by > 0);
   std::lock_guard growing_pool(m_pool_lock);
   size_t from = m_clients.size();
-  tprintf("growing from %lu by %lu\n", from, by);
   m_clients.resize(from + by);
   std::atomic<int> rv = 0;
   //std::for_each(std::execution::par_unseq, irange(from), irange(from + by),
@@ -104,7 +103,6 @@ int ClientPool::growPool(size_t by) {
   // adds workers with non-zero return values
   // if changed, acquire should probably raise rather than hang
   addWorkers(by);
-  tprintf("size is now %lu\n", m_clients.size());
   return rv;
 }
 
