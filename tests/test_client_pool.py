@@ -12,6 +12,9 @@ class ThreadedSingleServerCase(unittest.TestCase):
         for i in range(5):
             self.test_misc()
 
+    def test_acquire(self):
+        assert self.pool.acquire() is not None
+
     def test_misc(self):
         with self.pool.client() as mc:
             tid = str(mc._get_current_thread_ident() + (i,))
