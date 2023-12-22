@@ -39,6 +39,6 @@ class ThreadedSingleServerCase(unittest.TestCase):
         ts = [Thread(target=self.misc) for i in range(8)]
         for t in ts:
             t.start()
-        
+
         for t in ts:
             t.join()
