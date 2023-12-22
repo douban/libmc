@@ -1167,7 +1167,7 @@ cdef class PyClientPool(PyClientSettings):
     cdef connect(self):
         rv = _update_servers(self._imp, self.servers, True)
 
-    def acquire(self):
+    cdef acquire(self):
         if not self._initialized:
             self.connect()
             self._initialized = True
@@ -1179,12 +1179,13 @@ cdef class PyClientPool(PyClientSettings):
             self.clients[worker.index] = self.setup(worker)
         return self.clients[worker.index]
 
-    def release(self, PyPoolClient worker):
+    cdef release(self, PyPoolClient worker):
         self._imp._release(worker._indexed)
 
     @contextmanager
     def client(self):
         try:
-            yield self.acquire()
+            worker = self.acquire()
+            yield worker
         finally:
-            self.release()
+            self.release(worker)
