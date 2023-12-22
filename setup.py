@@ -10,7 +10,6 @@ from distutils.version import LooseVersion
 from glob import glob
 from setuptools import setup, Extension
 from setuptools.command.test import test as TestCommand
-from Cython.Build import cythonize
 
 sources = (glob("src/*.cpp") + ["libmc/_client.pyx"])
 include_dirs = ["include"]
@@ -123,7 +122,7 @@ setup(
     # Support for the basestring type is new in Cython 0.20.
     setup_requires=["Cython >= 0.20"],
     cmdclass={"test": PyTest},
-    ext_modules=cythonize([
+    ext_modules=[
         Extension(
             "libmc._client",
             sources,
@@ -131,7 +130,7 @@ setup(
             language="c++",
             extra_compile_args=COMPILER_FLAGS,
         )
-    ], gdb_debug=True),
+    ],
     tests_require=[
         "pytest",
         "future",
