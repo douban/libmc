@@ -238,6 +238,9 @@ cdef extern from "ClientPool.h" namespace "douban::mc":
         IndexedClient* _acquire() nogil
         void _release(const IndexedClient* ref) nogil
 
+ctypedef fused Configurable:
+    Client
+    ClientPool
 
 cdef uint32_t MC_DEFAULT_PORT = 11211
 cdef flags_t _FLAG_EMPTY = 0
@@ -393,8 +396,45 @@ cdef class PyClientSettings:
     def __reduce__(self):
         return (self.__class__, self._args())
 
+cdef _update_servers(Configurable* imp, list servers, bool_t init):
+    cdef int rv = 0
+    cdef size_t n = len(servers)
+    cdef char** c_hosts = <char**>PyMem_Malloc(n * sizeof(char*))
+    cdef uint32_t* c_ports = <uint32_t*>PyMem_Malloc(n * sizeof(uint32_t))
+    cdef char** c_aliases = <char**>PyMem_Malloc(n * sizeof(char*))
 
-cdef class PyClient(PyClientSettings):
+    servers_ = []
+    for srv in servers:
+        if PY_MAJOR_VERSION > 2:
+            srv = PyUnicode_AsUTF8String(srv)
+        srv = PyString_AsString(srv)
+        servers_.append(srv)
+
+    Py_INCREF(servers_)
+    for i in range(n):
+        c_split = splitServerString(servers_[i])
+
+        c_hosts[i] = c_split.host
+        c_aliases[i] = c_split.alias
+        if c_split.port == NULL:
+            c_ports[i] = MC_DEFAULT_PORT
+        else:
+            c_ports[i] = PyInt_AsLong(int(<bytes>c_split.port))
+
+    if init:
+        rv = imp.init(c_hosts, c_ports, n, c_aliases)
+    else:
+        rv = imp.updateServers(c_hosts, c_ports, n, c_aliases)
+
+    PyMem_Free(c_hosts)
+    PyMem_Free(c_ports)
+    PyMem_Free(c_aliases)
+
+    Py_DECREF(servers_)
+
+    return rv
+
+cdef class PyClientShell(PyClientSettings):
     cdef Client* _imp
     cdef err_code_t last_error
     cdef object _thread_ident
@@ -405,57 +445,14 @@ cdef class PyClient(PyClientSettings):
         self._thread_ident = None
         self._created_stack = traceback.extract_stack()
 
-        self._imp = new Client()
-        self._imp.config(CFG_HASH_FUNCTION, self.hash_fn)
-        rv = self._update_servers(self.servers, True)
-        if self.failover:
-            self._imp.enableConsistentFailover()
-        else:
-            self._imp.disableConsistentFailover()
-
-    cdef _update_servers(self, list servers, bool_t init):
-        cdef int rv = 0
-        cdef size_t n = len(servers)
-        cdef char** c_hosts = <char**>PyMem_Malloc(n * sizeof(char*))
-        cdef uint32_t* c_ports = <uint32_t*>PyMem_Malloc(n * sizeof(uint32_t))
-        cdef char** c_aliases = <char**>PyMem_Malloc(n * sizeof(char*))
-
-        servers_ = []
-        for srv in servers:
-            if PY_MAJOR_VERSION > 2:
-                srv = PyUnicode_AsUTF8String(srv)
-            srv = PyString_AsString(srv)
-            servers_.append(srv)
-
-        Py_INCREF(servers_)
-        for i in range(n):
-            c_split = splitServerString(servers_[i])
-
-            c_hosts[i] = c_split.host
-            c_aliases[i] = c_split.alias
-            if c_split.port == NULL:
-                c_ports[i] = MC_DEFAULT_PORT
-            else:
-                c_ports[i] = PyInt_AsLong(int(<bytes>c_split.port))
-
-        if init:
-            rv = self._imp.init(c_hosts, c_ports, n, c_aliases)
-        else:
-            rv = self._imp.updateServers(c_hosts, c_ports, n, c_aliases)
-
-        PyMem_Free(c_hosts)
-        PyMem_Free(c_ports)
-        PyMem_Free(c_aliases)
-
-        Py_DECREF(servers_)
-
-        return rv
-
     def __dealloc__(self):
         del self._imp
 
     def config(self, int opt, int val):
         self._imp.config(<config_options_t>opt, val)
+
+    cdef connect(self):
+        rv = _update_servers(self._imp, self.servers, True)
 
     def get_host_by_key(self, basestring key):
         cdef bytes key2 = self.normalize_key(key)
@@ -1126,18 +1123,22 @@ cdef class PyClient(PyClientSettings):
     def get_last_strerror(self):
         return errCodeToString(self.last_error)
 
-
-cdef class PyPoolClient(PyClient):
-    cdef IndexedClient* _indexed
-
+cdef class PyClient(PyClientShell):
     def __cinit__(self):
-        self.last_error = RET_OK
-        self._thread_ident = None
-        self._created_stack = traceback.extract_stack()
+        self._imp = new Client()
+        self._imp.config(CFG_HASH_FUNCTION, self.hash_fn)
+        self.connect()
+
+        if self.failover:
+            self._imp.enableConsistentFailover()
+        else:
+            self._imp.disableConsistentFailover()
+
+cdef class PyPoolClient(PyClientShell):
+    cdef IndexedClient* _indexed
 
     def _check_thread_ident(self):
         pass
-
 
 cdef class PyClientPool(PyClientSettings):
     cdef list clients
@@ -1145,8 +1146,17 @@ cdef class PyClientPool(PyClientSettings):
 
     def __cinit__(self):
         self._imp = new ClientPool()
-        self._imp.config(CFG_HASH_FUNCTION, self.hash_fn)
+        self.config(CFG_HASH_FUNCTION, self.hash_fn)
+        self._initialized = False
         self.clients = []
+
+        if self.failover:
+            self.config(CFG_SET_FAILOVER, 1)
+        else:
+            self.config(CFG_SET_FAILOVER, 0)
+
+    def config(self, int opt, int val):
+        self._imp.config(<config_options_t>opt, val)
 
     cdef setup(self, IndexedClient* imp):
         worker = PyPoolClient(*self._args())
@@ -1154,7 +1164,13 @@ cdef class PyClientPool(PyClientSettings):
         worker._imp = &imp.c
         return worker
 
+    cdef connect(self):
+        rv = _update_servers(self._imp, self.servers, True)
+
     def acquire(self):
+        if not self._initialized:
+            self.connect()
+            self._initialized = True
         worker = self._imp._acquire()
         if worker.index >= len(self.clients):
             self.clients += [None] * (worker.index - len(self.clients))
