@@ -131,6 +131,18 @@ case "$1" in
         shift
         capture $@
         ;;
+    cy-debug)
+        DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+        cd "$DIR/.."
+        git apply misc/git/debug.patch -q --recount || true
+        sh misc/git/pre-commit.sh
+        if [ -n "$2" ]; then 
+            shift
+            cygdb . -- --args pythong-gdb setup.py test -a "-k $@"
+        else
+            cygdb . -- --args pythong-gdb setup.py test
+        fi
+        ;;
     *)
         printf 'Usage: %s {start|stop|restart} <port>\n' "$prog"
         exit 1
