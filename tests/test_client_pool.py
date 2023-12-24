@@ -36,7 +36,7 @@ class ThreadedSingleServerCase(unittest.TestCase):
             assert (mc.get_multi([f, t]) ==
                     {f: 1024, t: '8964'})
 
-    def test_misc_threaded(self):
+    def test_pool_client_threaded(self):
         ts = [Thread(target=self.misc) for i in range(8)]
         for t in ts:
             t.start()

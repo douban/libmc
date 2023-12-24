@@ -55,6 +55,19 @@ function stop()
     fi
 }
 
+function capture()
+{
+    start=`echo $PORTS | cut -d' ' -f1`
+    host="${1:-${start}}"
+    proxy=31311
+    default=$((proxy+host-start))
+    port="${2:-${default}}"
+    output="$basedir/var/log/$host.log"
+    $cmd -d -u $USER -l $ip -t $threads -m ${memory} -p $port -P $basedir/var/run/${port}.pid > $basedir/var/log/${port}.log 2>&1
+    ncat --sh-exec "ncat localhost ${port}" -l ${host} --keep-open -o "$output" --append-output &
+    echo $! > "$basedir/var/run/${host}.pid"
+}
+
 case "$1" in
     start) 
         if [ -n "$2" ]; then
@@ -103,13 +116,20 @@ case "$1" in
         ;;
     stopall)
         if [ `ls $basedir/var/run/ | grep -c .pid` -ge 1 ]; then
-            names="`basename $basedir/var/run/*.pid | cut -d. -f1`"
-            for name in $names; do
-                stop $name &
+            # names="`basename $basedir/var/run/*.pid | cut -d. -f1`"
+            # for name in $names; do
+            #     stop $name &
+            # done
+            for f in $basedir/var/run/*.pid; do
+                cat "$f" | xargs kill
             done
         fi
-        wait
+        # wait
         rm -rf $basedir
+        ;;
+    capture)
+        shift
+        capture $@
         ;;
     *)
         printf 'Usage: %s {start|stop|restart} <port>\n' "$prog"
