@@ -1,6 +1,6 @@
 #!/bin/sh
 
-DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+DIR=$( cd -- "$( dirname -- `readlink -f "${BASH_SOURCE[0]}"` )" &> /dev/null && pwd )
 HOOK="$DIR/../../.git/hooks/pre-commit"
 
 [[ ! -e "$HOOK" ]] && ln -s "$DIR/pre-commit.sh" "$HOOK"

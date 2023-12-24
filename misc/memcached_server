@@ -136,11 +136,14 @@ case "$1" in
         cd "$DIR/.."
         git apply misc/git/debug.patch -q --recount || true
         sh misc/git/pre-commit.sh
+        if [ ! -e venv ]; then python -m virtualenv --python="`which python-dbg`" venv; fi
+        source venv/bin/activate
+        pip install Cython setuptools future pytest greenify gevent numpy
         if [ -n "$2" ]; then 
             shift
-            cygdb . -- --args pythong-gdb setup.py test -a "-k $@"
+            cygdb . --skip-interpreter -- --args python-dbg setup.py test -a "$*"
         else
-            cygdb . -- --args pythong-gdb setup.py test
+            cygdb . --skip-interpreter -- --args python-dbg setup.py test
         fi
         ;;
     *)
