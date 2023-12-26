@@ -132,18 +132,25 @@ case "$1" in
         capture $@
         ;;
     cy-debug)
-        DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+        DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
         cd "$DIR/.."
-        git apply misc/git/debug.patch -q --recount || true
-        sh misc/git/pre-commit.sh
-        if [ ! -e venv ]; then python -m virtualenv --python="`which python-dbg`" venv; fi
-        source venv/bin/activate
-        pip install Cython setuptools future pytest greenify gevent numpy
-        if [ -n "$2" ]; then 
-            shift
-            cygdb . --skip-interpreter -- --args python-dbg setup.py test -a "$*"
+        git apply misc/git/debug.patch --recount &> /dev/null || true
+        source misc/git/pre-commit
+        if [ ! -e venv ]; then
+            dbg="`which python-dbg || which python3-dbg`"
+            python -m virtualenv --python="$dbg" --seeder=pip venv;
+            source venv/bin/activate
+            pip install -U pip
+            pip install Cython setuptools future pytest greenify gevent numpy
         else
-            cygdb . --skip-interpreter -- --args python-dbg setup.py test
+            source venv/bin/activate
+        fi
+        dbg="`which python-dbg || which python3-dbg`"
+        if [ -n "$2" ]; then
+            shift
+            cygdb . --skip-interpreter -- --args "$dbg" setup.py test -a "$*"
+        else
+            cygdb . --skip-interpreter -- --args "$dbg" setup.py test
         fi
         ;;
     *)
