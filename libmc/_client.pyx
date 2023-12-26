@@ -432,7 +432,11 @@ cdef _update_servers(Configurable* imp, list servers, bool_t init):
 
     Py_DECREF(servers_)
 
-    return rv
+    if rv + len(servers) == 0:
+        return True
+    elif init:
+        warnings.warn("Client failed to initialize")
+    return False
 
 cdef class PyClientShell(PyClientSettings):
     cdef Client* _imp
@@ -450,9 +454,6 @@ cdef class PyClientShell(PyClientSettings):
 
     def config(self, int opt, int val):
         self._imp.config(<config_options_t>opt, val)
-
-    cdef connect(self):
-        rv = _update_servers(self._imp, self.servers, True)
 
     def get_host_by_key(self, basestring key):
         cdef bytes key2 = self.normalize_key(key)
@@ -1113,13 +1114,6 @@ cdef class PyClientShell(PyClientSettings):
     def get_last_error(self):
         return self.last_error
 
-    def update_servers(self, servers):
-        rv = _update_servers(servers, self._imp, False)
-        if rv + len(servers) == 0:
-            self.servers = servers
-            return True
-        return False
-
     def get_last_strerror(self):
         return errCodeToString(self.last_error)
 
@@ -1133,6 +1127,15 @@ cdef class PyClient(PyClientShell):
             self._imp.enableConsistentFailover()
         else:
             self._imp.disableConsistentFailover()
+
+    cdef connect(self):
+        return _update_servers(self._imp, self.servers, True)
+
+    def update_servers(self, servers):
+        if _update_servers(self._imp, servers, False):
+            self.servers = servers
+            return True
+        return False
 
 cdef class PyPoolClient(PyClientShell):
     cdef IndexedClient* _indexed
@@ -1164,9 +1167,6 @@ cdef class PyClientPool(PyClientSettings):
         worker._imp = &imp.c
         return worker
 
-    cdef connect(self):
-        rv = _update_servers(self._imp, self.servers, True)
-
     cdef acquire(self):
         if not self._initialized:
             self.connect()
@@ -1189,3 +1189,13 @@ cdef class PyClientPool(PyClientSettings):
             yield worker
         finally:
             self.release(worker)
+
+    # repeated from PyClient because cython can't handle fused types in classes
+    cdef connect(self):
+        return _update_servers(self._imp, self.servers, True)
+
+    def update_servers(self, servers):
+        if _update_servers(self._imp, servers, False):
+            self.servers = servers
+            return True
+        return False
