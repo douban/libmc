@@ -1114,7 +1114,7 @@ cdef class PyClientShell(PyClientSettings):
         return self.last_error
 
     def update_servers(self, servers):
-        rv = self._update_servers(servers, False)
+        rv = _update_servers(servers, self._imp, False)
         if rv + len(servers) == 0:
             self.servers = servers
             return True
