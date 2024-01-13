@@ -1191,6 +1191,7 @@ cdef class PyClientPool(PyClientSettings):
             self.release(worker)
 
     # repeated from PyClient because cython can't handle fused types in classes
+    # https://github.com/cython/cython/issues/3283
     cdef connect(self):
         return _update_servers(self._imp, self.servers, True)
 

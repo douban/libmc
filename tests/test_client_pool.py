@@ -18,8 +18,9 @@ class ThreadedSingleServerCase(unittest.TestCase):
 
     def test_pool_client_misc(self, i=0):
         with self.pool.client() as mc:
-            tid = str(mc._get_current_thread_ident() + (i,))
-            f, t = 'foo ' + tid, 'tuiche ' + tid
+            tid = mc._get_current_thread_ident() + (i,)
+            tid = "_".join(map(str, tid))
+            f, t = 'foo_' + tid, 'tuiche_' + tid
             mc.get_multi([f, t])
             mc.delete(f)
             mc.delete(t)
