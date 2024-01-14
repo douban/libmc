@@ -5,6 +5,7 @@
 #include <queue>
 #include <deque>
 #include <vector>
+#include <atomic>
 
 namespace douban {
 namespace mc {
@@ -14,7 +15,7 @@ class OrderedLock {
   std::queue<std::condition_variable*> m_fifo_locks;
 protected:
   std::mutex m_fifo_access;
-  bool m_locked;
+  std::atomic<bool> m_locked;
 
 protected:
   OrderedLock() : m_locked(true) {};

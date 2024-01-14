@@ -1,6 +1,5 @@
 //#include <execution>
 #include <thread>
-#include <atomic>
 #include "ClientPool.h"
 
 namespace douban {

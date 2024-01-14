@@ -449,9 +449,6 @@ cdef class PyClientShell(PyClientSettings):
         self._thread_ident = None
         self._created_stack = traceback.extract_stack()
 
-    def __dealloc__(self):
-        del self._imp
-
     def config(self, int opt, int val):
         self._imp.config(<config_options_t>opt, val)
 
@@ -1109,7 +1106,7 @@ cdef class PyClientShell(PyClientSettings):
                                 self._get_current_thread_ident()))
 
     def _get_current_thread_ident(self):
-        return (os.getpid(), threading.current_thread().name)
+        return (os.getpid(), threading.current_thread().native_id)
 
     def get_last_error(self):
         return self.last_error
@@ -1136,6 +1133,9 @@ cdef class PyClient(PyClientShell):
             self.servers = servers
             return True
         return False
+
+    def __dealloc__(self):
+        del self._imp
 
 cdef class PyPoolClient(PyClientShell):
     cdef IndexedClient* _indexed
@@ -1172,6 +1172,8 @@ cdef class PyClientPool(PyClientSettings):
             self.connect()
             self._initialized = True
         worker = self._imp._acquire()
+        return self.setup(worker)
+        # prone to race conditions pending mux and possibly fails to update
         if worker.index >= len(self.clients):
             self.clients += [None] * (worker.index - len(self.clients))
             self.clients.append(self.setup(worker))
@@ -1184,8 +1186,8 @@ cdef class PyClientPool(PyClientSettings):
 
     @contextmanager
     def client(self):
+        worker = self.acquire()
         try:
-            worker = self.acquire()
             yield worker
         finally:
             self.release(worker)
@@ -1200,3 +1202,6 @@ cdef class PyClientPool(PyClientSettings):
             self.servers = servers
             return True
         return False
+
+    def __dealloc__(self):
+        del self._imp

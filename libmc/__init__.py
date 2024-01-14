@@ -1,4 +1,4 @@
-import os
+import os, functools
 from ._client import (
     PyClient, PyClientPool, ThreadUnsafe,
     encode_value,
@@ -44,12 +44,32 @@ class Client(PyClient):
 class ClientPool(PyClientPool):
     pass
 
+class ThreadedClient():
+    @functools.wraps(ClientPool.__init__)
+    def __init__(self, *args, **kwargs):
+        self._client_pool = ClientPool(*args, **kwargs)
+
+    def update_servers(self, servers):
+        return self._client_pool.update_servers(servers)
+
+    def __getattr__(self, key):
+        if not hasattr(Client, key):
+            raise AttributeError
+        result = getattr(Client, key)
+        if callable(result):
+            @functools.wraps(result)
+            def wrapper(*args, **kwargs):
+                with self._client_pool.client() as mc:
+                    return getattr(mc, key)(*args, **kwargs)
+            return wrapper
+        return result
+
 
 DYNAMIC_LIBRARIES = [os.path.abspath(_libmc_so_file)]
 
 
 __all__ = [
-    'Client', 'ClientPool', 'ThreadUnsafe', '__VERSION__',
+    'Client', 'ClientPool', 'ThreadedClient', 'ThreadUnsafe', '__VERSION__',
     'encode_value', 'decode_value',
 
     'MC_DEFAULT_EXPTIME', 'MC_POLL_TIMEOUT', 'MC_CONNECT_TIMEOUT',

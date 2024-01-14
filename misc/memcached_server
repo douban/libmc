@@ -153,6 +153,11 @@ case "$1" in
             cygdb . --skip-interpreter -- --args "$dbg" setup.py test
         fi
         ;;
+    run-test)
+        cd "$( dirname "${BASH_SOURCE[0]}" )/.." &> /dev/null
+        shift
+        python setup.py test -a "-k $*"
+        ;;
     *)
         printf 'Usage: %s {start|stop|restart} <port>\n' "$prog"
         exit 1
