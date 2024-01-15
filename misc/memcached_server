@@ -138,7 +138,7 @@ case "$1" in
         source misc/git/pre-commit
         if [ ! -e venv ]; then
             dbg="`which python-dbg || which python3-dbg`"
-            python -m virtualenv --python="$dbg" --seeder=pip venv;
+            $dbg -m virtualenv --python="$dbg" --seeder=pip venv;
             source venv/bin/activate
             pip install -U pip
             pip install Cython setuptools future pytest greenify gevent numpy
@@ -148,7 +148,8 @@ case "$1" in
         dbg="`which python-dbg || which python3-dbg`"
         if [ -n "$2" ]; then
             shift
-            cygdb . --skip-interpreter -- -ex start --args "$dbg" setup.py test -a "$*"
+            cygdb . --skip-interpreter -- -ex "cy break libmc._client.PyClientPool.setup" -ex start --args "$dbg" setup.py test -a "$*"
+            # cygdb . --skip-interpreter -- -ex start --args "$dbg" setup.py test -a "$*"
         else
             cygdb . --skip-interpreter -- -ex start --args "$dbg" setup.py test
         fi
