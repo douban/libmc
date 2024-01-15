@@ -41,8 +41,6 @@ class ThreadedSingleServerCase(unittest.TestCase, ClientOps):
             self.test_pool_client_misc(i)
 
     def test_pool_client_misc(self, i=0):
-        with open('debug.log', 'w') as f:
-            f.write("stdout working\n")
         with self.pool.client() as mc:
             self.client_misc(mc, i)
 
@@ -51,8 +49,6 @@ class ThreadedSingleServerCase(unittest.TestCase, ClientOps):
             pass
 
     def test_pool_client_threaded(self):
-        with open('debug.log', 'w') as f:
-            f.write("stdout working\n")
         self.client_threads(self.misc)
 
 class ThreadedClientWrapperCheck(unittest.TestCase, ClientOps):

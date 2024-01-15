@@ -163,3 +163,4 @@ case "$1" in
         exit 1
         ;;
 esac
+# cy break libmc._client.PyClientPool.setup

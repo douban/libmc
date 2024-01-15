@@ -1164,17 +1164,9 @@ cdef class PyClientPool(PyClientSettings):
         self._imp.config(<config_options_t>opt, val)
 
     cdef setup(self, IndexedClient* imp):
-        with open('debug.log', 'a') as f:
-            f.write("a")
         worker = PyPoolClient(*self._args())
-        with open('debug.log', 'a') as f:
-            f.write("b")
         worker._indexed = imp
-        with open('debug.log', 'a') as f:
-            f.write("c")
         worker._imp = &imp.c
-        with open('debug.log', 'a') as f:
-            f.write("d")
         return worker
 
     cdef acquire(self):
@@ -1182,8 +1174,6 @@ cdef class PyClientPool(PyClientSettings):
         #     self.connect()
         #     self._initialized = True
         worker = self._imp._acquire()
-        with open('debug.log', 'a') as f:
-            f.write("index: " + repr(worker.index) + "\n")
         return self.setup(worker)
         # prone to race conditions pending mux and possibly fails to update
         if worker.index >= len(self.clients):
@@ -1199,8 +1189,6 @@ cdef class PyClientPool(PyClientSettings):
     @contextmanager
     def client(self):
         worker = self.acquire()
-        with open('debug.log', 'a') as f:
-            f.write("worker:" + repr(worker) + "\n")
         try:
             yield worker
         finally:
