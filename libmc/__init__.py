@@ -44,7 +44,7 @@ class Client(PyClient):
 class ClientPool(PyClientPool):
     pass
 
-class ThreadedClient():
+class ThreadedClient:
     @functools.wraps(ClientPool.__init__)
     def __init__(self, *args, **kwargs):
         self._client_pool = ClientPool(*args, **kwargs)

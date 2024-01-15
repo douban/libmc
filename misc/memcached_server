@@ -148,9 +148,9 @@ case "$1" in
         dbg="`which python-dbg || which python3-dbg`"
         if [ -n "$2" ]; then
             shift
-            cygdb . --skip-interpreter -- --args "$dbg" setup.py test -a "$*"
+            cygdb . --skip-interpreter -- -ex start --args "$dbg" setup.py test -a "$*"
         else
-            cygdb . --skip-interpreter -- --args "$dbg" setup.py test
+            cygdb . --skip-interpreter -- -ex start --args "$dbg" setup.py test
         fi
         ;;
     run-test)
