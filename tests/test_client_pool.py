@@ -53,7 +53,8 @@ class ClientOps:
         errs = []
         def passthrough(args):
             _, e, tb, t = args
-            e.add_note("Occurred in thread " + str(t))
+            if hasattr(e, "add_note"):
+                e.add_note("Occurred in thread " + str(t))
             errs.append(e.with_traceback(tb))
 
         threading.excepthook = passthrough
@@ -65,8 +66,10 @@ class ClientOps:
             t.join()
 
         if errs:
-            errs[0].add_note(f"Along with {len(errs)} errors in other threads")
-            raise errs[0]
+            e = errs[0]
+            if hasattr(e, "add_note"):
+                e.add_note(f"Along with {len(errs)} errors in other threads")
+            raise e
 
 class ThreadedSingleServerCase(unittest.TestCase, ClientOps):
     def setUp(self):
