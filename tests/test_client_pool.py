@@ -1,7 +1,13 @@
 # coding: utf-8
 import unittest
 import threading
+import functools
 from libmc import ClientPool, ThreadedClient
+
+@functools.wraps(print)
+def threaded_print(*args, **kwargs):
+    with open('/tmp/debug.log', 'a+') as fp:
+        print(*args, **kwargs, file=fp)
 
 class ClientOps:
     def client_misc(self, mc, i=0):
@@ -25,10 +31,11 @@ class ClientOps:
                 {f: 1024, t: '8964'})
 
     def client_threads(self, target):
+        errs = []
         def passthrough(args):
             _, e, tb, t = args
             e.add_note("Occurred in thread " + str(t))
-            raise e.with_traceback(tb)
+            errs.append(e.with_traceback(tb))
 
         threading.excepthook = passthrough
         ts = [threading.Thread(target=target) for i in range(8)]
@@ -37,6 +44,10 @@ class ClientOps:
 
         for t in ts:
             t.join()
+
+        if errs:
+            errs[0].add_note(f"Along with {len(errs)} errors in other threads")
+            raise errs[0]
 
 class ThreadedSingleServerCase(unittest.TestCase, ClientOps):
     def setUp(self):
