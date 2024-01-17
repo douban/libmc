@@ -4,7 +4,26 @@ import threading
 import functools
 from libmc import ClientPool, ThreadedClient
 
+def setup_loging(f):
+    g = None
+
+    @functools.wraps(f)
+    def wrapper(*args, **kwargs):
+        return g(*args, **kwargs)
+
+    @functools.wraps(f)
+    def begin(*args, **kwargs):
+        nonlocal g
+        with open("/tmp/debug.log", "w+") as fp:
+            fp.write("")
+        g = f
+        return wrapper(*args, **kwargs)
+
+    g = begin
+    return wrapper
+
 @functools.wraps(print)
+@setup_loging
 def threaded_print(*args, **kwargs):
     with open('/tmp/debug.log', 'a+') as fp:
         print(*args, **kwargs, file=fp)
