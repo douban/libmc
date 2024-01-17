@@ -447,7 +447,6 @@ cdef class PyClientShell(PyClientSettings):
     def __cinit__(self):
         self.last_error = RET_OK
         self._thread_ident = None
-        self._created_stack = traceback.extract_stack()
 
     def config(self, int opt, int val):
         self._imp.config(<config_options_t>opt, val)
@@ -1116,6 +1115,7 @@ cdef class PyClientShell(PyClientSettings):
 
 cdef class PyClient(PyClientShell):
     def __cinit__(self):
+        self._created_stack = traceback.extract_stack()
         self._imp = new Client()
         self._imp.config(CFG_HASH_FUNCTION, self.hash_fn)
         self.connect()

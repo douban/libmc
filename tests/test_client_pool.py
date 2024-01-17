@@ -1,6 +1,6 @@
 # coding: utf-8
 import unittest
-from threading import Thread
+import threading
 from libmc import ClientPool, ThreadedClient
 
 class ClientOps:
@@ -25,7 +25,13 @@ class ClientOps:
                 {f: 1024, t: '8964'})
 
     def client_threads(self, target):
-        ts = [Thread(target=target) for i in range(8)]
+        def passthrough(args):
+            _, e, tb, t = args
+            e.add_note("Occurred in thread " + str(t))
+            raise e.with_traceback(tb)
+
+        threading.excepthook = passthrough
+        ts = [threading.Thread(target=target) for i in range(8)]
         for t in ts:
             t.start()
 

@@ -150,7 +150,6 @@ case "$1" in
         $dbg setup.py build_ext --inplace
         if [ -n "$2" ]; then
             shift
-            # cygdb . --skip-interpreter -- -ex "cy break libmc._client.PyClientPool.setup" -ex start --args "$dbg" setup.py test -a "$*"
             cygdb . --skip-interpreter -- -ex start --args "$dbg" setup.py test -a "$*"
         else
             cygdb . --skip-interpreter -- -ex start --args "$dbg" setup.py test
