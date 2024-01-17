@@ -68,6 +68,20 @@ function capture()
     echo $! > "$basedir/var/run/${host}.pid"
 }
 
+function virtualize()
+{
+    if [ ! -e venv ]; then
+        dbg="${1:-`which python-dbg || which python3-dbg`}"
+        $dbg -m pip install virtualenv
+        $dbg -m virtualenv --python="$dbg" --seeder=pip venv;
+        source venv/bin/activate
+        pip install -U pip
+        pip install Cython setuptools future pytest greenify gevent numpy
+    else
+        source venv/bin/activate
+    fi
+}
+
 case "$1" in
     start) 
         if [ -n "$2" ]; then
@@ -136,16 +150,7 @@ case "$1" in
         cd "$DIR/.."
         git apply misc/git/debug.patch --recount &> /dev/null || true
         source misc/git/pre-commit
-        if [ ! -e venv ]; then
-            dbg="`which python-dbg || which python3-dbg`"
-            $dbg -m pip install virtualenv
-            $dbg -m virtualenv --python="$dbg" --seeder=pip venv;
-            source venv/bin/activate
-            pip install -U pip
-            pip install Cython setuptools future pytest greenify gevent numpy
-        else
-            source venv/bin/activate
-        fi
+        virtualize
         dbg="`which python-dbg || which python3-dbg`"
         $dbg setup.py build_ext --inplace
         if [ -n "$2" ]; then
@@ -157,6 +162,7 @@ case "$1" in
         ;;
     run-test)
         cd "$( dirname "${BASH_SOURCE[0]}" )/.." &> /dev/null
+        virtualize "`which python 2>/dev/null`"
         shift
         python setup.py test -a "-k $*"
         ;;
