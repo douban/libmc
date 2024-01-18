@@ -1,25 +1,82 @@
+diff --git a/setup.py b/setup.py
+index c9807b9..359a04c 100644
 --- a/setup.py
 +++ b/setup.py
-@@ -10,6 +10,7 @@ from distutils.version import LooseVersion
+@@ -10,18 +10,34 @@ from distutils.version import LooseVersion
  from glob import glob
  from setuptools import setup, Extension
  from setuptools.command.test import test as TestCommand
++from setuptools.command.build_ext import build_ext
 +from Cython.Build import cythonize
  
  sources = (glob("src/*.cpp") + ["libmc/_client.pyx"])
  include_dirs = ["include"]
-@@ -122,7 +123,7 @@ setup(
+ 
+ COMPILER_FLAGS = [
+-    "-fno-strict-aliasing",
+-    "-fno-exceptions",
+-    "-fno-rtti",
++    "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
++    "-march=x86-64",
++    "-mtune=generic",
++    "-pipe",
++    "-Wp,-D_FORTIFY_SOURCE=2",
++    "-Werror=format-security",
++    "-fPIC",
+     "-Wall",
++    "-Wextra",
++    "-fno-rtti",
++    "-fno-exceptions",
++    "-DDEBUG",
++    "-g3",
++    "-Og",
++    "-fno-strict-aliasing",
+     "-DMC_USE_SMALL_VECTOR",
+-    "-O3",
+-    "-DNDEBUG",
++]
++LINKER_FLAGS = [
++    "-shared",
++    "-g3",
++    "-Wl,-O0,--sort-common,--as-needed,-z,relro,-z,now"
+ ]
+ 
+ 
+@@ -91,6 +107,18 @@ class PyTest(TestCommand):
+         errno = pytest.main(shlex.split(self.pytest_args))
+         sys.exit(errno)
+ 
++# https://shwina.github.io/custom-compiler-linker-extensions/
++class BlankBuildExt(build_ext):
++    def build_extensions(self):
++        # Override the compiler executables. Importantly, this
++        # removes the "default" compiler flags that would
++        # otherwise get passed on to to the compiler, i.e.,
++        # distutils.sysconfig.get_var("CFLAGS").
++        self.compiler.set_executable("compiler_so", "gcc")
++        self.compiler.set_executable("compiler_cxx", "gcc")
++        self.compiler.set_executable("linker_so", "gcc")
++        build_ext.build_extensions(self)
++
+ 
+ setup(
+     name="libmc",
+@@ -121,16 +149,18 @@ setup(
+     ],
      # Support for the basestring type is new in Cython 0.20.
      setup_requires=["Cython >= 0.20"],
-     cmdclass={"test": PyTest},
+-    cmdclass={"test": PyTest},
 -    ext_modules=[
++    cmdclass={"test": PyTest, "build_ext": BlankBuildExt},
++    zip_safe=False,
 +    ext_modules=cythonize([
          Extension(
              "libmc._client",
              sources,
-@@ -130,7 +131,7 @@ setup(
+             include_dirs=include_dirs,
              language="c++",
              extra_compile_args=COMPILER_FLAGS,
++            extra_link_args=LINKER_FLAGS
          )
 -    ],
 +    ], gdb_debug=True),
