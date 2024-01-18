@@ -1,8 +1,15 @@
 diff --git a/setup.py b/setup.py
-index c9807b9..359a04c 100644
+index c9807b9..b3a915b 100644
 --- a/setup.py
 +++ b/setup.py
-@@ -10,18 +10,34 @@ from distutils.version import LooseVersion
+@@ -5,23 +5,43 @@ import sys
+ import shlex
+ import pkg_resources
+ import platform
++import functools
++import inspect
+ from distutils.sysconfig import get_config_var
+ from distutils.version import LooseVersion
  from glob import glob
  from setuptools import setup, Extension
  from setuptools.command.test import test as TestCommand
@@ -12,28 +19,27 @@ index c9807b9..359a04c 100644
  sources = (glob("src/*.cpp") + ["libmc/_client.pyx"])
  include_dirs = ["include"]
  
- COMPILER_FLAGS = [
--    "-fno-strict-aliasing",
--    "-fno-exceptions",
--    "-fno-rtti",
++COMPILER_PREARGS = [
 +    "-DDYNAMIC_ANNOTATIONS_ENABLED=1",
++    "-g3",
++    "-Og",
++    "-Wall",
 +    "-march=x86-64",
 +    "-mtune=generic",
 +    "-pipe",
 +    "-Wp,-D_FORTIFY_SOURCE=2",
 +    "-Werror=format-security",
 +    "-fPIC",
++]
+ COMPILER_FLAGS = [
+     "-fno-strict-aliasing",
+     "-fno-exceptions",
+     "-fno-rtti",
      "-Wall",
-+    "-Wextra",
-+    "-fno-rtti",
-+    "-fno-exceptions",
-+    "-DDEBUG",
-+    "-g3",
-+    "-Og",
-+    "-fno-strict-aliasing",
      "-DMC_USE_SMALL_VECTOR",
 -    "-O3",
 -    "-DNDEBUG",
++    "-DDEBUG",
 +]
 +LINKER_FLAGS = [
 +    "-shared",
@@ -42,26 +48,33 @@ index c9807b9..359a04c 100644
  ]
  
  
-@@ -91,6 +107,18 @@ class PyTest(TestCommand):
+@@ -91,6 +111,25 @@ class PyTest(TestCommand):
          errno = pytest.main(shlex.split(self.pytest_args))
          sys.exit(errno)
  
 +# https://shwina.github.io/custom-compiler-linker-extensions/
 +class BlankBuildExt(build_ext):
 +    def build_extensions(self):
-+        # Override the compiler executables. Importantly, this
-+        # removes the "default" compiler flags that would
-+        # otherwise get passed on to to the compiler, i.e.,
-+        # distutils.sysconfig.get_var("CFLAGS").
++        orig = self.compiler.compile
++
++        @functools.wraps(orig)
++        def prearg_compile(*args, **kwargs):
++            bound = inspect.Signature.from_callable(orig).bind(*args, **kwargs)
++            bound.apply_defaults()
++            bound.arguments["extra_preargs"] = COMPILER_PREARGS
++            return orig(*bound.args, **bound.kwargs)
++
++        self.compiler.compile = prearg_compile
++
 +        self.compiler.set_executable("compiler_so", "gcc")
-+        self.compiler.set_executable("compiler_cxx", "gcc")
-+        self.compiler.set_executable("linker_so", "gcc")
++        #self.compiler.set_executable("compiler_cxx", "gcc")
++        self.compiler.set_executable("linker_so", "g++")
 +        build_ext.build_extensions(self)
 +
  
  setup(
      name="libmc",
-@@ -121,16 +149,18 @@ setup(
+@@ -121,16 +160,18 @@ setup(
      ],
      # Support for the basestring type is new in Cython 0.20.
      setup_requires=["Cython >= 0.20"],

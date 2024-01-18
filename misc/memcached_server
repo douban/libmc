@@ -152,6 +152,7 @@ case "$1" in
         source misc/git/pre-commit
         virtualize
         dbg="`which python-dbg || which python3-dbg`"
+        make clean
         $dbg setup.py build_ext --inplace
         if [ -n "$2" ]; then
             shift
