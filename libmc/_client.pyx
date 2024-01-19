@@ -458,8 +458,7 @@ cdef class PyClientShell(PyClientSettings):
         cdef size_t c_key_len = 0
         Py_INCREF(key2)
         PyString_AsStringAndSize(key2, &c_key, <Py_ssize_t*>&c_key_len)
-        with nogil:
-            c_addr = self._imp.getServerAddressByKey(c_key, c_key_len)
+        c_addr = self._imp.getServerAddressByKey(c_key, c_key_len)
         cdef basestring server_addr = c_addr
         Py_DECREF(key2)
         return server_addr
@@ -471,8 +470,7 @@ cdef class PyClientShell(PyClientSettings):
         cdef size_t c_key_len = 0
         Py_INCREF(key2)
         PyString_AsStringAndSize(key2, &c_key, <Py_ssize_t*>&c_key_len)
-        with nogil:
-            c_addr = self._imp.getRealtimeServerAddressByKey(c_key, c_key_len)
+        c_addr = self._imp.getRealtimeServerAddressByKey(c_key, c_key_len)
         Py_DECREF(key2)
         cdef basestring server_addr
         if c_addr != NULL:
@@ -500,13 +498,12 @@ cdef class PyClientShell(PyClientSettings):
         PyString_AsStringAndSize(key, &c_key, <Py_ssize_t*>&c_key_len)  # XXX: safe cast?
         cdef size_t n = 1, n_results = 0
         cdef retrieval_result_t** results = NULL
-        with nogil:
-            if op == GET_OP:
-                self.last_error = self._imp.get(&c_key, &c_key_len, n, &results, &n_results)
-            elif op == GETS_OP:
-                self.last_error = self._imp.gets(&c_key, &c_key_len, n, &results, &n_results)
-            else:
-                pass
+        if op == GET_OP:
+            self.last_error = self._imp.get(&c_key, &c_key_len, n, &results, &n_results)
+        elif op == GETS_OP:
+            self.last_error = self._imp.gets(&c_key, &c_key_len, n, &results, &n_results)
+        else:
+            pass
 
         cdef bytes py_value = None
         if n_results == 1:
@@ -515,8 +512,7 @@ cdef class PyClientShell(PyClientSettings):
             if op == GETS_OP:
                 cas_unique_ptr[0] = results[0].cas_unique
         Py_DECREF(key)
-        with nogil:
-            self._imp.destroyRetrievalResult()
+        self._imp.destroyRetrievalResult()
         return py_value
 
     def _get_large_raw(self, bytes key, int n_splits, flags_t chuncked_flags):
@@ -582,8 +578,7 @@ cdef class PyClientShell(PyClientSettings):
 
         cdef retrieval_result_t** results = NULL
         cdef retrieval_result_t *r = NULL
-        with nogil:
-            self.last_error = self._imp.get(c_keys, c_key_lens, n, &results, &n_res)
+        self.last_error = self._imp.get(c_keys, c_key_lens, n, &results, &n_res)
 
         cdef dict rv = {}
         cdef bytes py_key
@@ -597,8 +592,7 @@ cdef class PyClientShell(PyClientSettings):
         PyMem_Free(c_keys)
         PyMem_Free(c_key_lens)
         Py_DECREF(keys)
-        with nogil:
-            self._imp.destroyRetrievalResult()
+        self._imp.destroyRetrievalResult()
         return rv
 
     def get_multi(self, keys):
@@ -645,26 +639,24 @@ cdef class PyClientShell(PyClientSettings):
 
         cdef message_result_t** results = NULL
 
-        with nogil:
-            if op == SET_OP:
-                self.last_error = self._imp.set(&c_key, &c_key_len, &flags, exptime, NULL, self.noreply, &c_val, &c_val_len, n, &results, &n_res)
-            elif op == ADD_OP:
-                self.last_error = self._imp.add(&c_key, &c_key_len, &flags, exptime, NULL, self.noreply, &c_val, &c_val_len, n, &results, &n_res)
-            elif op == REPLACE_OP:
-                self.last_error = self._imp.replace(&c_key, &c_key_len, &flags, exptime, NULL, self.noreply, &c_val, &c_val_len, n, &results, &n_res)
-            elif op == PREPEND_OP:
-                self.last_error = self._imp.prepend(&c_key, &c_key_len, &flags, exptime, NULL, self.noreply, &c_val, &c_val_len, n, &results, &n_res)
-            elif op == APPEND_OP:
-                self.last_error = self._imp.append(&c_key, &c_key_len, &flags, exptime, NULL, self.noreply, &c_val, &c_val_len, n, &results, &n_res)
-            elif op == CAS_OP:
-                self.last_error = self._imp.cas(&c_key, &c_key_len, &flags, exptime, &cas_unique, self.noreply, &c_val, &c_val_len, n, &results, &n_res)
-            else:
-                pass
+        if op == SET_OP:
+            self.last_error = self._imp.set(&c_key, &c_key_len, &flags, exptime, NULL, self.noreply, &c_val, &c_val_len, n, &results, &n_res)
+        elif op == ADD_OP:
+            self.last_error = self._imp.add(&c_key, &c_key_len, &flags, exptime, NULL, self.noreply, &c_val, &c_val_len, n, &results, &n_res)
+        elif op == REPLACE_OP:
+            self.last_error = self._imp.replace(&c_key, &c_key_len, &flags, exptime, NULL, self.noreply, &c_val, &c_val_len, n, &results, &n_res)
+        elif op == PREPEND_OP:
+            self.last_error = self._imp.prepend(&c_key, &c_key_len, &flags, exptime, NULL, self.noreply, &c_val, &c_val_len, n, &results, &n_res)
+        elif op == APPEND_OP:
+            self.last_error = self._imp.append(&c_key, &c_key_len, &flags, exptime, NULL, self.noreply, &c_val, &c_val_len, n, &results, &n_res)
+        elif op == CAS_OP:
+            self.last_error = self._imp.cas(&c_key, &c_key_len, &flags, exptime, &cas_unique, self.noreply, &c_val, &c_val_len, n, &results, &n_res)
+        else:
+            pass
 
         rv = self.last_error == RET_OK and (self.noreply or (n_res == 1 and results[0][0].type_ == MSG_STORED))
 
-        with nogil:
-            self._imp.destroyMessageResult()
+        self._imp.destroyMessageResult()
         Py_DECREF(key)
         Py_DECREF(val)
         return rv
@@ -794,18 +786,17 @@ cdef class PyClientShell(PyClientSettings):
             PyString_AsStringAndSize(vals[i], &c_vals[i], <Py_ssize_t*>&c_val_lens[i])  # XXX: safe cast?
 
         cdef message_result_t** results = NULL
-        with nogil:
-            if op == SET_OP:
-                self.last_error = self._imp.set(c_keys, c_key_lens, <const flags_t*>c_flags, c_exptime, NULL,
-                                   self.noreply, c_vals, c_val_lens, n, &results, &n_rst)
-            elif op == PREPEND_OP:
-                self.last_error = self._imp.prepend(c_keys, c_key_lens, <const flags_t*>c_flags, c_exptime, NULL,
-                                   self.noreply, c_vals, c_val_lens, n, &results, &n_rst)
-            elif op == APPEND_OP:
-                self.last_error = self._imp.append(c_keys, c_key_lens, <const flags_t*>c_flags, c_exptime, NULL,
-                                   self.noreply, c_vals, c_val_lens, n, &results, &n_rst)
-            else:
-                pass
+        if op == SET_OP:
+            self.last_error = self._imp.set(c_keys, c_key_lens, <const flags_t*>c_flags, c_exptime, NULL,
+                                self.noreply, c_vals, c_val_lens, n, &results, &n_rst)
+        elif op == PREPEND_OP:
+            self.last_error = self._imp.prepend(c_keys, c_key_lens, <const flags_t*>c_flags, c_exptime, NULL,
+                                self.noreply, c_vals, c_val_lens, n, &results, &n_rst)
+        elif op == APPEND_OP:
+            self.last_error = self._imp.append(c_keys, c_key_lens, <const flags_t*>c_flags, c_exptime, NULL,
+                                self.noreply, c_vals, c_val_lens, n, &results, &n_rst)
+        else:
+            pass
 
         is_succeed = (self.last_error == RET_OK) and (self.noreply or n_rst == n)
 
@@ -815,8 +806,7 @@ cdef class PyClientShell(PyClientSettings):
             failed_keys = list(set(keys) - set(succeed_keys))
             is_succeed = is_succeed and (len(failed_keys) == 0)
 
-        with nogil:
-            self._imp.destroyMessageResult()
+        self._imp.destroyMessageResult()
 
         PyMem_Free(c_keys)
         PyMem_Free(c_key_lens)
@@ -888,13 +878,11 @@ cdef class PyClientShell(PyClientSettings):
         PyString_AsStringAndSize(key, &c_key, <Py_ssize_t*>&c_key_len)
 
         cdef message_result_t** results = NULL
-        with nogil:
-            self.last_error = self._imp._delete(&c_key, &c_key_len, self.noreply, n, &results, &n_res)
+        self.last_error = self._imp._delete(&c_key, &c_key_len, self.noreply, n, &results, &n_res)
 
         rv = self.last_error == RET_OK and (self.noreply or (n_res == 1 and (results[0][0].type_ == MSG_DELETED or results[0][0].type_ == MSG_NOT_FOUND)))
 
-        with nogil:
-            self._imp.destroyMessageResult()
+        self._imp.destroyMessageResult()
         Py_DECREF(key)
         return rv
 
@@ -914,8 +902,7 @@ cdef class PyClientShell(PyClientSettings):
         cdef message_result_t** results = NULL
         cdef message_result_t *r = NULL
 
-        with nogil:
-            self.last_error = self._imp._delete(c_keys, c_key_lens, self.noreply, n, &results, &n_res)
+        self.last_error = self._imp._delete(c_keys, c_key_lens, self.noreply, n, &results, &n_res)
 
         is_succeed = self.last_error == RET_OK and (self.noreply or n_res == n)
         cdef list failed_keys = []
@@ -926,8 +913,7 @@ cdef class PyClientShell(PyClientSettings):
                             if results[i][0].type_ == MSG_DELETED or results[i][0].type_ == MSG_NOT_FOUND]
             failed_keys = list(set(keys) - set(succeed_keys))
 
-        with nogil:
-            self._imp.destroyMessageResult()
+        self._imp.destroyMessageResult()
         PyMem_Free(c_key_lens)
         PyMem_Free(c_keys)
         Py_DECREF(keys)
@@ -948,12 +934,10 @@ cdef class PyClientShell(PyClientSettings):
 
         cdef message_result_t** results = NULL
 
-        with nogil:
-            self.last_error = self._imp.touch(&c_key, &c_key_len, exptime, self.noreply, n, &results, &n_res)
+        self.last_error = self._imp.touch(&c_key, &c_key_len, exptime, self.noreply, n, &results, &n_res)
 
         rv = self.last_error == RET_OK and (self.noreply or (n_res == 1 and results[0][0].type_ == MSG_TOUCHED))
-        with nogil:
-            self._imp.destroyMessageResult()
+        self._imp.destroyMessageResult()
         Py_DECREF(key)
         return rv
 
@@ -966,8 +950,7 @@ cdef class PyClientShell(PyClientSettings):
         self._record_thread_ident()
         cdef broadcast_result_t* rst = NULL
         cdef size_t n = 0
-        with nogil:
-            self.last_error = self._imp.version(&rst, &n)
+        self.last_error = self._imp.version(&rst, &n)
 
         rv = {}
         for i in range(n):
@@ -975,8 +958,7 @@ cdef class PyClientShell(PyClientSettings):
                 continue
             rv[rst[i].host] = rst[i].lines[0][:rst[i].line_lens[0]]
 
-        with nogil:
-            self._imp.destroyBroadcastResult()
+        self._imp.destroyBroadcastResult()
         return rv
 
     def toggle_flush_all_feature(self, enabled):
@@ -986,16 +968,14 @@ cdef class PyClientShell(PyClientSettings):
         self._record_thread_ident()
         cdef broadcast_result_t* rst = NULL
         cdef size_t n = 0
-        with nogil:
-            self.last_error = self._imp.flushAll(&rst, &n)
+        self.last_error = self._imp.flushAll(&rst, &n)
 
         rv = []
         for i in range(n):
             if rst[i].msg_type == MSG_OK:
                 rv.append(rst[i].host)
 
-        with nogil:
-            self._imp.destroyBroadcastResult()
+        self._imp.destroyBroadcastResult()
         if self.last_error == RET_PROGRAMMING_ERR:
             raise RuntimeError(
                 "Please call client.toggle_flush_all_feature(True) first "
@@ -1005,9 +985,8 @@ cdef class PyClientShell(PyClientSettings):
 
     def quit(self):
         self._record_thread_ident()
-        with nogil:
-            self.last_error = self._imp.quit()
-            self._imp.destroyBroadcastResult()
+        self.last_error = self._imp.quit()
+        self._imp.destroyBroadcastResult()
         return self.last_error in {RET_CONN_POLL_ERR, RET_OK}
 
     def stats(self):
@@ -1016,8 +995,7 @@ cdef class PyClientShell(PyClientSettings):
         cdef broadcast_result_t* r = NULL
         cdef size_t n = 0
         rv = {}
-        with nogil:
-            self.last_error = self._imp.stats(&rst, &n)
+        self.last_error = self._imp.stats(&rst, &n)
 
         for i in range(n):
             r = &rst[i]
@@ -1036,8 +1014,7 @@ cdef class PyClientShell(PyClientSettings):
                     except:
                         pass
                 rv[r.host][k] = v
-        with nogil:
-            self._imp.destroyBroadcastResult()
+        self._imp.destroyBroadcastResult()
         return rv
 
     def _incr_decr_raw(self, op_code_t op, bytes key, uint64_t delta):
@@ -1050,19 +1027,17 @@ cdef class PyClientShell(PyClientSettings):
 
         cdef unsigned_result_t* result = NULL
         cdef size_t n_res = 0
-        with nogil:
-            if op == INCR_OP:
-                self.last_error = self._imp.incr(c_key, c_key_len, delta, self.noreply, &result, &n_res)
-            elif op == DECR_OP:
-                self.last_error = self._imp.decr(c_key, c_key_len, delta, self.noreply, &result, &n_res)
-            else:
-                pass
+        if op == INCR_OP:
+            self.last_error = self._imp.incr(c_key, c_key_len, delta, self.noreply, &result, &n_res)
+        elif op == DECR_OP:
+            self.last_error = self._imp.decr(c_key, c_key_len, delta, self.noreply, &result, &n_res)
+        else:
+            pass
 
         rv = None
         if n_res == 1 and result != NULL:
             rv = result.value
-        with nogil:
-            self._imp.destroyUnsignedResult()
+        self._imp.destroyUnsignedResult()
         Py_DECREF(key)
         return rv
 
@@ -1189,6 +1164,9 @@ cdef class PyClientPool(PyClientSettings):
     @contextmanager
     def client(self):
         worker = self.acquire()
+        yield worker
+        self.release(worker)
+        return
         try:
             yield worker
         finally:
