@@ -1125,7 +1125,6 @@ cdef class PyClientPool(PyClientSettings):
     def __cinit__(self):
         self._imp = new ClientPool()
         self.config(CFG_HASH_FUNCTION, self.hash_fn)
-        self._initialized = False
         self.clients = []
 
         if self.failover:
@@ -1145,18 +1144,7 @@ cdef class PyClientPool(PyClientSettings):
         return worker
 
     cdef acquire(self):
-        # if not self._initialized:
-        #     self.connect()
-        #     self._initialized = True
-        worker = self._imp._acquire()
-        return self.setup(worker)
-        # prone to race conditions pending mux and possibly fails to update
-        if worker.index >= len(self.clients):
-            self.clients += [None] * (worker.index - len(self.clients))
-            self.clients.append(self.setup(worker))
-        elif self.clients[worker.index] == None:
-            self.clients[worker.index] = self.setup(worker)
-        return self.clients[worker.index]
+        return self.setup(self._imp._acquire())
 
     cdef release(self, PyPoolClient worker):
         self._imp._release(worker._indexed)
@@ -1164,9 +1152,6 @@ cdef class PyClientPool(PyClientSettings):
     @contextmanager
     def client(self):
         worker = self.acquire()
-        yield worker
-        self.release(worker)
-        return
         try:
             yield worker
         finally:
