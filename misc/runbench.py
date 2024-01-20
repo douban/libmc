@@ -96,7 +96,7 @@ class Stopwatch(object):
     def __unicode__(self):
         m = self.mean()
         d = self.stddev()
-        fmt = u"%.3gs, σ=%.3g, n=%d, snr=%.3g:%.3g".__mod__
+        fmt = u"%.3gs, \u03C3=%.3g, n=%d, snr=%.3g:%.3g".__mod__
         return fmt((m, d, len(self.laps)) + ratio(m, d))
 
     __str__ = __unicode__
@@ -139,7 +139,7 @@ def bench_get(mc, key, data):
 
 @benchmark_method
 def bench_set(mc, key, data):
-    if isinstance(mc.mc, libmc.Client):
+    if isinstance(mc.mc, libmc.Client) or isinstance(mc.mc, libmc.ThreadedClient):
         if not mc.set(key, data):
             logger.warn('%r.set(%r, ...) fail', mc, key)
     else:
@@ -156,7 +156,7 @@ def bench_get_multi(mc, keys, pairs):
 @benchmark_method
 def bench_set_multi(mc, keys, pairs):
     ret = mc.set_multi(pairs)
-    if isinstance(mc.mc, libmc.Client):
+    if isinstance(mc.mc, libmc.Client) or isinstance(mc.mc, libmc.ThreadedClient):
         if not ret:
             logger.warn('%r.set_multi fail', mc)
     else:
@@ -234,6 +234,10 @@ participants = [
     Participant(
         name='libmc(md5 / ketama / nodelay / nonblocking, from douban)',
         factory=lambda: Prefix(__import__('libmc').Client(servers, comp_threshold=4000), 'libmc1')
+    ),
+    Participant(
+        name='libmc(md5 / ketama / nodelay / nonblocking / threaded, from douban)',
+        factory=lambda: Prefix(__import__('libmc').ThreadedClient(servers, comp_threshold=4000), 'libmc2')
     ),
 ]
 
