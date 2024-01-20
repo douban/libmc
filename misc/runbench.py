@@ -5,6 +5,7 @@
 import sys
 import math
 import logging
+import threading
 from functools import wraps
 from collections import namedtuple
 from contextlib import contextmanager
@@ -20,9 +21,10 @@ else:
 logger = logging.getLogger('libmc.bench')
 
 Benchmark = namedtuple('Benchmark', 'name f args kwargs')
-Participant = namedtuple('Participant', 'name factory')
+Participant = namedtuple('Participant', 'name factory threads', defaults=(1,))
 BENCH_TIME = 1.0
 N_SERVERS = 20
+NTHREADS = 5 # 4 max clients plus one to queue
 
 
 class Prefix(object):
@@ -232,15 +234,15 @@ participants = [
     ),
     Participant(name='python-memcached', factory=lambda: Prefix(__import__('memcache').Client(servers), 'memcache1')),
     Participant(
-        name='libmc(md5 / ketama / nodelay / nonblocking, from douban)',
+        name='libmc(md6 / ketama / nodelay / nonblocking, from douban)',
         factory=lambda: Prefix(__import__('libmc').Client(servers, comp_threshold=4000), 'libmc1')
     ),
     Participant(
-        name='libmc(md5 / ketama / nodelay / nonblocking / threaded, from douban)',
-        factory=lambda: Prefix(__import__('libmc').ThreadedClient(servers, comp_threshold=4000), 'libmc2')
+        name='libmc_threaded',
+        factory=lambda: Prefix(__import__('libmc').ThreadedClient(servers, comp_threshold=4000), 'libmc2'),
+        threads=NTHREADS
     ),
 ]
-
 
 def bench(participants=participants, benchmarks=benchmarks, bench_time=BENCH_TIME):
     """Do you even lift?"""
@@ -261,10 +263,22 @@ def bench(participants=participants, benchmarks=benchmarks, bench_time=BENCH_TIM
             if 'get' in fn.__name__:
                 last_fn(mc, *args, **kwargs)
 
-            sw = Stopwatch()
-            while sw.total() < bench_time:
-                with sw.timing():
-                    fn(mc, *args, **kwargs)
+            def loop():
+                while sw.total() < bench_time:
+                    with sw.timing():
+                        fn(mc, *args, **kwargs)
+
+            if participant.threads == 1:
+                sw = Stopwatch()
+                loop()
+            else:
+                ts = [threading.Thread(target=loop) for i in range(participant.threads)]
+                sw = Stopwatch()
+                for t in ts:
+                    t.start()
+
+                for t in ts:
+                    t.join()
 
             means[i].append(sw.mean())
             stddevs[i].append(sw.stddev())

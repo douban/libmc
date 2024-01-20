@@ -76,7 +76,7 @@ class ThreadedSingleServerCase(unittest.TestCase, ClientOps):
         self.pool = ClientPool(["127.0.0.1:21211"])
 
     def misc(self):
-        for i in range(5):
+        for i in range(100):
             self.test_pool_client_misc(i)
 
     def test_pool_client_misc(self, i=0):
@@ -95,7 +95,7 @@ class ThreadedClientWrapperCheck(unittest.TestCase, ClientOps):
         self.imp = ThreadedClient(["127.0.0.1:21211"])
 
     def misc(self):
-        for i in range(5):
+        for i in range(100):
             self.client_misc(self.imp, i)
 
     def test_many_threads(self):

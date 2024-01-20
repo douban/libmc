@@ -72,7 +72,9 @@ function virtualize()
 {
     if [ ! -e venv ]; then
         dbg="${1:-`which python-dbg || which python3-dbg`}"
-        $dbg -m pip install virtualenv
+        if ! $dbg -m pip list | grep -w virtualenv &> /dev/null; then
+            $dbg -m pip install virtualenv
+        fi
         $dbg -m virtualenv --python="$dbg" --seeder=pip venv;
         source venv/bin/activate
         pip install -U pip

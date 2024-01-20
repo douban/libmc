@@ -50,7 +50,7 @@ index c9807b9..b3a915b 100644
  
 @@ -91,6 +111,25 @@ class PyTest(TestCommand):
          errno = pytest.main(shlex.split(self.pytest_args))
-         sys.exit(errno)
+         os._exit(errno)
  
 +# https://shwina.github.io/custom-compiler-linker-extensions/
 +class BlankBuildExt(build_ext):
