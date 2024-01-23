@@ -238,7 +238,7 @@ participants = [
         factory=lambda: Prefix(__import__('libmc').Client(servers, comp_threshold=4000), 'libmc1')
     ),
     Participant(
-        name='libmc_threaded',
+        name='libmc(md5 / ketama / nodelay / nonblocking / threaded, from douban)',
         factory=lambda: Prefix(__import__('libmc').ThreadedClient(servers, comp_threshold=4000), 'libmc2'),
         threads=NTHREADS
     ),

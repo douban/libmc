@@ -158,7 +158,6 @@ case "$1" in
         source misc/git/pre-commit
         virtualize "`which python-dbg || which python3-dbg`"
         dbg="`which python-dbg || which python3-dbg`"
-        #make clean
         $dbg setup.py build_ext --inplace
         if [ -n "$2" ]; then
             shift
@@ -175,10 +174,12 @@ case "$1" in
         ;;
     bench)
         cd "`src_dir`/.."
-        virtualize
+        git apply misc/git/debug.patch -R --recount &> /dev/null || true
         make clean
+        virtualize
         python setup.py build_ext --inplace
         python -m pip install pylibmc python-memcached
+        python -m pip install -e .
         python misc/runbench.py
         ;;
     *)
