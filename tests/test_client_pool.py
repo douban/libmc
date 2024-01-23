@@ -29,6 +29,9 @@ def threaded_print(*args, **kwargs):
         print(*args, **kwargs, file=fp)
 
 class ClientOps:
+    nthreads=8
+    ops = 100
+
     def client_misc(self, mc, i=0):
         tid = mc._get_current_thread_ident() + (i,)
         tid = "_".join(map(str, tid))
@@ -58,7 +61,7 @@ class ClientOps:
             errs.append(e.with_traceback(tb))
 
         threading.excepthook = passthrough
-        ts = [threading.Thread(target=target) for i in range(8)]
+        ts = [threading.Thread(target=target) for i in range(self.nthreads)]
         for t in ts:
             t.start()
 
@@ -76,7 +79,7 @@ class ThreadedSingleServerCase(unittest.TestCase, ClientOps):
         self.pool = ClientPool(["127.0.0.1:21211"])
 
     def misc(self):
-        for i in range(100):
+        for i in range(self.ops):
             self.test_pool_client_misc(i)
 
     def test_pool_client_misc(self, i=0):
@@ -90,13 +93,37 @@ class ThreadedSingleServerCase(unittest.TestCase, ClientOps):
     def test_pool_client_threaded(self):
         self.client_threads(self.misc)
 
-class ThreadedClientWrapperCheck(unittest.TestCase, ClientOps):
+class ThreadedClientOps(ClientOps):
+    def misc(self):
+        for i in range(self.ops):
+            self.client_misc(self.imp, i)
+
+
+class ThreadedClientWrapperCheck(unittest.TestCase, ThreadedClientOps):
     def setUp(self):
         self.imp = ThreadedClient(["127.0.0.1:21211"])
 
-    def misc(self):
-        for i in range(100):
-            self.client_misc(self.imp, i)
-
     def test_many_threads(self):
+        self.client_threads(self.misc)
+
+
+class ThreadedGreenletCompat(unittest.TestCase, ThreadedClientOps):
+    def setUp(self):
+        import greenify, libmc
+        greenify.greenify()
+        for so_path in libmc.DYNAMIC_LIBRARIES:
+            assert greenify.patch_lib(so_path)
+
+        self.imp = libmc.ThreadedClient(["127.0.0.1:21211"])
+
+    def client_threads(self, target):
+        import gevent
+        ts = [gevent.spawn(target) for i in range(self.nthreads)]
+        for t in ts:
+            t.start()
+
+        for t in ts:
+            t.join()
+
+    def test_many_eventlets(self):
         self.client_threads(self.misc)
