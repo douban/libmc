@@ -1169,10 +1169,13 @@ cdef class PyClientPool(PyClientSettings):
         return worker
 
     cdef acquire(self):
-        return self.setup(self._imp._acquire())
+        with nogil:
+            worker = self._imp._acquire()
+        return self.setup(worker)
 
     cdef release(self, PyPoolClient worker):
-        self._imp._release(worker._indexed)
+        with nogil:
+            self._imp._release(worker._indexed)
 
     @contextmanager
     def client(self):
