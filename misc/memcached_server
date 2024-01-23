@@ -154,11 +154,15 @@ case "$1" in
         source misc/git/pre-commit
         virtualize
         dbg="`which python-dbg || which python3-dbg`"
-        #make clean
+        make clean
         $dbg setup.py build_ext --inplace
         if [ -n "$2" ]; then
             shift
-            cygdb . --skip-interpreter -- -ex start --args "$dbg" setup.py test -a "$*"
+            # cygdb . --skip-interpreter -- -ex start --args "$dbg" setup.py test -a "$*"
+            cygdb . --skip-interpreter -- \
+                -ex start \
+                -ex "cy break libmc._client.PyClientPool.setup" \
+                --args "$dbg" setup.py test -a "$*"
         else
             cygdb . --skip-interpreter -- -ex start --args "$dbg" setup.py test
         fi
