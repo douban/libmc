@@ -1,5 +1,5 @@
 diff --git a/setup.py b/setup.py
-index c9807b9..b3a915b 100644
+index afc15c1..98f8465 100644
 --- a/setup.py
 +++ b/setup.py
 @@ -5,23 +5,43 @@ import sys
@@ -74,7 +74,7 @@ index c9807b9..b3a915b 100644
  
  setup(
      name="libmc",
-@@ -121,16 +160,18 @@ setup(
+@@ -121,18 +160,20 @@ setup(
      ],
      # Support for the basestring type is new in Cython 0.20.
      setup_requires=["Cython >= 0.20"],
@@ -96,3 +96,6 @@ index c9807b9..b3a915b 100644
      tests_require=[
          "pytest",
          "future",
+-        "numpy",
++        #"numpy",
+     ])

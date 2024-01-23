@@ -71,17 +71,22 @@ function capture()
 function virtualize()
 {
     if [ ! -e venv ]; then
-        dbg="${1:-`which python-dbg || which python3-dbg`}"
-        if ! $dbg -m pip list | grep -w virtualenv &> /dev/null; then
-            $dbg -m pip install virtualenv
+        py="${1:-`which python 2>/dev/null`}"
+        if ! $py -m pip list | grep -w virtualenv &> /dev/null; then
+            $py -m pip install virtualenv
         fi
-        $dbg -m virtualenv --python="$dbg" --seeder=pip venv;
+        $py -m virtualenv --python="$py" --seeder=pip venv;
         source venv/bin/activate
         pip install -U pip
-        pip install Cython setuptools future pytest greenify gevent numpy
+        pip install Cython setuptools future pytest greenify gevent
     else
         source venv/bin/activate
     fi
+}
+
+function src_dir()
+{
+    cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd
 }
 
 case "$1" in
@@ -148,11 +153,10 @@ case "$1" in
         capture $@
         ;;
     cy-debug)
-        DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-        cd "$DIR/.."
+        cd "`src_dir`/.."
         git apply misc/git/debug.patch --recount &> /dev/null || true
         source misc/git/pre-commit
-        virtualize
+        virtualize "`which python-dbg || which python3-dbg`"
         dbg="`which python-dbg || which python3-dbg`"
         #make clean
         $dbg setup.py build_ext --inplace
@@ -164,10 +168,18 @@ case "$1" in
         fi
         ;;
     run-test)
-        cd "$( dirname "${BASH_SOURCE[0]}" )/.." &> /dev/null
-        virtualize "`which python 2>/dev/null`"
+        cd "`src_dir`/.."
+        virtualize
         shift
         python setup.py test -a "-k $*"
+        ;;
+    bench)
+        cd "`src_dir`/.."
+        virtualize
+        make clean
+        python setup.py build_ext --inplace
+        python -m pip install pylibmc python-memcached
+        python misc/runbench.py
         ;;
     *)
         printf 'Usage: %s {start|stop|restart} <port>\n' "$prog"

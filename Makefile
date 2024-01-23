@@ -11,4 +11,4 @@ pytest:
 	pytest tests/
 
 clean:
-	rm -fr build cython_debug libmc/*.so libmc/*.cpp
+	rm -fr build cython_debug libmc/*.so libmc/*.cpp .eggs

@@ -234,7 +234,7 @@ participants = [
     ),
     Participant(name='python-memcached', factory=lambda: Prefix(__import__('memcache').Client(servers), 'memcache1')),
     Participant(
-        name='libmc(md6 / ketama / nodelay / nonblocking, from douban)',
+        name='libmc(md5 / ketama / nodelay / nonblocking, from douban)',
         factory=lambda: Prefix(__import__('libmc').Client(servers, comp_threshold=4000), 'libmc1')
     ),
     Participant(
