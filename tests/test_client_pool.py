@@ -2,6 +2,7 @@
 import unittest
 import threading
 import functools
+import gevent
 from libmc import ClientPool, ThreadedClient
 
 def setup_loging(f):
@@ -32,8 +33,11 @@ class ClientOps:
     nthreads=8
     ops = 100
 
+    def tid(self, mc):
+        return mc._get_current_thread_ident()
+
     def client_misc(self, mc, i=0):
-        tid = mc._get_current_thread_ident() + (i,)
+        tid = self.tid(mc) + (i,)
         tid = "_".join(map(str, tid))
         f, t = 'foo_' + tid, 'tuiche_' + tid
         mc.get_multi([f, t])
@@ -117,13 +121,11 @@ class ThreadedGreenletCompat(unittest.TestCase, ThreadedClientOps):
         self.imp = libmc.ThreadedClient(["127.0.0.1:21211"])
 
     def client_threads(self, target):
-        import gevent
         ts = [gevent.spawn(target) for i in range(self.nthreads)]
-        for t in ts:
-            t.start()
+        gevent.joinall(ts)
 
-        for t in ts:
-            t.join()
+    def tid(self, mc):
+        return (gevent.getcurrent().name,)
 
     def test_many_eventlets(self):
         self.client_threads(self.misc)
