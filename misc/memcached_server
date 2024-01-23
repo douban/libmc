@@ -175,7 +175,6 @@ case "$1" in
     bench)
         cd "`src_dir`/.."
         git apply misc/git/debug.patch -R --recount &> /dev/null || true
-        make clean
         virtualize
         python setup.py build_ext --inplace
         python -m pip install pylibmc python-memcached

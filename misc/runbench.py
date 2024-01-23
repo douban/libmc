@@ -5,7 +5,6 @@
 import sys
 import math
 import logging
-import threading
 from functools import wraps
 from collections import namedtuple
 from contextlib import contextmanager
@@ -17,6 +16,21 @@ if sys.version_info.major == 2:
     from time import clock as process_time
 else:
     from time import process_time
+
+if False:
+    import threading
+    fork = lambda f: threading.Thread(target=f)
+else:
+    import gevent
+    import gevent.monkey
+    gevent.monkey.patch_time()
+
+    import greenify
+    greenify.greenify()
+    for so_path in libmc.DYNAMIC_LIBRARIES:
+        assert greenify.patch_lib(so_path)
+
+    fork = gevent.spawn_raw
 
 logger = logging.getLogger('libmc.bench')
 
@@ -272,7 +286,7 @@ def bench(participants=participants, benchmarks=benchmarks, bench_time=BENCH_TIM
                 sw = Stopwatch()
                 loop()
             else:
-                ts = [threading.Thread(target=loop) for i in range(participant.threads)]
+                ts = [fork(loop) for i in range(participant.threads)]
                 sw = Stopwatch()
                 for t in ts:
                     t.start()
