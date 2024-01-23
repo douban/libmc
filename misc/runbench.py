@@ -19,7 +19,7 @@ else:
 
 if False:
     import threading
-    fork = lambda f: threading.Thread(target=f)
+    spawn = lambda f: threading.Thread(target=f)
 else:
     import gevent
     import gevent.monkey
@@ -30,7 +30,7 @@ else:
     for so_path in libmc.DYNAMIC_LIBRARIES:
         assert greenify.patch_lib(so_path)
 
-    fork = gevent.spawn_raw
+    spawn = gevent.spawn
 
 logger = logging.getLogger('libmc.bench')
 
@@ -286,7 +286,7 @@ def bench(participants=participants, benchmarks=benchmarks, bench_time=BENCH_TIM
                 sw = Stopwatch()
                 loop()
             else:
-                ts = [fork(loop) for i in range(participant.threads)]
+                ts = [spawn(loop) for i in range(participant.threads)]
                 sw = Stopwatch()
                 for t in ts:
                     t.start()
