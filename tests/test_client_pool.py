@@ -2,7 +2,7 @@
 import unittest
 import threading
 import functools
-import gevent
+import os
 from libmc import ClientPool, ThreadedClient
 
 def setup_loging(f):
@@ -34,7 +34,7 @@ class ClientOps:
     ops = 100
 
     def tid(self, mc):
-        return mc._get_current_thread_ident()
+        return (os.getpid(), threading.current_thread().native_id)
 
     def client_misc(self, mc, i=0):
         tid = self.tid(mc) + (i,)
@@ -110,9 +110,13 @@ class ThreadedClientWrapperCheck(unittest.TestCase, ThreadedClientOps):
     def test_many_threads(self):
         self.client_threads(self.misc)
 
-
 class ThreadedGreenletCompat(unittest.TestCase, ThreadedClientOps):
     def setUp(self):
+        global gevent
+        import gevent
+        import gevent.monkey
+        gevent.monkey.patch_all()
+
         import greenify, libmc
         greenify.greenify()
         for so_path in libmc.DYNAMIC_LIBRARIES:
@@ -122,10 +126,10 @@ class ThreadedGreenletCompat(unittest.TestCase, ThreadedClientOps):
 
     def client_threads(self, target):
         ts = [gevent.spawn(target) for i in range(self.nthreads)]
-        gevent.joinall(ts)
+        gevent.joinall(ts, raise_error=True)
 
     def tid(self, mc):
-        return (gevent.getcurrent().name,)
+        return (os.getpid(), gevent.getcurrent().name)
 
     def test_many_eventlets(self):
         self.client_threads(self.misc)

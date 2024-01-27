@@ -1137,6 +1137,10 @@ cdef class PyClient(PyClientShell):
     def __dealloc__(self):
         del self._imp
 
+cdef class PyClientUnsafe(PyClient):
+    def _check_thread_ident(self):
+        pass
+
 cdef class PyPoolClient(PyClientShell):
     cdef IndexedClient* _indexed
 

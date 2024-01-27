@@ -28,6 +28,9 @@ void ClientPool::config(config_options_t opt, int val) {
   switch (val) {
     case CFG_INITIAL_CLIENTS:
       m_initial_clients = val;
+      if (m_initial_clients > m_max_clients) {
+        m_max_clients = m_initial_clients;
+      }
       if (m_clients.size() < m_initial_clients) {
         growPool(m_initial_clients);
       }

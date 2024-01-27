@@ -68,27 +68,6 @@ function capture()
     echo $! > "$basedir/var/run/${host}.pid"
 }
 
-function virtualize()
-{
-    if [ ! -e venv ]; then
-        py="${1:-`which python 2>/dev/null`}"
-        if ! $py -m pip list | grep -w virtualenv &> /dev/null; then
-            $py -m pip install virtualenv
-        fi
-        $py -m virtualenv --python="$py" --seeder=pip venv;
-        source venv/bin/activate
-        pip install -U pip
-        pip install Cython setuptools future pytest greenify gevent
-    else
-        source venv/bin/activate
-    fi
-}
-
-function src_dir()
-{
-    cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd
-}
-
 case "$1" in
     start) 
         if [ -n "$2" ]; then
@@ -152,37 +131,8 @@ case "$1" in
         shift
         capture $@
         ;;
-    cy-debug)
-        cd "`src_dir`/.."
-        git apply misc/git/debug.patch --recount &> /dev/null || true
-        source misc/git/pre-commit
-        virtualize "`which python-dbg || which python3-dbg`"
-        dbg="`which python-dbg || which python3-dbg`"
-        $dbg setup.py build_ext --inplace
-        if [ -n "$2" ]; then
-            shift
-            cygdb . --skip-interpreter -- -ex start --args "$dbg" setup.py test -a "$*"
-        else
-            cygdb . --skip-interpreter -- -ex start --args "$dbg" setup.py test
-        fi
-        ;;
-    run-test)
-        cd "`src_dir`/.."
-        virtualize
-        shift
-        python setup.py test -a "-k $*"
-        ;;
-    bench)
-        cd "`src_dir`/.."
-        git apply misc/git/debug.patch -R --recount &> /dev/null || true
-        virtualize
-        python setup.py build_ext --inplace
-        python -m pip install pylibmc python-memcached
-        python -m pip install -e .
-        python misc/runbench.py
-        ;;
     *)
-        printf 'Usage: %s {start|stop|restart} <port>\n' "$prog"
+        printf 'Usage: %s {start[all] | stop[all] | restart | unix | capture} <port>\n' "$prog"
         exit 1
         ;;
 esac

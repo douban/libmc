@@ -36,7 +36,7 @@ protected:
     if (m_fifo_locks.empty()) {
       m_locked = false;
     } else {
-      m_fifo_locks.front()->notify_one();
+      m_fifo_locks.front()->notify_all();
     }
   }
 };
