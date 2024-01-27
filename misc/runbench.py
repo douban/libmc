@@ -326,6 +326,37 @@ class BenchmarkThreadedClient(libmc.ThreadedClient):
         self.config(libmc.MC_MAX_CLIENTS, POOL_SIZE)
 
 
+class FIFOThreadPool(ThreadPool):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.waiting = Queue()
+        self.semaphore = Queue(1) # sorry
+        self.semaphore.put(1)
+
+    @contextmanager
+    def reserve(self):
+        try:
+            self.semaphore.get()
+            mc = self.clients.get(False)
+            self.semaphore.put(1)
+        except:
+            channel = Queue()
+            self.waiting.put(channel)
+            self.semaphore.put(1)
+            channel.get()
+            mc = self.clients.get(False)
+            self.semaphore.put(1)
+        try:
+            yield mc
+        finally:
+            self.clients.put(mc)
+            try:
+                self.semaphore.get()
+                self.waiting.get(False).put(1)
+            except:
+                self.semaphore.put(1)
+
+
 host = '127.0.0.1'
 servers = ['%s:%d' % (host, 21211 + i) for i in range(N_SERVERS)]
 
@@ -378,6 +409,12 @@ participants = [
         # name='libmc(md5 / ketama / nodelay / nonblocking / py thread pool, from douban)',
         name='libmc (py thread pool)',
         factory=lambda: Prefix(ThreadPool(**libmc_kwargs), 'libmc4'),
+        threads=NTHREADS
+    ),
+    Participant(
+        # name='libmc(md5 / ketama / nodelay / nonblocking / py thread pool, from douban)',
+        name='libmc (py FIFO thread pool)',
+        factory=lambda: Prefix(FIFOThreadPool(**libmc_kwargs), 'libmc5'),
         threads=NTHREADS
     ),
 ]
@@ -434,6 +471,7 @@ def bench(participants=participants, benchmarks=benchmarks, bench_time=BENCH_TIM
                 logger.info(u'%76s: %s', participant.name, total)
                 exceptions[i].append(None)
             except Exception as e:
+                raise
                 logger.info(u'%76s: %s', participant.name, "failed")
                 exceptions[i].append(e)
         last_fn = fn
