@@ -369,14 +369,14 @@ participants = [
         threads=NTHREADS
     ),
     Participant(
-        # name='libmc(md5 / ketama / nodelay / nonblocking / py thead mapped, from douban)',
-        name='libmc (py thead mapped)',
+        # name='libmc(md5 / ketama / nodelay / nonblocking / py thread mapped, from douban)',
+        name='libmc (py thread mapped)',
         factory=lambda: Prefix(ThreadMappedPool(**libmc_kwargs), 'libmc3'),
         threads=NTHREADS
     ),
     Participant(
-        # name='libmc(md5 / ketama / nodelay / nonblocking / py thead pool, from douban)',
-        name='libmc (py thead pool)',
+        # name='libmc(md5 / ketama / nodelay / nonblocking / py thread pool, from douban)',
+        name='libmc (py thread pool)',
         factory=lambda: Prefix(ThreadPool(**libmc_kwargs), 'libmc4'),
         threads=NTHREADS
     ),
