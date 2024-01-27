@@ -340,7 +340,7 @@ class FIFOThreadPool(ThreadPool):
             mc = self.clients.get(False)
             self.semaphore.put(1)
         except:
-            channel = Queue()
+            channel = Queue(1)
             self.waiting.put(channel)
             self.semaphore.put(1)
             channel.get()
@@ -349,9 +349,9 @@ class FIFOThreadPool(ThreadPool):
         try:
             yield mc
         finally:
+            self.semaphore.get()
             self.clients.put(mc)
             try:
-                self.semaphore.get()
                 self.waiting.get(False).put(1)
             except:
                 self.semaphore.put(1)
@@ -412,7 +412,7 @@ participants = [
         threads=NTHREADS
     ),
     Participant(
-        # name='libmc(md5 / ketama / nodelay / nonblocking / py thread pool, from douban)',
+        # name='libmc(md5 / ketama / nodelay / nonblocking / py FIFO thread pool, from douban)',
         name='libmc (py FIFO thread pool)',
         factory=lambda: Prefix(FIFOThreadPool(**libmc_kwargs), 'libmc5'),
         threads=NTHREADS
@@ -471,7 +471,6 @@ def bench(participants=participants, benchmarks=benchmarks, bench_time=BENCH_TIM
                 logger.info(u'%76s: %s', participant.name, total)
                 exceptions[i].append(None)
             except Exception as e:
-                raise
                 logger.info(u'%76s: %s', participant.name, "failed")
                 exceptions[i].append(e)
         last_fn = fn
