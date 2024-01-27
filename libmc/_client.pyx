@@ -1144,6 +1144,9 @@ cdef class PyClientUnsafe(PyClient):
 cdef class PyPoolClient(PyClientShell):
     cdef IndexedClient* _indexed
 
+    def _record_thread_ident(self):
+        pass
+
     def _check_thread_ident(self):
         pass
 
