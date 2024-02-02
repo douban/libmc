@@ -114,8 +114,8 @@ class ThreadedGreenletCompat(unittest.TestCase, ThreadedClientOps):
     def setUp(self):
         global gevent
         import gevent
-        import gevent.monkey
-        gevent.monkey.patch_all()
+        # import gevent.monkey
+        # gevent.monkey.patch_all()
 
         import greenify, libmc
         greenify.greenify()

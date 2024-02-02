@@ -58,9 +58,9 @@ case "$1" in
             shift 2
             cmds=(-ex start)
             for arg in "$@"; do cmds+=(-ex "$arg"); done
-            cygdb . -- "${cmds[@]}" --args python setup.py test -a "-k $pattern"
+            cygdb . -- "${cmds[@]}" --args python setup.py test -a "--full-trace -s -k $pattern"
         else
-            cygdb . -- -ex start --args python setup.py test
+            cygdb . -- -ex start --args python setup.py test -a -s
         fi
         ;;
     run-test)
@@ -89,6 +89,7 @@ case "$1" in
         greenify=`python -c "import greenify; print(greenify.__file__)"`
         deactivate
         cd `dirname "$greenify"`
+        rm -fr build
         virtualize "`which python-dbg || which python3-dbg`"
         python setup.py build_ext --inplace
         ;;
