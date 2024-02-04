@@ -68,9 +68,9 @@ case "$1" in
         virtualize_libmc
         shift
         if [ -n "$1" ]; then
-            python setup.py test -a "-k $*"
+            python setup.py test -a "-s -k $*"
         else
-            python setup.py test
+            python setup.py test -a -s
         fi
         ;;
     bench)
