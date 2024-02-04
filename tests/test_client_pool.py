@@ -3,7 +3,7 @@ import unittest
 import threading
 import functools
 import os
-from libmc import ClientPool, ThreadedClient
+from libmc import ClientPool, ThreadedClient, MC_MAX_CLIENTS
 
 def setup_loging(f):
     g = None
@@ -123,6 +123,7 @@ class ThreadedGreenletCompat(unittest.TestCase, ThreadedClientOps):
             assert greenify.patch_lib(so_path)
 
         self.imp = libmc.ThreadedClient(["127.0.0.1:21211"])
+        self.imp.config(MC_MAX_CLIENTS, 1)
 
     def client_threads(self, target):
         ts = [gevent.spawn(target) for i in range(self.nthreads)]

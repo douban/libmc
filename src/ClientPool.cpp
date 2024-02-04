@@ -25,7 +25,7 @@ void ClientPool::config(config_options_t opt, int val) {
     return;
   }
   std::unique_lock initializing(m_acquiring_growth);
-  switch (val) {
+  switch (opt) {
     case CFG_INITIAL_CLIENTS:
       m_initial_clients = val;
       if (m_initial_clients > m_max_clients) {
