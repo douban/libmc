@@ -11,7 +11,7 @@ from collections import namedtuple
 from contextlib import contextmanager
 from queue import Queue
 
-#import pylibmc
+import pylibmc
 import libmc
 
 if sys.version_info.major == 2:
@@ -40,8 +40,13 @@ Benchmark = namedtuple('Benchmark', 'name f args kwargs')
 Participant = namedtuple('Participant', 'name factory threads', defaults=(1,))
 BENCH_TIME = 1.0
 N_SERVERS = 20
-NTHREADS = 40
+NTHREADS = 4
 POOL_SIZE = 4
+
+# setting (eg) NTHREADS to 40 and POOL_SIZE to 4 illustrates a failure case of a
+# simpler python solution to thread pools for clients
+#NTHREADS = 40
+#POOL_SIZE = 4
 
 class Prefix(object):
     '''add prefix for key in mc command'''
@@ -389,34 +394,29 @@ participants = [
     ),
     Participant(name='python-memcached', factory=lambda: Prefix(__import__('memcache').Client(servers), 'memcache1')),
     Participant(
-        # name='libmc(md5 / ketama / nodelay / nonblocking, from douban)',
-        name='libmc (from douban)',
+        name='libmc(md5 / ketama / nodelay / nonblocking, from douban)',
         factory=lambda: Prefix(__import__('libmc').Client(**libmc_kwargs), 'libmc1')
     ),
     Participant(
-        # name='libmc(md5 / ketama / nodelay / nonblocking / C++ thread pool, from douban)',
-        name='libmc (C++ thread pool)',
+        name='libmc(md5 / ketama / nodelay / nonblocking / C++ thread pool, from douban)',
         factory=lambda: Prefix(BenchmarkThreadedClient(**libmc_kwargs), 'libmc2'),
         threads=NTHREADS
     ),
-    Participant(
-        # name='libmc(md5 / ketama / nodelay / nonblocking / py thread mapped, from douban)',
-        name='libmc (py thread mapped)',
-        factory=lambda: Prefix(ThreadMappedPool(**libmc_kwargs), 'libmc3'),
-        threads=NTHREADS
-    ),
-    Participant(
-        # name='libmc(md5 / ketama / nodelay / nonblocking / py thread pool, from douban)',
-        name='libmc (py thread pool)',
-        factory=lambda: Prefix(ThreadPool(**libmc_kwargs), 'libmc4'),
-        threads=NTHREADS
-    ),
-    Participant(
-        # name='libmc(md5 / ketama / nodelay / nonblocking / py FIFO thread pool, from douban)',
-        name='libmc (py FIFO thread pool)',
-        factory=lambda: Prefix(FIFOThreadPool(**libmc_kwargs), 'libmc5'),
-        threads=NTHREADS
-    ),
+    # Participant(
+    #     name='libmc(md5 / ketama / nodelay / nonblocking / py thread mapped, from douban)',
+    #     factory=lambda: Prefix(ThreadMappedPool(**libmc_kwargs), 'libmc3'),
+    #     threads=NTHREADS
+    # ),
+    # Participant(
+    #     name='libmc(md5 / ketama / nodelay / nonblocking / py thread pool, from douban)',
+    #     factory=lambda: Prefix(ThreadPool(**libmc_kwargs), 'libmc4'),
+    #     threads=NTHREADS
+    # ),
+    # Participant(
+    #     name='libmc(md5 / ketama / nodelay / nonblocking / py ordered thread pool, from douban)',
+    #     factory=lambda: Prefix(FIFOThreadPool(**libmc_kwargs), 'libmc5'),
+    #     threads=NTHREADS
+    # ),
 ]
 
 def bench(participants=participants, benchmarks=benchmarks, bench_time=BENCH_TIME):
@@ -479,12 +479,12 @@ def bench(participants=participants, benchmarks=benchmarks, bench_time=BENCH_TIM
 
 
 def main(args=sys.argv[1:]):
-    # logger.info('pylibmc: %s', pylibmc.__file__)
+    logger.info('pylibmc: %s', pylibmc.__file__)
     logger.info('libmc: %s', libmc.__file__)
     logger.info('Running %s servers, %s threads, and a %s client pool',
                 N_SERVERS, NTHREADS, POOL_SIZE)
 
-    ps = [p for p in participants if p.name.startswith("libmc")]
+    ps = [p for p in participants if any(p.name.startswith(arg) for arg in args)]
     ps = ps if ps else participants
 
     bs = benchmarks[:]

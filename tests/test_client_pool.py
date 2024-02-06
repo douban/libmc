@@ -110,7 +110,14 @@ class ThreadedClientWrapperCheck(unittest.TestCase, ThreadedClientOps):
     def test_many_threads(self):
         self.client_threads(self.misc)
 
-class ThreadedGreenletCompat(unittest.TestCase, ThreadedClientOps):
+# class ThreadedGreenletCompat(unittest.TestCase, ThreadedClientOps):
+class ThreadedGreenletCompat(ThreadedClientOps):
+    """
+    At the moment, threaded client pools do not support gevent since greenlets'
+    virtual address space for the stack overlaps. Support may be added in the
+    future though, so this test is getting left in the codebase but inactive.
+    """
+
     def setUp(self):
         global gevent
         import gevent

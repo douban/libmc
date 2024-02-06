@@ -43,10 +43,6 @@ function src_dir()
 }
 
 case "$1" in
-    test)
-        shift
-        echo $res
-        ;;
     cy-debug)
         cd "`src_dir`/.."
         git apply misc/git/debug.patch --recount &> /dev/null || true
@@ -78,7 +74,7 @@ case "$1" in
         git apply misc/git/debug.patch -R --recount &> /dev/null || true
         virtualize_libmc
         python setup.py build_ext --inplace
-        # python -m pip install pylibmc python-memcached
+        python -m pip install pylibmc python-memcached
         if ! python -m pip list | grep -w "libmc" &> /dev/null; then
             python -m pip install -e .
         fi
@@ -94,7 +90,7 @@ case "$1" in
         python setup.py build_ext --inplace
         ;;
     *)
-        printf 'Usage: %s {cy-debug [test pattern [gdb commands...]] | run-test [test pattern] | bench | build-greenify}\n' "$prog"
+        printf 'Usage: %s {cy-debug [test pattern [gdb commands...]] | run-test [test pattern] | bench | build-greenify}\nNote that cy-debug and run-test don't \`make clean\` so that needs to happen elsewhere for changes to setup.py\n"$prog"
         exit 1
         ;;
 esac
