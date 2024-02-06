@@ -15,7 +15,7 @@ if (NOT CMAKE_BUILD_TYPE)
    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build, options are: Debug Release." FORCE)
 endif (NOT CMAKE_BUILD_TYPE)
 
-set(CMAKE_CXX_FLAGS_COMMON "-Wall -fno-rtti -fno-exceptions")
+set(CMAKE_CXX_FLAGS_COMMON "-Wall -fno-rtti -fno-exceptions -std=c++17")
 set(CMAKE_CXX_FLAGS_DEBUG "-DDEBUG -g2 ${CMAKE_CXX_FLAGS_COMMON}" CACHE STRING "CXX DEBUG FLAGS" FORCE)
 set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -O3 ${CMAKE_CXX_FLAGS_COMMON}" CACHE STRING "CXX RELEASE FLAGS" FORCE)
 set(CMAKE_INSTALL_INCLUDE include CACHE PATH "Output directory for header files")

@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        compiler: ["gcc"]
+        compiler: ["gcc", "clang"]
         build_type: ["Debug"]
 
     steps:
@@ -59,60 +59,3 @@ jobs:
         ./misc/travis/unittest.sh
     - name: Stop memcached servers
       run: ./misc/memcached_server stopall
-
-  goclang:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        gover: ["1.15"]
-        compiler: ["clang"]
-
-    steps:
-    - uses: actions/checkout@v2
-    - name: Setup system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get -y install memcached
-    - name: Set up Golang
-      uses: actions/setup-go@v2
-      with:
-        go-version: ${{ matrix.gover }}
-        repo-token: ${{ secrets.GITHUB_TOKEN }}
-    - name: Start memcached servers
-      run: ./misc/memcached_server start
-    - name: Run gotest
-      run: |
-        export CC=clang CXX=clang++
-        clang++ -v
-        ./misc/travis/gotest.sh
-    - name: Stop memcached servers
-      run: ./misc/memcached_server stop
-
-  reference:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        pyver: ["3.12"]
-
-    steps:
-    - uses: actions/checkout@v2
-    - name: Setup system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get -y install memcached libmemcached-dev g++
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.pyver }}
-        repo-token: ${{ secrets.GITHUB_TOKEN }}
-    - name: Install python dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install setuptools future python-memcached pylibmc
-    - name: Start memcached servers
-      run: ./misc/memcached_server start
-    - name: Run benchmark
-      run: |
-        ./misc/travis/benchmark.sh
-    - name: Stop memcached servers
-      run: ./misc/memcached_server stop
