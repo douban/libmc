@@ -49,7 +49,9 @@ case "$1" in
         source misc/git/pre-commit
         virtualize_libmc "`which python-dbg || which python3-dbg`"
         python setup.py build_ext --inplace
-        if [ -n "$2" ]; then
+        if [ "$2" == "bench" ]; then
+            cygdb . -- -ex start --args python misc/runbench.py
+        elif [ -n "$2" ]; then
             pattern="$2"
             shift 2
             cmds=(-ex start)

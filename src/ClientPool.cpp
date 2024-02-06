@@ -50,6 +50,7 @@ int ClientPool::init(const char* const * hosts, const uint32_t* ports,
                      const size_t n, const char* const * aliases) {
   updateServers(hosts, ports, n, aliases);
   std::unique_lock initializing(m_acquiring_growth);
+  std::lock_guard config_pool(m_pool_lock);
   return growPool(m_initial_clients);
 }
 
@@ -86,10 +87,9 @@ int ClientPool::setup(Client* c) {
   return c->init(m_hosts.data(), m_ports.data(), m_hosts.size(), m_aliases.data());
 }
 
-// if called outside acquire, needs to own m_acquiring_growth
+// needs to hold both m_acquiring_growth and m_pool_lock
 int ClientPool::growPool(size_t by) {
   assert(by > 0);
-  std::lock_guard growing_pool(m_pool_lock);
   size_t from = m_clients.size();
   m_clients.resize(from + by);
   std::atomic<int> rv = 0;
@@ -115,6 +115,7 @@ inline bool ClientPool::shouldGrowUnsafe() {
 int ClientPool::autoGrow() {
   std::unique_lock<std::shared_mutex> growing(m_acquiring_growth);
   if (shouldGrowUnsafe()) {
+    std::lock_guard growing_pool(m_pool_lock);
     return growPool(MIN(m_max_clients - m_clients.size(),
                     MIN(m_max_growth, m_clients.size())));
   }
