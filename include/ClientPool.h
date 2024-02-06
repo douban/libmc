@@ -36,7 +36,6 @@ public:
   using difference_type = int;
   using iterator_category = std::random_access_iterator_tag;
 
-  irange() : i(0) {}
   irange(int i) : i(i) {}
 
   reference operator*() const { return i; }

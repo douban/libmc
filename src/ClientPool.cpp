@@ -64,8 +64,8 @@ int ClientPool::updateServers(const char* const* hosts, const uint32_t* ports,
 
   std::atomic<int> rv = 0;
   std::lock_guard<std::mutex> updating(m_fifo_access);
-  std::for_each(irange(), irange(m_clients.size()),
-  //std::for_each(std::execution::par_unseq, irange(), irange(m_clients.size()),
+  std::for_each(irange(0), irange(m_clients.size()),
+  //std::for_each(std::execution::par_unseq, irange(0), irange(m_clients.size()),
                 [this, &rv](int i) {
     std::lock_guard<std::mutex> updating_worker(*m_thread_workers[i]);
     const int err = m_clients[i].c.updateServers(
