@@ -145,8 +145,6 @@ class Stopwatch(object):
 
 
 class DelayedStopwatch(Stopwatch):
-    """ Rollie """
-
     def __init__(self, laps=None, bound=0):
         super().__init__()
         self.laps = laps or []
@@ -366,7 +364,7 @@ host = '127.0.0.1'
 servers = ['%s:%d' % (host, 21211 + i) for i in range(N_SERVERS)]
 
 libmc_clients = (libmc.Client, BenchmarkThreadedClient, ThreadMappedPool, ThreadPool)
-libmc_kwargs = {"servers": servers, "comp_threshold": 4000, "hash_fn": libmc.MC_HASH_FNV1_32}
+libmc_kwargs = {"servers": servers, "comp_threshold": 4000}
 
 participants = [
     Participant(
@@ -420,7 +418,7 @@ participants = [
 ]
 
 def bench(participants=participants, benchmarks=benchmarks, bench_time=BENCH_TIME):
-    """dyel"""
+    """Do you even lift?"""
 
     mcs = [p.factory() for p in participants]
     means = [[] for p in participants]
