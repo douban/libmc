@@ -11,7 +11,7 @@ can be considered a drop in replacement for libmemcached and
 
 libmc is developed and maintained by Douban Inc. Currently, it is
 working in a production environment, powering all web traffic on
-`douban.com <https://www.semrush.com/website/douban.com/overview/>`. Realtime
+`douban.com <https://www.semrush.com/website/douban.com/overview/>`__. Realtime
 `benchmark results <https://travis-ci.org/douban/libmc/builds/57124335#L1611>`__
 are available on travis.
 
@@ -92,7 +92,7 @@ Configuration
    compressed. If ``comp_threshold == 0``, the string buffer will never be
    compressed. Default: ``0``
 -  ``noreply``: controls memcached's
-   [``noreply`` feature](https://github.com/memcached/memcached/wiki/CommonFeatures#noreplyquiet).
+   ``noreply`` `feature <https://github.com/memcached/memcached/wiki/CommonFeatures#noreplyquiet>`__.
    default: ``False``
 -  ``prefix``: The key prefix. default: ``''``
 -  ``hash_fn``: hashing function for keys. possible values:
