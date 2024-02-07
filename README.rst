@@ -11,9 +11,7 @@ can be considered a drop in replacement for libmemcached and
 
 libmc is developed and maintained by Douban Inc. Currently, it is
 working in a production environment, powering all web traffic on
-`douban.com <https://www.semrush.com/website/douban.com/overview/>`__. Realtime
-`benchmark results <https://travis-ci.org/douban/libmc/builds/57124335#L1611>`__
-are available on travis.
+`douban.com <https://www.semrush.com/website/douban.com/overview/>`__.
 
 Build and Installation
 ----------------------
