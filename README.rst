@@ -234,8 +234,8 @@ https://github.com/douban/libmc/wiki
 Footnotes
 -------
 
-.. [#] The link not an endorsement of the site's accuracy, just a publicly
-   available reference point
+.. [#] The link not an endorsement of the traffic estimate site's accuracy, just
+   a publicly available reference point
 
 LICENSE
 -------
