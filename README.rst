@@ -83,7 +83,7 @@ Configuration
    will be used. If given, ``alias`` will be used to compute the server hash,
    which would otherwise be computed based on ``host`` and ``port``
    (i.e. whichever portion is given).
--  ``do_split``: splits large values (up to 10MB) into chunks (&lt;1MB). The
+-  ``do_split``: splits large values (up to 10MB) into chunks (<1MB). The
    memcached server implementation will not store items larger than 1MB,
    however in some environments it is beneficial to shard up to 10MB of data.
    Attempts to store more than that are ignored. Default: ``True``.
@@ -93,7 +93,7 @@ Configuration
    compressed. Default: ``0``
 -  ``noreply``: controls memcached's
    ``noreply`` `feature <https://github.com/memcached/memcached/wiki/CommonFeatures#noreplyquiet>`__.
-   default: ``False``
+   Default: ``False``
 -  ``prefix``: The key prefix. default: ``''``
 -  ``hash_fn``: hashing function for keys. possible values:
 
