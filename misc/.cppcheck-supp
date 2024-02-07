@@ -15,7 +15,8 @@
 *:include/llvm/SmallVector.h:735
 *:include/llvm/SmallVector.h:796
 constParameter:include/BufferReader.h:99
-unusedFunction:src/Client.cpp:232
+unreadVariable:include/LockPool.h
+unusedFunction:src/Client.cpp:239
 unusedFunction:src/c_client.cpp:8
 unusedFunction:src/c_client.cpp:13
 unusedFunction:src/c_client.cpp:25

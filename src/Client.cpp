@@ -33,6 +33,13 @@ void Client::config(config_options_t opt, int val) {
     case CFG_MAX_RETRIES:
       setMaxRetries(val);
       break;
+    case CFG_SET_FAILOVER:
+      assert(val == 0 || val == 1);
+      if (val == 0) {
+        disableConsistentFailover();
+      } else {
+        enableConsistentFailover();
+      }
     default:
       break;
   }

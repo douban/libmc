@@ -22,6 +22,7 @@ COMPILER_FLAGS = [
     "-DMC_USE_SMALL_VECTOR",
     "-O3",
     "-DNDEBUG",
+    "-std=c++17",
 ]
 
 
@@ -89,7 +90,7 @@ class PyTest(TestCommand):
         # import here, cause outside the eggs aren't loaded
         import pytest
         errno = pytest.main(shlex.split(self.pytest_args))
-        sys.exit(errno)
+        os._exit(errno)
 
 
 setup(

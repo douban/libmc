@@ -25,3 +25,5 @@ tests/resources/keys_*.txt
 
 /go.mod
 /go.sum
+
+/cython_debug
