@@ -36,7 +36,7 @@ public:
   using difference_type = int;
   using iterator_category = std::random_access_iterator_tag;
 
-  irange(int i) : i(i) {}
+  explicit irange(int i) : i(i) {}
 
   reference operator*() const { return i; }
   pointer operator->() const { return &i; }
@@ -55,7 +55,7 @@ public:
   irange& operator-=(difference_type n) { i -= n; return *this; }
   friend irange operator+(const irange& lhs, difference_type n) { irange tmp = lhs; tmp += n; return tmp; }
   friend irange operator+(difference_type n, const irange& rhs) { return rhs + n; }
-  friend irange operator-(const irange& lhs, difference_type n) { return lhs.i + (-n); }
+  friend irange operator-(const irange& lhs, difference_type n) { irange tmp = lhs; tmp -= n; return tmp; }
   friend difference_type operator-(const irange& lhs, const irange& rhs) { return lhs.i - rhs.i; }
 };
 
