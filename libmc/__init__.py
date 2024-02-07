@@ -1,4 +1,5 @@
-import os, functools
+import os
+import functools
 from ._client import (
     PyClient, PyClientUnsafe as ClientUnsafe, PyClientPool, ThreadUnsafe,
     encode_value,
