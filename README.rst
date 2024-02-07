@@ -160,9 +160,9 @@ still some unsolved bugs.
 Is libmc thread-safe ?
 ^^^^^^^^^^^^^^^^^^^^^^
 
-Yes. `libmc.ThreadedClient` is a thread-safe client implementation. To hold
-access for more than one request, `libmc.ClientPool` can be used with Python
-`with` statements. `libmc.Client`, however, is a single-threaded memcached
+Yes. ``libmc.ThreadedClient`` is a thread-safe client implementation. To hold
+access for more than one request, ``libmc.ClientPool`` can be used with Python
+``with`` statements. ``libmc.Client``, however, is a single-threaded memcached
 client. If you initialize a standard client in one thread but reuse that in
 another thread, a Python ``ThreadUnsafe`` Exception will be raised.
 
@@ -171,13 +171,13 @@ Is libmc compatible with gevent?
 
 Yes, with the help of `greenify <https://github.com/douban/greenify>`__,
 libmc is friendly to gevent. Read ``tests/shabby/gevent_issue.py`` for
-details. `libmc.ThreadedClient` and `libmc.ClientPool` are not currently
+details. ``libmc.ThreadedClient`` and ``libmc.ClientPool`` are not currently
 compatible.
 
 **Notice:**
 
-`gevent.monkey.patch_all()` will override
-`threading.current_thread().ident` to Greenlet's ID,
+``gevent.monkey.patch_all()`` will override
+``threading.current_thread().ident`` to Greenlet's ID,
 this will cause libmc to throw a ThreadUnSafe error
 or run into dead lock, you should only patch the things
 that you need, e.g.
