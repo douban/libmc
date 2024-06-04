@@ -409,7 +409,7 @@ def bench(participants=participants, benchmarks=benchmarks, bench_time=BENCH_TIM
                 loop(sw[0])
             else:
                 sw = [DelayedStopwatch() for i in range(participant.threads)]
-                ts = [threading.Thread(target=loop, args=i) for i in sw]
+                ts = [threading.Thread(target=loop, args=[i]) for i in sw]
                 for t in ts:
                     t.start()
 
