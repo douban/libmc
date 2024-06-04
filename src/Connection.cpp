@@ -47,7 +47,7 @@ Connection::~Connection() {
 int Connection::init(const char* host, uint32_t port, const char* alias) {
   snprintf(m_host, sizeof m_host, "%s", host);
   m_port = port;
-  m_unixSocket = isUnixSocket(m_host);
+  m_unixSocket = isLocalSocket(m_host);
   if (alias == NULL) {
     m_hasAlias = false;
     if (m_unixSocket) {

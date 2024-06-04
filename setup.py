@@ -90,7 +90,7 @@ class PyTest(TestCommand):
         # import here, cause outside the eggs aren't loaded
         import pytest
         errno = pytest.main(shlex.split(self.pytest_args))
-        os._exit(errno)
+        sys.exit(errno)
 
 
 setup(

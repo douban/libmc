@@ -50,9 +50,9 @@ const char* errCodeToString(err_code_t err) {
   }
 }
 
-bool isUnixSocket(const char* host) {
+bool isLocalSocket(const char* host) {
   // errors on the side of false negatives, allowing syntax expansion;
-  // starting slash syntax is from libmemcached
+  // starting slash to denote socket paths is from pylibmc
   return host[0] == '/';
 }
 

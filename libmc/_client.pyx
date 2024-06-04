@@ -1105,7 +1105,7 @@ cdef class PyClientShell(PyClientSettings):
                                 self._get_current_thread_ident()))
 
     def _get_current_thread_ident(self):
-        return (os.getpid(), threading.current_thread().native_id)
+        return (os.getpid(), threading.current_thread().name)
 
     def get_last_error(self):
         return self.last_error

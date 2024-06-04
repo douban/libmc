@@ -1,9 +1,10 @@
 import os
 import functools
 from ._client import (
-    PyClient, PyClientUnsafe as ClientUnsafe, PyClientPool, ThreadUnsafe,
+    PyClient, ThreadUnsafe,
     encode_value,
     decode_value,
+    PyClientPool, PyClientUnsafe as ClientUnsafe,
 
     MC_DEFAULT_EXPTIME,
     MC_POLL_TIMEOUT,
@@ -72,8 +73,8 @@ DYNAMIC_LIBRARIES = [os.path.abspath(_libmc_so_file)]
 
 
 __all__ = [
-    'Client', 'ClientUnsafe', 'ClientPool', 'ThreadedClient', 'ThreadUnsafe',
-    '__VERSION__', 'encode_value', 'decode_value',
+    'Client', 'ThreadUnsafe', '__VERSION__', 'encode_value', 'decode_value',
+    'ClientUnsafe', 'ClientPool', 'ThreadedClient',
 
     'MC_DEFAULT_EXPTIME', 'MC_POLL_TIMEOUT', 'MC_CONNECT_TIMEOUT',
     'MC_RETRY_TIMEOUT', 'MC_SET_FAILOVER', 'MC_INITIAL_CLIENTS',

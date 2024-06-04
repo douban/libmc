@@ -19,21 +19,6 @@ if sys.version_info.major == 2:
 else:
     from time import process_time
 
-if True:
-    spawn = lambda f, *a: threading.Thread(target=f, args=a)
-else:
-    # ThreadedGreenletCompat.test_many_eventlets
-    import gevent
-    import gevent.monkey
-    gevent.monkey.patch_all()
-
-    import greenify
-    greenify.greenify()
-    for so_path in libmc.DYNAMIC_LIBRARIES:
-        assert greenify.patch_lib(so_path)
-
-    spawn = gevent.spawn
-
 logger = logging.getLogger('libmc.bench')
 
 Benchmark = namedtuple('Benchmark', 'name f args kwargs')
@@ -184,27 +169,23 @@ def benchmark_method(f):
 @benchmark_method
 def bench_get(mc, key, data):
     if mc.get(key) != data:
-        # logger.warn('%r.get(%r) fail', mc, key)
-        raise Exception()
+        logger.warn('%r.get(%r) fail', mc, key)
 
 
 @benchmark_method
 def bench_set(mc, key, data):
     if any(isinstance(mc.mc, client) for client in libmc_clients):
         if not mc.set(key, data):
-            # logger.warn('%r.set(%r, ...) fail', mc, key)
-            raise Exception()
+            logger.warn('%r.set(%r, ...) fail', mc, key)
     else:
         if not mc.set(key, data, min_compress_len=4001):
-            # logger.warn('%r.set(%r, ...) fail', mc, key)
-            raise Exception()
+            logger.warn('%r.set(%r, ...) fail', mc, key)
 
 
 @benchmark_method
 def bench_get_multi(mc, keys, pairs):
     if len(mc.get_multi(keys)) != len(pairs):
-        # logger.warn('%r.get_multi() incomplete', mc)
-        raise Exception()
+        logger.warn('%r.get_multi() incomplete', mc)
 
 
 @benchmark_method
@@ -212,12 +193,10 @@ def bench_set_multi(mc, keys, pairs):
     ret = mc.set_multi(pairs)
     if any(isinstance(mc.mc, client) for client in libmc_clients):
         if not ret:
-            # logger.warn('%r.set_multi fail', mc)
-            raise Exception()
+            logger.warn('%r.set_multi fail', mc)
     else:
         if ret:
-            # logger.warn('%r.set_multi(%r) fail', mc, ret)
-            raise Exception()
+            logger.warn('%r.set_multi(%r) fail', mc, ret)
 
 
 def multi_pairs(n, val_len):
@@ -400,21 +379,6 @@ participants = [
         factory=lambda: Prefix(BenchmarkThreadedClient(**libmc_kwargs), 'libmc2'),
         threads=NTHREADS
     ),
-    # Participant(
-    #     name='libmc(md5 / ketama / nodelay / nonblocking / py thread mapped, from douban)',
-    #     factory=lambda: Prefix(ThreadMappedPool(**libmc_kwargs), 'libmc3'),
-    #     threads=NTHREADS
-    # ),
-    # Participant(
-    #     name='libmc(md5 / ketama / nodelay / nonblocking / py thread pool, from douban)',
-    #     factory=lambda: Prefix(ThreadPool(**libmc_kwargs), 'libmc4'),
-    #     threads=NTHREADS
-    # ),
-    # Participant(
-    #     name='libmc(md5 / ketama / nodelay / nonblocking / py ordered thread pool, from douban)',
-    #     factory=lambda: Prefix(FIFOThreadPool(**libmc_kwargs), 'libmc5'),
-    #     threads=NTHREADS
-    # ),
 ]
 
 def bench(participants=participants, benchmarks=benchmarks, bench_time=BENCH_TIME):
@@ -423,7 +387,6 @@ def bench(participants=participants, benchmarks=benchmarks, bench_time=BENCH_TIM
     mcs = [p.factory() for p in participants]
     means = [[] for p in participants]
     stddevs = [[] for p in participants]
-    exceptions = [[] for p in participants]
 
     # Have each lifter do one benchmark each
     last_fn = None
@@ -432,48 +395,35 @@ def bench(participants=participants, benchmarks=benchmarks, bench_time=BENCH_TIM
         logger.info('%s', benchmark_name)
 
         for i, (participant, mc) in enumerate(zip(participants, mcs)):
-            failed = False
             def loop(sw):
-                nonlocal failed
-                try:
-                    while sw.total() < bench_time:
-                        with sw.timing():
-                            fn(mc, *args, **kwargs)
-                except Exception as e:
-                    failed = failed or e
+                while sw.total() < bench_time:
+                    with sw.timing():
+                        fn(mc, *args, **kwargs)
 
-            try:
-                # FIXME: set before bench for get
-                if 'get' in fn.__name__:
-                    last_fn(mc, *args, **kwargs)
+            # FIXME: set before bench for get
+            if 'get' in fn.__name__:
+                last_fn(mc, *args, **kwargs)
 
-                if participant.threads == 1:
-                    sw = [DelayedStopwatch()]
-                    loop(sw[0])
-                else:
-                    sw = [DelayedStopwatch() for i in range(participant.threads)]
-                    ts = [spawn(loop, i) for i in sw]
-                    for t in ts:
-                        t.start()
+            if participant.threads == 1:
+                sw = [DelayedStopwatch()]
+                loop(sw[0])
+            else:
+                sw = [DelayedStopwatch() for i in range(participant.threads)]
+                ts = [threading.Thread(target=loop, args=i) for i in sw]
+                for t in ts:
+                    t.start()
 
-                    for t in ts:
-                        t.join()
+                for t in ts:
+                    t.join()
 
-                if failed:
-                    raise failed
+            total = sum(sw, DelayedStopwatch())
+            means[i].append(total.mean())
+            stddevs[i].append(total.stddev())
 
-                total = sum(sw, DelayedStopwatch())
-                means[i].append(total.mean())
-                stddevs[i].append(total.stddev())
-
-                logger.info(u'%76s: %s', participant.name, total)
-                exceptions[i].append(None)
-            except Exception as e:
-                logger.info(u'%76s: %s', participant.name, "failed")
-                exceptions[i].append(e)
+            logger.info(u'%76s: %s', participant.name, total)
         last_fn = fn
 
-    return means, stddevs, exceptions
+    return means, stddevs
 
 
 def main(args=sys.argv[1:]):
@@ -482,20 +432,19 @@ def main(args=sys.argv[1:]):
     logger.info('Running %s servers, %s threads, and a %s client pool',
                 N_SERVERS, NTHREADS, POOL_SIZE)
 
-    ps = [p for p in participants if any(p.name.startswith(arg) for arg in args)]
+    ps = [p for p in participants if p.name in args]
     ps = ps if ps else participants
 
     bs = benchmarks[:]
 
     logger.info('%d participants in %d benchmarks', len(ps), len(bs))
 
-    means, stddevs, exceptions = bench(participants=ps, benchmarks=bs)
+    means, stddevs = bench(participants=ps, benchmarks=bs)
 
     print('labels =', [p.name for p in ps])
     print('benchmarks =', [b.name for b in bs])
     print('means =', means)
     print('stddevs =', stddevs)
-    print('exceptions =', exceptions)
 
 
 if __name__ == "__main__":
