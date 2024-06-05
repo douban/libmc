@@ -9,11 +9,21 @@
 
 
 typedef enum {
-  CFG_POLL_TIMEOUT,
+  // Client config options
+  CFG_POLL_TIMEOUT = 0,
   CFG_CONNECT_TIMEOUT,
   CFG_RETRY_TIMEOUT,
   CFG_HASH_FUNCTION,
-  CFG_MAX_RETRIES
+  CFG_MAX_RETRIES,
+  CFG_SET_FAILOVER,
+
+  // type separator to track number of Client config options to save
+  CLIENT_CONFIG_OPTION_COUNT,
+
+  // ClientPool config options
+  CFG_INITIAL_CLIENTS,
+  CFG_MAX_CLIENTS,
+  CFG_MAX_GROWTH
 } config_options_t;
 
 

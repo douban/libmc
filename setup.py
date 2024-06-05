@@ -22,6 +22,7 @@ COMPILER_FLAGS = [
     "-DMC_USE_SMALL_VECTOR",
     "-O3",
     "-DNDEBUG",
+    "-std=c++17",
 ]
 
 

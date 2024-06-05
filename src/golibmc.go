@@ -2,7 +2,7 @@ package golibmc
 
 /*
 #cgo CFLAGS: -I ./../include
-#cgo CXXFLAGS: -I ./../include
+#cgo CXXFLAGS: -std=c++17 -I ./../include
 #include "c_client.h"
 */
 import "C"
