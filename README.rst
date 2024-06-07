@@ -172,14 +172,6 @@ libmc is friendly to gevent. Read ``tests/shabby/gevent_issue.py`` for
 details. ``libmc.ThreadedClient`` and ``libmc.ClientPool`` are not compatible.
 [#]_
 
-.. [#] In order to use a single executable for multiple greenlet contexts,
-   gevent has to `copy thread memory
-   <https://github.com/python-greenlet/greenlet/blob/937f150e07823ee03344aeeb5111c0bb371a831d/src/greenlet/greenlet.cpp#L105>`__
-   to and from the same stack space. This doesn't affect Python references,
-   which are handed off through gevent, but makes it impossible for shared
-   libraries to pass memory addresses across greenlets, which is required for
-   the worker pool.
-
 **Notice:**
 
 ``gevent.monkey.patch_all()`` will override
@@ -238,6 +230,18 @@ Documentation
 -------------
 
 https://github.com/douban/libmc/wiki
+
+Footnotes
+---------
+
+.. [#] In order to use a single executable for multiple greenlet contexts,
+   gevent has to `copy thread memory
+   <https://github.com/python-greenlet/greenlet/blob/937f150e07823ee03344aeeb5111c0bb371a831d/src/greenlet/greenlet.cpp#L105>`__
+   to and from the same stack space. This doesn't affect Python references,
+   which are handed off through gevent, but makes it impossible for shared
+   libraries to pass memory addresses across greenlets, which is required for
+   the worker pool.
+
 
 LICENSE
 -------
