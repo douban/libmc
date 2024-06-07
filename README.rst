@@ -11,10 +11,7 @@ can be considered a drop in replacement for libmemcached and
 
 libmc is developed and maintained by Douban Inc. Currently, it is
 working in a production environment, powering all web traffic on
-`douban.com <https://www.semrush.com/website/douban.com/overview/>`__. [#]_
-
-.. [#] The link not an endorsement of the traffic estimate site's accuracy, just
-   a publicly available reference point
+`douban.com <https://jobs.douban.com/about/>`__.
 
 Build and Installation
 ----------------------
