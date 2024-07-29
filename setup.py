@@ -2,14 +2,12 @@ from __future__ import print_function
 import os
 import re
 import sys
-import shlex
 import pkg_resources
 import platform
 from distutils.sysconfig import get_config_var
 from distutils.version import LooseVersion
 from glob import glob
 from setuptools import setup, Extension
-from setuptools.command.test import test as TestCommand
 
 sources = (glob("src/*.cpp") + ["libmc/_client.pyx"])
 include_dirs = ["include"]
@@ -74,25 +72,6 @@ def find_version(*file_paths):
     raise RuntimeError("Unable to find version string.")
 
 
-class PyTest(TestCommand):
-    user_options = [('pytest-args=', 'a', "Arguments to pass to py.test")]
-
-    def initialize_options(self):
-        TestCommand.initialize_options(self)
-        self.pytest_args = 'tests'
-
-    def finalize_options(self):
-        TestCommand.finalize_options(self)
-        self.test_args = []
-        self.test_suite = True
-
-    def run_tests(self):
-        # import here, cause outside the eggs aren't loaded
-        import pytest
-        errno = pytest.main(shlex.split(self.pytest_args))
-        sys.exit(errno)
-
-
 setup(
     name="libmc",
     packages=["libmc"],
@@ -122,7 +101,6 @@ setup(
     ],
     # Support for the basestring type is new in Cython 0.20.
     setup_requires=["Cython >= 0.20"],
-    cmdclass={"test": PyTest},
     ext_modules=[
         Extension(
             "libmc._client",
