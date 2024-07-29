@@ -9,6 +9,7 @@ cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DWITH_TESTING=ON  ..
 make -j8
 valgrind --leak-check=full make test
 cd ..
-python setup.py test
+python setup.py build_ext --inplace
+python -m pytest tests
 pip install -e .
 ./tests/shabby/run_test.sh
