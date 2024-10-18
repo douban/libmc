@@ -33,8 +33,8 @@ from ._client import (
     __file__ as _libmc_so_file
 )
 
-__VERSION__ = "1.4.7"
-__version__ = "1.4.7"
+__VERSION__ = "1.4.8"
+__version__ = "1.4.8"
 __author__ = "mckelvin"
 __email__ = "mckelvin@users.noreply.github.com"
 __date__ = "Fri Jun  7 06:16:00 2024 +0800"
