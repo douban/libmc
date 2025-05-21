@@ -100,7 +100,7 @@ setup(
         "Topic :: Software Development :: Libraries",
     ],
     # Support for the basestring type is new in Cython 0.20.
-    setup_requires=["Cython >= 0.20"],
+    setup_requires=["Cython >= 0.20, < 3.1"],
     ext_modules=[
         Extension(
             "libmc._client",
