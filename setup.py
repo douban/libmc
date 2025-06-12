@@ -99,8 +99,8 @@ setup(
         "License :: OSI Approved :: BSD License",
         "Topic :: Software Development :: Libraries",
     ],
-    # Support for the basestring type is new in Cython 0.20.
-    setup_requires=["Cython >= 0.20"],
+    # upgrade cython to a higher version to avoid conflicts
+    setup_requires=["Cython >= 3.1.0"],
     ext_modules=[
         Extension(
             "libmc._client",
