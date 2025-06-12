@@ -8,14 +8,11 @@ from libcpp.string cimport string
 from libcpp.vector cimport vector
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
 from cpython.version cimport PY_MAJOR_VERSION
-from cpython cimport Py_INCREF, Py_DECREF, PyInt_AsLong, PyInt_FromLong
+from cpython cimport Py_INCREF, Py_DECREF, PyLong_AsLong, PyLong_FromLong
+from ctypes import c_long as long
 
-if PY_MAJOR_VERSION < 3:
-    from cpython cimport PyString_AsStringAndSize, PyString_AsString
-    import cPickle as pickle
-else:
-    from cpython cimport PyBytes_AsStringAndSize as PyString_AsStringAndSize, PyBytes_AsString as PyString_AsString, PyUnicode_AsUTF8String
-    import pickle
+from cpython cimport PyBytes_AsStringAndSize as PyString_AsStringAndSize, PyBytes_AsString as PyString_AsString, PyUnicode_AsUTF8String
+import pickle
 
 import os
 import sys
@@ -257,33 +254,33 @@ cdef flags_t _FLAG_DOUBAN_CHUNKED = 1 << 12
 cdef int _DOUBAN_CHUNK_SIZE = 1000000
 
 
-MC_DEFAULT_EXPTIME = PyInt_FromLong(DEFAULT_EXPTIME)
-MC_POLL_TIMEOUT = PyInt_FromLong(CFG_POLL_TIMEOUT)
-MC_CONNECT_TIMEOUT = PyInt_FromLong(CFG_CONNECT_TIMEOUT)
-MC_RETRY_TIMEOUT = PyInt_FromLong(CFG_RETRY_TIMEOUT)
-MC_MAX_RETRIES = PyInt_FromLong(CFG_MAX_RETRIES)
-MC_SET_FAILOVER = PyInt_FromLong(CFG_SET_FAILOVER)
-MC_INITIAL_CLIENTS = PyInt_FromLong(CFG_INITIAL_CLIENTS)
-MC_MAX_CLIENTS = PyInt_FromLong(CFG_MAX_CLIENTS)
-MC_MAX_GROWTH = PyInt_FromLong(CFG_MAX_GROWTH)
+MC_DEFAULT_EXPTIME = PyLong_FromLong(DEFAULT_EXPTIME)
+MC_POLL_TIMEOUT = PyLong_FromLong(CFG_POLL_TIMEOUT)
+MC_CONNECT_TIMEOUT = PyLong_FromLong(CFG_CONNECT_TIMEOUT)
+MC_RETRY_TIMEOUT = PyLong_FromLong(CFG_RETRY_TIMEOUT)
+MC_MAX_RETRIES = PyLong_FromLong(CFG_MAX_RETRIES)
+MC_SET_FAILOVER = PyLong_FromLong(CFG_SET_FAILOVER)
+MC_INITIAL_CLIENTS = PyLong_FromLong(CFG_INITIAL_CLIENTS)
+MC_MAX_CLIENTS = PyLong_FromLong(CFG_MAX_CLIENTS)
+MC_MAX_GROWTH = PyLong_FromLong(CFG_MAX_GROWTH)
 
 
-MC_HASH_MD5 = PyInt_FromLong(OPT_HASH_MD5)
-MC_HASH_FNV1_32 = PyInt_FromLong(OPT_HASH_FNV1_32)
-MC_HASH_FNV1A_32 = PyInt_FromLong(OPT_HASH_FNV1A_32)
-MC_HASH_CRC_32 = PyInt_FromLong(OPT_HASH_CRC_32)
+MC_HASH_MD5 = PyLong_FromLong(OPT_HASH_MD5)
+MC_HASH_FNV1_32 = PyLong_FromLong(OPT_HASH_FNV1_32)
+MC_HASH_FNV1A_32 = PyLong_FromLong(OPT_HASH_FNV1A_32)
+MC_HASH_CRC_32 = PyLong_FromLong(OPT_HASH_CRC_32)
 
 
-MC_RETURN_SEND_ERR = PyInt_FromLong(RET_SEND_ERR)
-MC_RETURN_RECV_ERR = PyInt_FromLong(RET_RECV_ERR)
-MC_RETURN_CONN_POLL_ERR = PyInt_FromLong(RET_CONN_POLL_ERR)
-MC_RETURN_POLL_TIMEOUT_ERR = PyInt_FromLong(RET_POLL_TIMEOUT_ERR)
-MC_RETURN_POLL_ERR = PyInt_FromLong(RET_POLL_ERR)
-MC_RETURN_MC_SERVER_ERR = PyInt_FromLong(RET_MC_SERVER_ERR)
-MC_RETURN_PROGRAMMING_ERR = PyInt_FromLong(RET_PROGRAMMING_ERR)
-MC_RETURN_INVALID_KEY_ERR = PyInt_FromLong(RET_INVALID_KEY_ERR)
-MC_RETURN_INCOMPLETE_BUFFER_ERR = PyInt_FromLong(RET_INCOMPLETE_BUFFER_ERR)
-MC_RETURN_OK = PyInt_FromLong(RET_OK)
+MC_RETURN_SEND_ERR = PyLong_FromLong(RET_SEND_ERR)
+MC_RETURN_RECV_ERR = PyLong_FromLong(RET_RECV_ERR)
+MC_RETURN_CONN_POLL_ERR = PyLong_FromLong(RET_CONN_POLL_ERR)
+MC_RETURN_POLL_TIMEOUT_ERR = PyLong_FromLong(RET_POLL_TIMEOUT_ERR)
+MC_RETURN_POLL_ERR = PyLong_FromLong(RET_POLL_ERR)
+MC_RETURN_MC_SERVER_ERR = PyLong_FromLong(RET_MC_SERVER_ERR)
+MC_RETURN_PROGRAMMING_ERR = PyLong_FromLong(RET_PROGRAMMING_ERR)
+MC_RETURN_INVALID_KEY_ERR = PyLong_FromLong(RET_INVALID_KEY_ERR)
+MC_RETURN_INCOMPLETE_BUFFER_ERR = PyLong_FromLong(RET_INCOMPLETE_BUFFER_ERR)
+MC_RETURN_OK = PyLong_FromLong(RET_OK)
 
 
 
@@ -419,7 +416,7 @@ cdef _update_servers(Configurable* imp, list servers, bool_t init):
         if c_split.port == NULL:
             c_ports[i] = MC_DEFAULT_PORT
         else:
-            c_ports[i] = PyInt_AsLong(int(<bytes>c_split.port))
+            c_ports[i] = PyLong_AsLong(int(<bytes>c_split.port))
 
     if init:
         rv = imp.init(c_hosts, c_ports, n, c_aliases)
