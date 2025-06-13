@@ -44,7 +44,6 @@ void fprintBuffer(std::FILE* file, const char *data_buffer_, const unsigned int 
   const unsigned char* data_buffer = reinterpret_cast<const unsigned char*>(data_buffer_);
   unsigned int i, j;
   for (i = 0; i < length; i++) {
-    unsigned char byte = data_buffer[i];
     fprintf(file, "%02x ", data_buffer[i]);
     if (((i%16) == 15) || (i == length-1)) {
       for (j = 0; j < 15-(i%16); j++) {
@@ -52,7 +51,7 @@ void fprintBuffer(std::FILE* file, const char *data_buffer_, const unsigned int 
       }
       fprintf(file, "| ");
       for (j=(i-(i%16)); j <= i; j++) {
-        byte = data_buffer[j];
+        unsigned char byte = data_buffer[j];
         if ((byte > 31) && (byte < 127)) {
           fprintf(file, "%c", byte);
         } else {

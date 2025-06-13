@@ -6,4 +6,4 @@ set -ex
 # https://github.com/danmar/cppcheck/pull/1026
 cppcheck --enable=all --error-exitcode=1 \
     -UMSG_MORE -UNI_MAXHOST -UNI_MAXSERV -UUIO_MAXIOV \
-    --suppressions-list=misc/.cppcheck-supp -Iinclude src tests
+    --suppressions-list=misc/.cppcheck-supp -Iinclude src

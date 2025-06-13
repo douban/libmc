@@ -123,7 +123,6 @@ int Connection::connect() {
 
 try_next_ai:
     ::close(fd);
-    continue;
   }
 
   if (server_addrinfo) {
@@ -147,7 +146,7 @@ int Connection::unixSocketConnect() {
       return -1;
   }
 
-  setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (void *)&opt_keepalive, sizeof opt_keepalive);
+  setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, static_cast<void*>(&opt_keepalive), sizeof opt_keepalive);
 
   struct sockaddr_un addr;
   memset(&addr, 0, sizeof(addr));
@@ -156,7 +155,7 @@ int Connection::unixSocketConnect() {
   // storing the unix path as a host doesn't limit the input but can overflow
   strncpy(addr.sun_path, m_host, sizeof(addr.sun_path) - 1);
   assert(strcmp(addr.sun_path, m_host) == 0);
-  if (connectPoll(fd, (const struct sockaddr *)&addr, sizeof addr) != 0) {
+  if (connectPoll(fd, reinterpret_cast<const struct sockaddr*>(&addr), sizeof addr) != 0) {
     return -1;
   }
   m_socketFd = fd;
@@ -240,7 +239,7 @@ void Connection::markDead(const char* reason, int delay) {
     if (strcmp(reason, keywords::kCONN_QUIT) != 0) {
       log_warn("Connection %s is dead(reason: %s, delay: %d), next check at %lu",
                m_name, reason, delay, m_deadUntil);
-      struct iovec* key = m_parser.currentRequestKey();
+      const struct iovec* key = m_parser.currentRequestKey();
       if (key != NULL) {
         log_warn("%s: first request key: %.*s", m_name,
                  static_cast<int>(key->iov_len),

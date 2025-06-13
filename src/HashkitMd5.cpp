@@ -218,7 +218,7 @@ void md5_update( md5_context *ctx, const unsigned char *input, size_t ilen )
 
     if( left && ilen >= fill )
     {
-        memcpy( (void *) (ctx->buffer + left), input, fill );
+        memcpy( ctx->buffer + left, input, fill );
         md5_process( ctx, ctx->buffer );
         input += fill;
         ilen  -= fill;
@@ -234,7 +234,7 @@ void md5_update( md5_context *ctx, const unsigned char *input, size_t ilen )
 
     if( ilen > 0 )
     {
-        memcpy( (void *) (ctx->buffer + left), input, ilen );
+        memcpy( ctx->buffer + left, input, ilen );
     }
 }
 
@@ -293,7 +293,7 @@ uint32_t hash_md5(const char *key, size_t key_length)
 {
   unsigned char results[16];
 
-  md5((unsigned char*)key, (size_t)key_length, results);
+  md5(reinterpret_cast<const unsigned char*>(key), key_length, results);
 
   return ((uint32_t) (results[3] & 0xFF) << 24)
     | ((uint32_t) (results[2] & 0xFF) << 16)

@@ -91,7 +91,7 @@ size_t DataBlock::getWriteLeft() {
 
 
 size_t DataBlock::find(char c, size_t since) {
-  char *p = std::find(m_data + since, m_data + m_size, c);
+  const char *p = std::find(m_data + since, m_data + m_size, c);
   return p - m_data;
 }
 
@@ -102,7 +102,7 @@ bool is_not_digit(int c) {
 
 
 size_t DataBlock::findNotNumeric(size_t since) {
-  char *p = std::find_if(m_data + since, m_data + m_size, is_not_digit);
+  const char *p = std::find_if(m_data + since, m_data + m_size, is_not_digit);
   return p - m_data;
 }
 

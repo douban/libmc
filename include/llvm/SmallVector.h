@@ -53,7 +53,7 @@ namespace llvm {
 
     protected:
         SmallVectorBase(size_t Size)
-            : BeginX(&FirstEl), EndX(&FirstEl), CapacityX((char*)&FirstEl+Size) {}
+            : BeginX(&FirstEl), EndX(&FirstEl), CapacityX(static_cast<char*>(&FirstEl)+Size) {}
 
         /// isSmall - Return true if this is a smallvector which has not had dynamic
         /// memory allocated for it.
@@ -63,12 +63,12 @@ namespace llvm {
 
         /// size_in_bytes - This returns size()*sizeof(T).
         size_t size_in_bytes() const {
-            return size_t((char*)EndX - (char*)BeginX);
+            return size_t(static_cast<char*>(EndX) - static_cast<char*>(BeginX));
         }
 
         /// capacity_in_bytes - This returns capacity()*sizeof(T).
         size_t capacity_in_bytes() const {
-            return size_t((char*)CapacityX - (char*)BeginX);
+            return size_t(static_cast<char*>(CapacityX) - static_cast<char*>(BeginX));
         }
 
         /// grow_pod - This is an implementation of the grow() method which only works
@@ -830,9 +830,9 @@ Retry:
         if (!this->isSmall())
             operator delete(this->BeginX);
 
-        this->EndX = (char*)NewElts+CurSizeBytes;
+        this->EndX = static_cast<char*>(NewElts)+CurSizeBytes;
         this->BeginX = NewElts;
-        this->CapacityX = (char*)this->BeginX + NewCapacityInBytes;
+        this->CapacityX = static_cast<char*>(this->BeginX) + NewCapacityInBytes;
     }
 } // namespace llvm
 

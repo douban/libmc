@@ -64,7 +64,7 @@ class BufferReader {
 
   char* getWritePtr();
   void commitWrite(size_t len);
-  void write(char* ptr, size_t len, bool copying = true);
+  void write(const char* ptr, size_t len, bool copying = true);
 
   size_t capacity();
   size_t size();
@@ -84,7 +84,7 @@ class BufferReader {
   size_t getNextPreferedDataBlockSize();
 
  protected:
-  const char charAtCursor(DataCursor& cur) const;
+  const char charAtCursor(const DataCursor& cur) const;
 
   DataBlockList m_dataBlockList;
   size_t m_capacity;
@@ -96,7 +96,7 @@ class BufferReader {
 };
 
 
-inline const char BufferReader::charAtCursor(DataCursor& cur) const {
+inline const char BufferReader::charAtCursor(const DataCursor& cur) const {
   // NOTE: make sure cur is valid
   /**
    * DataBlock& db = *cur.iterator;

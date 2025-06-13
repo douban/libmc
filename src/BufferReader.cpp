@@ -74,8 +74,10 @@ size_t BufferReader::prepareWriteBlock(size_t len) {
     ++m_blockWriteIterator;
   }
 
-  assert(m_blockWriteIterator == m_dataBlockList.end() ||
-         m_blockWriteIterator->getWriteLeft() > 0);
+  // Store the result to avoid side effects in assert
+  size_t writeLeft = (m_blockWriteIterator == m_dataBlockList.end()) ? 
+                     0 : m_blockWriteIterator->getWriteLeft();
+  assert(m_blockWriteIterator == m_dataBlockList.end() || writeLeft > 0);
 
   DataBlock *dbPtr = NULL;
 
@@ -111,7 +113,9 @@ char* BufferReader::getWritePtr() {
 
 
 void BufferReader::commitWrite(size_t len) {
-  assert(m_blockWriteIterator->size() + len <= m_blockWriteIterator->capacity());
+  // Store the result to avoid side effects in assert
+  size_t currentCapacity = m_blockWriteIterator->capacity();
+  assert(m_blockWriteIterator->size() + len <= currentCapacity);
   m_blockWriteIterator->occupy(len);
   if (m_blockWriteIterator->size() + len == m_blockWriteIterator->capacity()) {
     ++m_blockWriteIterator;
