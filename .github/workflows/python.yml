@@ -8,7 +8,7 @@ on:
 
 jobs:
   unittest:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         pyver: ["3.8", "3.9", "3.10", "3.11", "3.12"]
@@ -40,7 +40,7 @@ jobs:
       run: ./misc/memcached_server stopall
 
   benchmark:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         pyver: ["3.8", "3.9", "3.10", "3.11", "3.12"]

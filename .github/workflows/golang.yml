@@ -9,7 +9,7 @@ on:
 
 jobs:
   gotest:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         gover: ["1.15"]
