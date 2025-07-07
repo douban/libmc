@@ -13,6 +13,7 @@ from cpython cimport (
     PyLong_AsLong as PyInt_AsLong,
     PyLong_FromLong as PyInt_FromLong,
 )
+from ctypes import c_long as long
 
 if PY_MAJOR_VERSION < 3:
     from cpython cimport PyString_AsStringAndSize, PyString_AsString
