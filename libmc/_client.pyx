@@ -8,14 +8,15 @@ from libcpp.string cimport string
 from libcpp.vector cimport vector
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
 from cpython.version cimport PY_MAJOR_VERSION
-from cpython cimport Py_INCREF, Py_DECREF, PyInt_AsLong, PyInt_FromLong
-
-if PY_MAJOR_VERSION < 3:
-    from cpython cimport PyString_AsStringAndSize, PyString_AsString
-    import cPickle as pickle
-else:
-    from cpython cimport PyBytes_AsStringAndSize as PyString_AsStringAndSize, PyBytes_AsString as PyString_AsString, PyUnicode_AsUTF8String
-    import pickle
+from cpython cimport (
+    Py_INCREF, Py_DECREF,
+    PyLong_AsLong as PyInt_AsLong,
+    PyLong_FromLong as PyInt_FromLong,
+    PyBytes_AsStringAndSize as PyString_AsStringAndSize,
+    PyBytes_AsString as PyString_AsString,
+    PyUnicode_AsUTF8String,
+)
+from ctypes import c_long as long
 
 import os
 import sys
@@ -24,6 +25,7 @@ import threading
 import zlib
 import marshal
 import warnings
+import pickle
 from contextlib import contextmanager
 
 cdef extern from "Common.h" namespace "douban::mc":
