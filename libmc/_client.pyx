@@ -8,7 +8,11 @@ from libcpp.string cimport string
 from libcpp.vector cimport vector
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
 from cpython.version cimport PY_MAJOR_VERSION
-from cpython cimport Py_INCREF, Py_DECREF, PyInt_AsLong, PyInt_FromLong
+from cpython cimport (
+    Py_INCREF, Py_DECREF,
+    PyLong_AsLong as PyInt_AsLong,
+    PyLong_FromLong as PyInt_FromLong,
+)
 
 if PY_MAJOR_VERSION < 3:
     from cpython cimport PyString_AsStringAndSize, PyString_AsString
