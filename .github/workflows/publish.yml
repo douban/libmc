@@ -7,7 +7,11 @@ on:
 
 jobs:
   pypi:
-    runs-on: ubuntu-22.04
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-22.04, macos-13, macos-latest]
 
     steps:
     - uses: actions/checkout@v2
@@ -19,6 +23,8 @@ jobs:
     - name: Build wheels
       env:
         CIBW_BEFORE_BUILD: pip install 'setuptools<72.2.0 ; implementation_name == "pypy"'
+        MACOSX_DEPLOYMENT_TARGET: "10.13"
+        CIBW_SKIP: "pp*-macosx_*"
       run: python -m cibuildwheel --output-dir wheelhouse
     - name: Check build result
       run: ls -lh wheelhouse/
