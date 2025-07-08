@@ -6,7 +6,7 @@ on:
       - v*
 
 jobs:
-  pypi:
+  wheel:
     name: Build wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -28,6 +28,22 @@ jobs:
       run: python -m cibuildwheel --output-dir wheelhouse
     - name: Check build result
       run: ls -lh wheelhouse/
+    - uses: actions/upload-artifact@v4
+      with:
+        name: cibw-wheels-${{ matrix.os }}-${{ strategy.job-index }}
+        path: ./wheelhouse/*.whl
+
+  pypi:
+    needs: [wheel]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        pattern: cibw-*
+        path: wheelhouse/
+        merge-multiple: true
+    - name: Check download result
+      run: ls -lht wheelhouse/
     - name: Publish to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
