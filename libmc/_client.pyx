@@ -16,7 +16,6 @@ from cpython cimport (
     PyBytes_AsString as PyString_AsString,
     PyUnicode_AsUTF8String,
 )
-from ctypes import c_long as long
 
 import os
 import sys
@@ -299,9 +298,6 @@ cdef bytes _encode_value(object val, int comp_threshold, flags_t *flags):
         flags[0] = _FLAG_BOOL
         enc_val = b'1' if val else b'0'
     elif type_ is int:
-        flags[0] = _FLAG_INTEGER
-        enc_val = str(val).encode('ascii')
-    elif type_ is long:
         flags[0] = _FLAG_LONG
         enc_val = str(val).encode('ascii')
     elif type_.__module__ == 'numpy':
@@ -346,7 +342,7 @@ cpdef object decode_value(bytes val, flags_t flags):
     elif flags & _FLAG_INTEGER:
         dec_val = int(dec_val.decode('ascii'))
     elif flags & _FLAG_LONG:
-        dec_val = long(dec_val.decode('ascii'))
+        dec_val = int(dec_val.decode('ascii'))
     elif flags & _FLAG_MARSHAL:
         try:
             dec_val = marshal.loads(dec_val)

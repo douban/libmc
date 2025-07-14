@@ -1,6 +1,5 @@
 # coding: utf-8
 
-import sys
 import time
 import pytest
 import unittest
@@ -31,13 +30,24 @@ class DiveMaster(object):
 class MiscCase(unittest.TestCase):
 
     def test_encode_value(self):
-        expect = (b'(\x02\x00\x00\x00s\x06\x00\x00\x00doubani\x00\x00\x00\x00',
-                  32)
-        data = (b'douban', 0)
-        # FIXME
-        vi = sys.version_info
-        if vi.major == 2 and vi.micro == 7 and vi.minor < 9:
-            assert encode_value(data, 0) == expect
+        for expect, flag, data in [
+            (
+                b'(\x02\x00\x00\x00s\x06\x00\x00\x00doubani\x00\x00\x00\x00',
+                32,
+                (b'douban', 0)
+            ),
+            (
+                b'1234567890',
+                4,
+                123_456_789_0,
+            ),
+            (
+                b'12345678901234567890',
+                4,
+                123_456_7890_123_456_7890,
+            ),
+        ]:
+            assert encode_value(data, 0) == (expect, flag)
 
     def test_decode_value(self):
         dataset = [
@@ -50,12 +60,20 @@ class MiscCase(unittest.TestCase):
             "scubadiving",
             b'haha',
             ('douban', 0),
+            123_456_789,
         ]
         for d in dataset:
             new_d = decode_value(*encode_value(d, 0))
             assert new_d == d
             if isinstance(d, DiveMaster):
                 assert d is not new_d
+
+        for data, flag, expected in [
+            (b'123', 2, 123),
+            (b'123456789', 2, 123_456_789),
+            (b'12345678901234567890', 4, 123_456_7890_123_456_7890),
+        ]:
+            assert decode_value(data, flag) == expected
 
 
 class SingleServerCase(unittest.TestCase):
@@ -195,7 +213,7 @@ class SingleServerCase(unittest.TestCase):
 
     def test_get_set_raw(self):
         self.mc.set('foo', 233)
-        assert self.mc.get_raw('foo') == (b'233', 2)
+        assert self.mc.get_raw('foo') == (b'233', 4)
         self.mc.set_raw('foo', b'2335', 0, 2)
         assert self.mc.get('foo') == 2335
 
