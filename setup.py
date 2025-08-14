@@ -101,12 +101,7 @@ setup(
     ],
     setup_requires=[
         # Support for the basestring type is new in Cython 0.20.
-        'Cython >= 0.20 ; implementation_name != "pypy"',
-        'Cython >= 0.20 ; implementation_name == "pypy" and python_version > "3.8"',
-
-        # compile error in PyPy 3.8 with Cython 3.1.2
-        # error: 'PyDescr_NewMember' was not declared in this scope
-        'Cython >= 0.20, < 3.1; implementation_name == "pypy" and python_version <= "3.8"',
+        'Cython >= 0.20',
     ],
     ext_modules=[
         Extension(
