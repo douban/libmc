@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        pyver: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        pyver: ["3.10", "3.11", "3.12", "3.13", "3.14"]
         compiler: ["gcc", "clang"]
         build_type: ["Debug", "Release"]
 
@@ -43,7 +43,7 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        pyver: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        pyver: ["3.10", "3.11", "3.12", "3.13", "3.14"]
 
     steps:
     - uses: actions/checkout@v2
